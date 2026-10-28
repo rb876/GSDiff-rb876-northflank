@@ -21,6 +21,7 @@ These Markdown files are ready to paste into HackMD.
 | 003 — guidance window | Pending: full SVDD guidance versus the final 200 stochastic steps | [Report](experiments/003_guidance_window/REPORT.md) |
 | 004 — feasible constraints | Six GPU-compatible checks with three supporting measurement rules | [Report](experiments/004_feasible_constraints/REPORT.md) |
 | 005 — denoiser budget | Match Best-of-N to full SVDD by evaluated denoiser states | [Report](experiments/005_denoiser_budget/REPORT.md) |
+| 006 — sweep analysis | Offline method comparisons, constraint bottlenecks, diversity and sample gallery | [Report](experiments/006_sweep_analysis/REPORT.md) |
 
 ## Measurement policy
 
@@ -34,6 +35,10 @@ The headline overall-valid rate requires structural validity **and all applicabl
 Unknown measurements never count as passes; unresolved samples without a known failure remain unknown.
 No applicable scored checks means not applicable, not success. Every selected design stays in the denominator.
 Structural validity, per-check compliance and measurement coverage remain separate diagnostics.
+The offline analysis reports passes/applicable checks as constraint success and retains
+measurable-only compliance separately. It also reports per-constraint sole failures, recorded
+failure reasons, overall-validity intervals and paired trial outcomes. Diversity and distribution
+diagnostics show their eligible geometry counts; seed batches are not pooled.
 
 ## Method
 
@@ -75,11 +80,17 @@ designs. All nine selected designs fail C035. Structural validity is 2/3 for bas
 This small pilot does not establish an improvement; larger evaluation design remains pending.
 The original 48-test suite passed locally and on Northflank; the batching update passed 92 local tests.
 The prior constraint update passed **186 tests** locally, with three CUDA checks skipped because CUDA is unavailable.
-The denoiser-budget update passes **205 tests**, with the same three CUDA checks skipped locally.
+The denoiser-budget update passed **205 tests**, with the same three CUDA checks skipped locally.
 The GPU backend's offline audit matches room geometry and structural validity on all 12 saved pilot
 candidates, and every constraint status on all 10 structurally valid candidates. Invalid graphs skip
 GPU searches. This is a small implementation check, not evidence of improved generation or speed.
 No new pretrained generation was launched for this update. Pilot reports and figures retain the saved earlier results.
 Missing local checkpoint files produce setup instructions.
+
+The sweep-analysis workflow is prepared and uses saved results only. It produces six PNG/PDF
+figures, CSV/JSON tables, a concise Markdown report and a gallery of every selected design.
+The current suite passes **221 tests**, with three CUDA tests skipped. Offline verification
+rendered nine selected designs from the three-method historical pilot; no full-sweep conclusion is claimed.
+Command and metric definitions: [analysis guide](../docs/ANALYSIS.md).
 
 Implementation and exact run commands: [README](README.md).

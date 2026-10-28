@@ -145,4 +145,6 @@ for ((batch=0; batch<${#batch_seeds[@]}; batch++)); do
   execute "$python_bin" -m test_time.evaluate --experiment_dir "$batch_dir"
 done
 
-printf '\nCross-batch aggregation, confidence intervals and dedicated diversity metrics are not yet implemented.\n'
+printf '\nFor confidence intervals, diversity diagnostics and the sample gallery, run:\n'
+printf '  %q -m test_time.analyze --experiment_dir %q\n' "$python_bin" "$output_root"
+printf 'Seed batches are analysed separately; cross-batch aggregation is not implemented.\n'

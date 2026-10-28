@@ -1,0 +1,2 @@
+# Install alongside the inference/checker environment; no GPU or weights needed.
+matplotlib>=3.7,<4

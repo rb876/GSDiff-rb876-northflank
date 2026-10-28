@@ -23,6 +23,7 @@ test_time/
   run.py                    # one experiment entry point
   launch_eval.sh            # preview/run paired batches; no automatic launch
   evaluate.py               # saved-result summaries and comparisons
+  analyze.py                # offline figures, metrics, failures and complete image gallery
   visualize.py              # annotated PNG/SVG
   tests/                    # small synthetic tests; no weights required
   outputs/                  # generated runs; ignored by Git
@@ -224,10 +225,35 @@ timings do not predict GPU-guided runtime.
 Each batch gets separate variant directories, logs, configs, saved candidates and reports;
 its comparison table includes both SVDD variants.
 The script stops on failure; interrupted-run resume is not implemented.
-The existing evaluator does **not** pool results across batches or calculate confidence intervals,
-near-duplicate rates, or geometric/structural diversity distances. Those reporting additions
-remain to be done before treating this as the final evaluation. Aggregate by paired trial seed,
-not the Best-of-N winner's seed.
+The offline analysis command below adds overall-validity confidence intervals, duplicate and
+semantic-layout diversity diagnostics, and paired trial outcomes. Seed batches remain separate;
+cross-batch pooling is not implemented. Pair by trial seed, not the Best-of-N winner's seed.
+
+## Analyse a completed sweep
+
+After downloading results to Kraken, run from the repository root in the project environment:
+
+```bash
+python -m pip install -r test_time/requirements-analysis.txt
+python -m test_time.analyze --experiment_dir test_time/outputs/sweep_001
+```
+
+This creates `sweep_001/analysis/REPORT.md`, a filterable `index.html` gallery, CSV/JSON metrics,
+six PNG/PDF figures, and annotated PNG/SVG plus graph/evaluation JSON for **every selected design**.
+Use `--output_dir PATH` to change the destination. The analysis needs no GPU or checkpoints and
+does not rerun inference or constraint checks; original outputs remain unchanged.
+
+Figures cover overall validity, per-constraint outcomes, the number of checks passed, measured
+severity, layout distributions and compute. Failure tables include the recorded reasons and
+the number of designs where a constraint is the sole failure. Method tables distinguish
+passes/applicable checks from measurable-only compliance, so unknowns cannot inflate the
+headline success rate. Best-of-N contributes only its selected design from each trial.
+
+Diversity includes graph uniqueness, pairwise semantic-layout distance and near-duplicate
+fraction, with eligible geometry counts. Distribution shifts compare against a compatible
+generated baseline; these are not RPLAN fidelity scores. Completed runs are analysed separately;
+running, failed and incomplete runs are excluded and listed. Full details and the assessment
+requirements are in [the analysis guide](../docs/ANALYSIS.md).
 
 ## Checkpoints and baseline audit
 
