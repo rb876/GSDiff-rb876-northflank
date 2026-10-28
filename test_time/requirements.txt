@@ -1,0 +1,8 @@
+# Use the existing PyTorch 2.1.0 / CUDA 11.8 Northflank image.
+numpy==1.26.0
+networkx==3.1
+opencv-python-headless==4.9.0.80
+pillow==10.0.1
+tqdm==4.65.0
+shapely==2.0.6
+pytest==8.3.5

@@ -1,0 +1,113 @@
+"""Reporting denominators, compute comparisons and annotated output artifacts."""
+
+from dataclasses import asdict
+import json
+from pathlib import Path
+
+from PIL import Image
+import pytest
+
+from test_time.evaluate import summarize_run, write_comparison, write_report
+from test_time.types import ConstraintResult, FloorplanSample, PolicyEvaluation, Room, write_json
+from test_time.visualize import save_sample
+
+
+def result(cid, status, auxiliary=False, assumed=False):
+    return ConstraintResult(cid, status, {"pass": 0.0, "fail": 0.5}.get(status),
+                            status != "not_applicable", status in {"pass", "fail"}, "assessment",
+                            {"area_m2": 8}, {"area_min_m2": 9},
+                            ["assumed_scale"] if assumed else [], "Measured area versus required area.",
+                            counts_toward_compliance=not auxiliary)
+
+
+def candidate(trial, checks, valid=True, selected=True):
+    sample = FloorplanSample(nodes=[[0, 0], [4, 0], [4, 3], [0, 3]],
+                             edges=[[0, 1], [1, 2], [2, 3], [3, 0]],
+                             rooms=[Room(0, [[0, 0], [4, 0], [4, 3], [0, 3], [0, 0]])],
+                             scenario={"scale_provenance": "assumed", "coordinate_scale_m_per_model_unit": 0.025})
+    evaluation = PolicyEvaluation(0.5, -0.5, checks, valid,
+                                  sum(r.status == "unknown" for r in checks),
+                                  sum(r.applicable for r in checks),
+                                  sum(bool(r.assumption_flags) for r in checks), 0 if valid else 1)
+    return {"trial": trial, "seed": trial, "selected": selected, "method": "baseline",
+            "candidate_id": str(trial), "sample": asdict(sample), "evaluation": asdict(evaluation), "stats": {}}
+
+
+def make_run(path, rows, method="baseline", seconds=20, scale=0.025):
+    path.mkdir(parents=True)
+    write_json(path / "config.json", {"method": method, "n": 1 if method == "baseline" else 4,
+               "scenario": {"scale_provenance": "assumed", "coordinate_scale_m_per_model_unit": scale},
+               "constraints": [{"id": "C076"}],
+               "adapter": {"variant": "unconstrained_rplan", "steps": 1000,
+                           "checkpoints": {"node": {"sha256": "node"}, "edge": {"sha256": "edge"}}}})
+    write_json(path / "run.json", {"method": method, "trials": sum(row["selected"] for row in rows),
+               "total_wall_seconds": seconds, "node_calls": 2000, "edge_calls": 2,
+               "candidate_evaluations": 2})
+    (path / "candidates.jsonl").write_text("\n".join(json.dumps(row) for row in rows) + "\n")
+    return path
+
+
+def test_coverage_auxiliary_and_invalid_denominators(tmp_path):
+    rows = [candidate(0, [result("C076", "pass", assumed=True), result("C033", "unknown"), result("C034", "pass", auxiliary=True)]),
+            candidate(1, [result("C076", "fail", assumed=True), result("C033", "not_applicable"), result("C034", "pass", auxiliary=True)], valid=False),
+            candidate(0, [result("C076", "pass")], selected=False)]
+    summary = write_report(make_run(tmp_path / "baseline", rows))
+    assert summary["selected_trials"] == 2 and summary["saved_final_candidates"] == 3
+    assert summary["compliance"] == 0.5
+    assert summary["validity_rate"] == 0.5
+    assert summary["measurable_fraction"] == pytest.approx(2 / 3)
+    assert summary["unknown_fraction"] == pytest.approx(1 / 3)
+    assert summary["assumption_based_fraction"] == pytest.approx(2 / 3)
+    assert summary["severity"]["mean"] == 0.25
+    assert summary["all_measurable_pass_fraction"] == 0.5
+    assert summary["all_applicable_pass_fraction"] == 0.0
+    assert "C034" not in summary["per_constraint"] and summary["auxiliary_checks"]["C034"]["pass"] == 2
+    assert summary["graph_statistics"]["room_area_drawing_units2"]["mean"] == 12
+    assert (tmp_path / "baseline" / "report.md").exists()
+
+
+def test_all_unknown_is_not_perfect_or_zero_severity(tmp_path):
+    summary = summarize_run(make_run(tmp_path / "unknown", [candidate(0, [result("C076", "unknown")])]))
+    assert summary["compliance"] is None
+    assert summary["severity"]["mean"] is None
+    assert summary["measurable_fraction"] == 0
+    assert summary["all_measurable_pass_fraction"] == 0
+
+
+def test_runtime_multiplier_is_per_trial_and_scenario_matched(tmp_path):
+    baseline = write_report(make_run(tmp_path / "baseline", [candidate(0, [result("C076", "pass")])], seconds=10))
+    best = write_report(make_run(tmp_path / "best", [candidate(i, [result("C076", "pass")]) for i in range(2)], method="best_of_n", seconds=40))
+    other_scale = write_report(make_run(tmp_path / "other-scale", [candidate(0, [result("C076", "pass")])], method="svdd_pm", seconds=10, scale=0.05))
+    table = write_comparison(tmp_path, [baseline, best, other_scale])
+    assert table[0]["compute_multiplier"] == 1
+    assert table[1]["compute_multiplier"] == 2
+    assert table[2]["compute_multiplier"] is None
+    assert "none measured yet" in (tmp_path / "comparison.md").read_text()
+
+
+def test_duplicate_selected_trial_is_not_silently_averaged(tmp_path):
+    directory = make_run(tmp_path / "bad", [candidate(0, [result("C076", "pass")]) for _ in range(2)])
+    with pytest.raises(ValueError, match="one selected candidate"):
+        summarize_run(directory)
+
+
+def test_partial_run_is_labelled_and_not_a_compute_reference(tmp_path):
+    directory = make_run(tmp_path / "partial", [candidate(0, [result("C076", "pass")])])
+    config = json.loads((directory / "config.json").read_text())
+    config["trials"] = 8
+    write_json(directory / "config.json", config)
+    partial = write_report(directory)
+    assert partial["status"] == "incomplete" and partial["expected_trials"] == 8
+    rows = write_comparison(tmp_path, [partial])
+    assert rows[0]["compute_multiplier"] is None
+    assert "**incomplete**" in (directory / "report.md").read_text()
+
+
+def test_png_and_svg_include_actual_checks_and_assumptions(tmp_path):
+    row = candidate(0, [result("C076", "fail", assumed=True), result("C033", "unknown")])
+    paths = save_sample(row["sample"], row["evaluation"], tmp_path / "sample")
+    with Image.open(paths["png"]) as image:
+        assert image.size[0] == 1120 and image.getextrema() != ((255, 255),) * 3
+    svg = Path(paths["svg"]).read_text()
+    assert "C076: fail" in svg and "C033: unknown" in svg
+    assert "area_min_m2" in svg and "area_m2" in svg and "assumed" in svg

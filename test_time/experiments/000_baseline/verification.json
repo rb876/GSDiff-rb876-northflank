@@ -1,0 +1,52 @@
+{
+  "checks": {
+    "raw_nodes_identical": true,
+    "coordinates_identical": true,
+    "raw_edges_identical": true,
+    "parameters_unchanged": true,
+    "models_frozen": true,
+    "rooms_extracted": true
+  },
+  "seconds": 12.010404668999854,
+  "junctions": 33,
+  "edges": 39,
+  "rooms": 8,
+  "adapter": {
+    "variant": "unconstrained_rplan",
+    "steps": 1000,
+    "checkpoints": {
+      "node": {
+        "path": "/workspace/GSDiff/outputs/structure-1/model1000000.pt",
+        "sha256": "99a6567f2c19bd849a026d1931cc56fa5742229a4ec50769bcff8b1e3314e96b"
+      },
+      "edge": {
+        "path": "/workspace/GSDiff/outputs/structure-2/model_stage2_best_061000.pt",
+        "sha256": "6e9fc4fc8aef2f39c55371cfab6066658b2eed39ada9bb808be6705039da75d1"
+      }
+    },
+    "node_shape": [
+      1,
+      53,
+      10
+    ],
+    "state_dtype": "float64",
+    "drawing_resolution": 512,
+    "coordinate_unit": "drawing_pixel",
+    "merge_points": false,
+    "align_points": false,
+    "edge_rng_policy": "Clone current diffusion RNG for edge interpolation; common random numbers within a guided step.",
+    "environment": {
+      "python": "3.10.13",
+      "torch": "2.1.0",
+      "numpy": "1.26.0",
+      "cuda": "11.8",
+      "device": "cuda:0",
+      "gpu": "NVIDIA H100 80GB HBM3"
+    }
+  },
+  "counters": {
+    "node_calls": 1000,
+    "edge_calls": 1,
+    "graph_completions": 1
+  }
+}

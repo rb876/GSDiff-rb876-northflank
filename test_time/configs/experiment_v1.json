@@ -1,0 +1,14 @@
+{
+  "name": "001_constraints",
+  "variant": "unconstrained_rplan",
+  "scenario": "scenario_v1.json",
+  "constraints": "constraints_v1.json",
+  "trials": 1,
+  "seed": 42,
+  "n": 4,
+  "k": 4,
+  "guided_steps": 10,
+  "temperature": 0.0,
+  "validity_weight": 100.0,
+  "output_root": "test_time/outputs/001_constraints"
+}

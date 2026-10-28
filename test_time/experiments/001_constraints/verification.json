@@ -1,0 +1,34 @@
+{
+  "local_tests_passed": 48,
+  "northflank_tests_passed": 48,
+  "smoke_runs": {
+    "baseline": {
+      "status": "complete",
+      "completed_trials": 1,
+      "parameters_unchanged": true,
+      "node_calls": 1000,
+      "edge_calls": 1,
+      "candidate_evaluations": 1,
+      "total_wall_seconds": 11.42767270999957
+    },
+    "best_of_n": {
+      "status": "complete",
+      "completed_trials": 1,
+      "parameters_unchanged": true,
+      "node_calls": 2000,
+      "edge_calls": 2,
+      "candidate_evaluations": 2,
+      "total_wall_seconds": 23.019902497000658
+    },
+    "svdd_pm": {
+      "status": "complete",
+      "completed_trials": 1,
+      "parameters_unchanged": true,
+      "node_calls": 1004,
+      "edge_calls": 5,
+      "candidate_evaluations": 5,
+      "total_wall_seconds": 12.625657729000523
+    }
+  },
+  "larger_experiments_run": false
+}

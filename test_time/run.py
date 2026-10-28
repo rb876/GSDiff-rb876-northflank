@@ -1,0 +1,137 @@
+"""Run a reproducible baseline, Best-of-N, or SVDD-PM experiment."""
+
+import argparse
+from dataclasses import asdict
+from datetime import datetime, timezone
+import json
+from pathlib import Path
+import subprocess
+import time
+
+from .types import Scenario, read_json, write_json
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--config", type=Path, default=Path(__file__).parent / "configs/experiment_v1.json")
+    parser.add_argument("--method", required=True, choices=["baseline", "best_of_n", "svdd_pm"])
+    for name in ("trials", "seed", "n", "k", "guided_steps"):
+        parser.add_argument("--" + name, type=int)
+    parser.add_argument("--temperature", type=float)
+    parser.add_argument("--output_dir", type=Path)
+    parser.add_argument("--device", default="cuda:0")
+    parser.add_argument("--node-checkpoint")
+    parser.add_argument("--edge-checkpoint")
+    args = parser.parse_args()
+    config_path = args.config.resolve()
+    config = read_json(config_path)
+    config.update({name: value for name, value in vars(args).items()
+                   if name in {"method", "trials", "seed", "n", "k", "guided_steps", "temperature"} and value is not None})
+    if config["trials"] < 1 or config["seed"] < 0:
+        parser.error("trials must be positive and seed nonnegative")
+    scenario = Scenario(**read_json(config_path.parent / config["scenario"]))
+    from .constraints import load_specs
+    from .policy import ConstraintEvaluator
+    specs = load_specs(config_path.parent / config["constraints"])
+    evaluator = ConstraintEvaluator(specs, validity_weight=config["validity_weight"])
+    from .adapter import GSDiffAdapter, file_hash
+    from . import sampling
+    from .evaluate import write_report
+    from .visualize import save_sample
+    import torch
+
+    repo = Path(__file__).resolve().parents[1]
+    setup_start = time.perf_counter()
+    try:
+        adapter = GSDiffAdapter(repo=repo, node_checkpoint=args.node_checkpoint,
+                               edge_checkpoint=args.edge_checkpoint, device=args.device,
+                               variant=config["variant"])
+    except (FileNotFoundError, ImportError) as error:
+        parser.exit(2, f"Setup needed: {error}\n")
+    before = adapter.parameter_hash()
+    setup_seconds = time.perf_counter() - setup_start
+    stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S-%fZ")
+    suffix = {"baseline": "", "best_of_n": f"-n{config['n']}",
+              "svdd_pm": f"-k{config['k']}-s{config['guided_steps']}-t{config['temperature']:g}"}[args.method]
+    output = args.output_dir or repo / config["output_root"] / f"{args.method}{suffix}-{stamp}"
+    output = output.resolve()
+    output.mkdir(parents=True, exist_ok=False)
+    try:
+        commit = subprocess.check_output(["git", "-C", str(repo), "rev-parse", "HEAD"], text=True).strip()
+    except (FileNotFoundError, subprocess.CalledProcessError):
+        commit = None
+    snapshot = {**config, "scenario": asdict(scenario), "constraints": [asdict(spec) for spec in specs],
+                "adapter": adapter.metadata, "repo_commit": commit,
+                "source_sha256": {str(path.relative_to(repo)): file_hash(path)
+                                  for path in sorted((repo / "test_time").glob("*.py"))},
+                "metric_scope": "Assumption-based scenario and geometric feasibility checks; not verified building compliance.",
+                "selection_order": "best validity class; no new unknown IDs relative to its first candidate; fewest unknown checks, energy, seed",
+                "runtime_scope": "sum of timed sampling plus policy evaluation, excluding loading/rendering/serialization"}
+    snapshot.update(n=(1 if args.method == "baseline" else config["n"] if args.method == "best_of_n" else None),
+                    k=config["k"] if args.method == "svdd_pm" else None,
+                    guided_steps=config["guided_steps"] if args.method == "svdd_pm" else None,
+                    temperature=config["temperature"] if args.method == "svdd_pm" else None)
+    write_json(output / "config.json", snapshot)
+    run = {"method": args.method, "status": "running", "planned_trials": config["trials"], "completed_trials": 0,
+           "total_wall_seconds": 0.0, "setup_seconds": setup_seconds,
+           "node_calls": 0, "edge_calls": 0, "graph_completions": 0,
+           "candidate_evaluations": 0, "fallback_count": 0, "peak_gpu_allocated_bytes": 0}
+    write_json(output / "run.json", run)
+    print(f"Run: {output}", flush=True)
+    if adapter.device.type == "cuda":
+        torch.cuda.reset_peak_memory_stats(adapter.device)
+    started = time.perf_counter()
+    try:
+        with (output / "candidates.jsonl").open("w") as candidates_file:
+            for trial in range(config["trials"]):
+                seed = config["seed"] + trial
+                arguments = (adapter, evaluator, scenario, seed)
+                if args.method == "baseline":
+                    result = sampling.baseline(*arguments)
+                elif args.method == "best_of_n":
+                    result = sampling.best_of_n(*arguments, n=config["n"])
+                else:
+                    result = sampling.svdd_pm(*arguments, k=config["k"], guided_steps=config["guided_steps"],
+                                              temperature=config["temperature"])
+                for index, candidate in enumerate(result.candidates):
+                    candidate.candidate_id = f"trial-{trial:03d}-{candidate.candidate_id}"
+                    candidate.sample.metadata.update({"config_file": "config.json", "trial": trial,
+                                                      "trial_seed": seed, "candidate_id": candidate.candidate_id})
+                    prefix = output / "samples" / candidate.candidate_id
+                    write_json(prefix.with_suffix(".json"), candidate.sample.to_dict())
+                    artifacts = save_sample(candidate.sample, candidate.evaluation, prefix)
+                    row = {**asdict(candidate), "trial": trial, "method": args.method,
+                           "selected": index == result.selected_index,
+                           "artifacts": {key: str(Path(value).relative_to(output)) for key, value in artifacts.items()}}
+                    candidates_file.write(json.dumps(row, allow_nan=False) + "\n")
+                candidates_file.flush()
+                if result.trace:
+                    write_json(output / "traces" / f"trial-{trial:03d}.json", result.trace)
+                for key in ("node_calls", "edge_calls", "graph_completions", "candidate_evaluations", "fallback_count"):
+                    run[key] += result.stats.get(key, 0)
+                run["total_wall_seconds"] += result.stats["wall_seconds"]
+                run["completed_trials"] += 1
+                if adapter.device.type == "cuda":
+                    run["peak_gpu_allocated_bytes"] = torch.cuda.max_memory_allocated(adapter.device)
+                    run["peak_gpu_reserved_bytes"] = torch.cuda.max_memory_reserved(adapter.device)
+                write_json(output / "run.json", run)
+                chosen = result.candidates[result.selected_index]
+                print(f"{args.method} trial {trial + 1}/{config['trials']}: seed={seed}, "
+                      f"valid={chosen.evaluation.structurally_valid}, energy={chosen.evaluation.energy:.4f}, "
+                      f"unknown={chosen.evaluation.unknown_count}, seconds={result.stats['wall_seconds']:.2f}", flush=True)
+        run["parameters_unchanged"] = before == adapter.parameter_hash()
+        if not run["parameters_unchanged"]:
+            raise RuntimeError("Frozen model parameter check failed")
+        run["status"] = "complete"
+    except Exception as error:
+        run.update(status="failed", error=f"{type(error).__name__}: {error}")
+        raise
+    finally:
+        run["end_to_end_seconds"] = time.perf_counter() - started
+        write_json(output / "run.json", run)
+    summary = write_report(output)
+    print(f"Saved {output / 'report.md'}; validity={summary['validity_rate']:.1%}", flush=True)
+
+
+if __name__ == "__main__":
+    main()
