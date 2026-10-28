@@ -2,6 +2,7 @@
 
 import argparse
 from collections import Counter, defaultdict
+from dataclasses import asdict, is_dataclass
 import csv
 import hashlib
 import json
@@ -16,6 +17,67 @@ ROOM_NAMES = {0: "living", 1: "bedroom", 2: "storage", 3: "kitchen",
               4: "bathroom", 5: "balcony", 6: "outside"}
 
 
+def _supporting(record):
+    # Legacy C034 may carry the new default role='check' while its historical
+    # explicit denominator flag remains false. Never turn that into a check.
+    return record.get("role") == "supporting_rule" or not record.get("counts_toward_compliance", True)
+
+
+def _spec_dicts(specs):
+    return [asdict(spec) if is_dataclass(spec) else dict(spec) for spec in (specs or [])]
+
+
+def constraint_selection(specs):
+    """Describe the saved registry without treating disabled IDs as results."""
+    specs = _spec_dicts(specs)
+    scored, supporting, disabled = [], [], []
+    for spec in specs:
+        role = "supporting_rule" if _supporting(spec) else "check"
+        if not spec.get("enabled", True):
+            disabled.append({"id": spec["id"], "group": spec.get("group") or "ungrouped", "role": role,
+                             "reason": spec.get("disabled_reason") or "Disabled in saved configuration; reason not recorded"})
+        else:
+            (supporting if role == "supporting_rule" else scored).append(spec["id"])
+    support_count = sum(_supporting(spec) for spec in specs)
+    return {"active_scored_ids": scored, "active_supporting_ids": supporting, "disabled_constraints": disabled,
+            "constraint_counts": {"registered": len(specs), "scored": len(specs) - support_count,
+                                  "supporting": support_count, "active": len(scored) + len(supporting),
+                                  "active_scored": len(scored), "active_supporting": len(supporting),
+                                  "disabled": len(disabled)}}
+
+
+def _configured_rows(rows, specs):
+    """Apply saved enable/role metadata to reporting views, preserving files."""
+    by_id = {spec["id"]: spec for spec in specs}
+    complete_registry = bool(specs) and all("enabled" in spec for spec in specs)
+    output = []
+    for row in rows:
+        results = []
+        for result in row["evaluation"]["results"]:
+            spec = by_id.get(result["id"], {})
+            if not spec.get("enabled", True):
+                continue
+            role_recorded = "role" in spec or "counts_toward_compliance" in spec
+            support = _supporting(spec) if role_recorded else _supporting(result)
+            results.append({**result, "counts_toward_compliance": not support,
+                            "role": "supporting_rule" if support else "check",
+                            "group": spec.get("group") or result.get("group") or "ungrouped"})
+        if complete_registry:
+            observed = {result["id"] for result in results}
+            for spec in specs:
+                if spec["enabled"] and not _supporting(spec) and spec["id"] not in observed:
+                    results.append({"id": spec["id"], "status": "unknown", "severity": None,
+                                    "applicable": True, "measurable": False, "counts_toward_compliance": True,
+                                    "role": "check", "group": spec.get("group") or "ungrouped",
+                                    "claim_level": "unobservable", "reporting_missing_result": True,
+                                    "source_id": spec.get("source_id"), "assumption_flags": [],
+                                    "explanation": "Active check absent from saved evaluation; applicability and measurement unconfirmed."})
+        output.append({**row, "evaluation": {**row["evaluation"], "results": results,
+                                               "unknown_count": sum(result["status"] == "unknown" and not _supporting(result)
+                                                                    for result in results)}})
+    return output
+
+
 def fraction(numerator, denominator):
     return numerator / denominator if denominator else None
 
@@ -27,7 +89,7 @@ def describe(values):
 
 
 def counted_results(row):
-    return [r for r in row["evaluation"]["results"] if r.get("counts_toward_compliance", True)]
+    return [r for r in row["evaluation"]["results"] if not _supporting(r)]
 
 
 def measurable(result):
@@ -68,6 +130,51 @@ def validity_summary(rows):
     }
 
 
+def group_summary(rows, specs):
+    """Group only active checks; supporting/disabled-only groups are unassessed."""
+    by_id = {spec["id"]: spec for spec in specs}
+    # Older saved configs can be partial. Retain observed result IDs rather than
+    # silently dropping their existing metrics or inventing registry entries.
+    for row in rows:
+        for result in row["evaluation"]["results"]:
+            by_id.setdefault(result["id"], result)
+    groups = defaultdict(list)
+    for spec in by_id.values():
+        groups[spec.get("group") or "ungrouped"].append(spec)
+    output = {}
+    for name, entries in sorted(groups.items()):
+        selected = constraint_selection(entries)
+        ids = set(selected["active_scored_ids"])
+        results, outcomes, missing_count = [], Counter(), 0
+        for row in rows:
+            checks = [result for result in counted_results(row) if result["id"] in ids]
+            results.extend(checks)
+            missing = ids - {result["id"] for result in checks}
+            missing_count += len(missing) + sum(bool(result.get("reporting_missing_result")) for result in checks)
+            evaluation = {**row["evaluation"], "results": checks}
+            status = overall_validity(evaluation)
+            if not ids:
+                status = "not_assessed"
+            elif missing and status != "invalid":
+                status = "unknown"
+            outcomes[status] += 1
+        metrics = check_summary(results)
+        output[name] = {"status": "assessed" if ids else "not_assessed",
+                        "active_scored_ids": selected["active_scored_ids"],
+                        "active_supporting_ids": selected["active_supporting_ids"],
+                        "disabled_ids": [entry["id"] for entry in selected["disabled_constraints"]],
+                        "selected_trials": len(rows), "missing_result_count": missing_count,
+                        "overall_valid_count": outcomes["valid"],
+                        "overall_valid_rate": fraction(outcomes["valid"], len(rows)) if ids else None,
+                        "overall_validity_counts": {status: outcomes[status] for status in
+                                                    ("valid", "invalid", "unknown", "not_applicable", "not_assessed")},
+                        **metrics,
+                        "check_pass_rate": fraction(metrics["pass"], metrics["applicable_count"]),
+                        "check_pass_rate_denominator": "observed applicable active scored checks, including unknowns",
+                        "claim_levels": sorted({result.get("claim_level") or "unrecorded" for result in results})}
+    return output
+
+
 def polygon_area(points):
     if len(points) < 3:
         return 0.0
@@ -92,6 +199,9 @@ def summarize_run(run_dir):
     config = read_json(run_dir / "config.json")
     run = read_json(run_dir / "run.json")
     rows = [json.loads(line) for line in (run_dir / "candidates.jsonl").read_text().splitlines() if line.strip()]
+    specs = _spec_dicts(config.get("constraints", []))
+    selection = constraint_selection(specs)
+    rows = _configured_rows(rows, specs)
     selected = [row for row in rows if row.get("selected", False)]
     if not selected:
         raise ValueError(f"{run_dir}: no selected candidates; complete the run before evaluating")
@@ -104,7 +214,7 @@ def summarize_run(run_dir):
     auxiliary = defaultdict(list)
     for row in selected:
         for result in row["evaluation"]["results"]:
-            target = per_id if result.get("counts_toward_compliance", True) else auxiliary
+            target = auxiliary if _supporting(result) else per_id
             target[result["id"]].append(result)
     aggregate = check_summary(results)
     all_measurable_pass = 0
@@ -139,7 +249,7 @@ def summarize_run(run_dir):
                 "failed_ids": [r["id"] for r in counted_results(row) if r["status"] == "fail"],
                 "unknown_ids": [r["id"] for r in counted_results(row) if r["status"] == "unknown"]}
     return {
-        "metric_schema_version": 2,
+        "metric_schema_version": 3,
         "validity_definitions": {
             "overall": "Structurally valid and every applicable counted constraint measurably passes; at least one must apply.",
             "unknown": "No confirmed failure, but a required counted result is not measurable; not a confirmed valid sample.",
@@ -162,12 +272,19 @@ def summarize_run(run_dir):
         "status": status, "expected_trials": expected_trials,
         "selected_trials": count, "saved_final_candidates": len(rows),
         "selected_candidate_ids": [r.get("candidate_id", "") for r in selected],
+        **selection,
+        "missing_active_results": [{"trial": row["trial"], "candidate_id": row.get("candidate_id", ""),
+                                    "ids": [result["id"] for result in row["evaluation"]["results"]
+                                            if result.get("reporting_missing_result")]}
+                                   for row in selected if any(result.get("reporting_missing_result")
+                                                              for result in row["evaluation"]["results"])],
         **validity_summary(selected),
         **aggregate,
         "all_measurable_pass_fraction": all_measurable_pass / count,
         "all_applicable_pass_fraction": all_applicable_pass / count,
         "per_constraint": {key: check_summary(value) for key, value in sorted(per_id.items())},
         "auxiliary_checks": {key: check_summary(value) for key, value in sorted(auxiliary.items())},
+        "per_group": group_summary(selected, specs),
         "all_candidates": {
             "count": len(rows),
             **validity_summary(rows),
@@ -211,6 +328,9 @@ def write_report(run_dir):
     result = summarize_run(run_dir)
     write_json(run_dir / "summary.json", result)
     scenario = result["scenario"]
+    counts = result["constraint_counts"]
+    disabled_note = (f" {counts['disabled']} IDs disabled; these are excluded from compliance denominators "
+                     "and are not counted as unknown or passed." if counts["disabled"] else "")
     parameters = ", ".join(f"{key}={value}" for key, value in result["parameters"].items() if value is not None)
     lines = [f"# {result['method']} experiment", "",
              f"Status: **{result['status']}**. {result['selected_trials']}/{result['expected_trials']} selected trials; "
@@ -219,6 +339,12 @@ def write_report(run_dir):
              "Results under declared geometry/scenario assumptions are not verified real-world compliance.", "",
              f"Guidance backend: **{result['parameters']['reward_backend']}**. Reported final validity and compliance use the **CPU reference checker**. "
              "GPU guidance uses conservative finite searches and can differ from the reference; its scores are saved separately in sample metadata.", "",
+             f"Saved registry: **{counts['registered']} IDs** ({counts['scored']} checks, {counts['supporting']} supporting rules). "
+             f"Active: **{counts['active_scored']} scored checks** and {counts['active_supporting']} supporting rules. "
+             "Overall validity covers only the active scored checks." + disabled_note, "",
+             "Active scored IDs: " + (", ".join(result["active_scored_ids"]) or "none") + ".",
+             "Active supporting IDs: " + (", ".join(result["active_supporting_ids"]) or "none") +
+             ". Supporting rules define measurements and assumptions; they add no separate reward or pass/fail result.", "",
              "| Measure | Result |", "|---|---:|",
              f"| **Overall valid** | **{result['overall_valid_count']}/{result['selected_trials']} ({percent(result['overall_valid_rate'])})** |",
              f"| Structurally valid | {result['structural_valid_count']}/{result['selected_trials']} ({percent(result['structural_valid_rate'])}) |",
@@ -243,6 +369,30 @@ def write_report(run_dir):
                      f"{percent(stats['compliance'])} | {percent(stats['measurable_fraction'])} |")
     if result["auxiliary_checks"]:
         lines.extend(["", "Auxiliary checks excluded from compliance: " + ", ".join(result["auxiliary_checks"]) + "."])
+    if result["per_group"]:
+        lines.extend(["", "| Group | Assessment | Active checks | Overall valid | Check pass rate | Unknown checks |",
+                      "|---|---|---|---:|---:|---:|"])
+        for group, stats in result["per_group"].items():
+            assessed = stats["status"] != "not_assessed"
+            valid = f"{stats['overall_valid_count']}/{stats['selected_trials']}" if assessed else "not_assessed"
+            rate = percent(stats["check_pass_rate"]) if assessed else "not_assessed"
+            lines.append(f"| {group} | {stats['status']} | {', '.join(stats['active_scored_ids']) or 'none'} | "
+                         f"{valid} | {rate} | {stats['unknown']} |")
+        lines.extend(["", "Group overall validity also requires a valid graph and every applicable active group check to pass. "
+                      "Group check pass rates divide passes by observed applicable checks, including unknowns; "
+                      "measurable-only compliance remains separate in JSON. "
+                      "Missing active results prevent a group from being reported valid and are recorded in JSON."])
+        if any(stats["status"] == "not_assessed" for stats in result["per_group"].values()):
+            lines.extend(["", "Groups without active scored checks are not_assessed."])
+    if result["disabled_constraints"]:
+        lines.extend(["", "| Disabled ID | Group | Reason |", "|---|---|---|"])
+        for entry in result["disabled_constraints"]:
+            reason = str(entry["reason"]).replace("|", "\\|").replace("\n", " ")
+            lines.append(f"| {entry['id']} | {entry['group']} | {reason} |")
+    if result["missing_active_results"]:
+        lines.extend(["", "Some saved evaluations omit active scored IDs. These are reported as unknown and unmeasured, "
+                      "with unconfirmed applicability; they cannot establish an overall pass. "
+                      "See `missing_active_results` in summary.json. Original saved evaluations were not modified."])
     lines.extend(["", "**Overall valid** means structurally valid AND every applicable counted check measurably passes. "
                   "A structural defect or failed counted check makes it invalid; otherwise unresolved checks make it unknown. "
                   "Auxiliary checks and individual not-applicable checks are excluded. For a structurally valid graph with no applicable counted checks, "
@@ -281,6 +431,12 @@ def write_comparison(experiment_dir, summaries):
                      "status": s["status"],
                      "comparison_group": s["comparison_group"], "trials": s["selected_trials"],
                      "final_candidates": s["saved_final_candidates"],
+                     "registered_constraint_ids": s.get("constraint_counts", {}).get("registered"),
+                     "active_scored_count": s.get("constraint_counts", {}).get("active_scored"),
+                     "active_supporting_count": s.get("constraint_counts", {}).get("active_supporting"),
+                     "disabled_constraint_count": s.get("constraint_counts", {}).get("disabled"),
+                     "active_scored_ids": ",".join(s.get("active_scored_ids", [])),
+                     "active_supporting_ids": ",".join(s.get("active_supporting_ids", [])),
                      "overall_valid_count": s["overall_valid_count"], "overall_valid_rate": s["overall_valid_rate"],
                      "overall_invalid_count": s["overall_validity_counts"]["invalid"],
                      "overall_unknown_count": s["overall_validity_counts"]["unknown"],
@@ -331,10 +487,14 @@ def write_comparison(experiment_dir, summaries):
                   "A structurally valid graph with no applicable counted checks is not_applicable, not a success. All selected samples remain in the denominator. "
                   "CSV `validity_rate` is a legacy alias for `structural_valid_rate`, not overall validity.", "",
                   "Approximately matched compute (within 20% wall time per trial): " + ("; ".join(matched) if matched else "none measured yet") + ".", "",
-                  "C034 is auxiliary where configured; see per-run reports for check counts and assumptions. "
+                  "Supporting rules (including C034/C079/C080 where configured) are excluded from compliance denominators. "
+                  "CSV records active scored/supporting IDs and registry counts; per-run reports list group metrics. "
+                  "Do not compare percentages across different active pools without their denominators and assumptions. "
                   "Unknown values are not zero violations or passes. Missing evaluated-state counts are unknown (empty CSV cells), not inferred from forward calls. "
                   "All final validity/compliance metrics use the CPU reference checker, including runs guided by tensor scores. "
                   "No RPLAN-based FID/KID was measured.", ""])
+    if any(s.get("disabled_constraints") for s in summaries):
+        lines.extend(["Disabled IDs are excluded from compliance denominators; per-run reports list their reasons.", ""])
     (experiment_dir / "comparison.md").write_text("\n".join(lines))
     return rows
 

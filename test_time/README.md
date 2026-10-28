@@ -48,10 +48,12 @@ python -m pytest -q test_time/tests
 python -m test_time.run --method baseline
 python -m test_time.run --method best_of_n --n 4
 python -m test_time.run --method svdd_pm --k 10 --guided_steps 999 --temperature 0
-python -m test_time.evaluate --experiment_dir test_time/outputs/001_constraints
+python -m test_time.evaluate --experiment_dir test_time/outputs/004_feasible_constraints
 ```
 
 Defaults are one trial, seed 42, GPU rewards, and the same scenario/checkpoints for all methods.
+The default configuration is `configs/experiment_v2.json`, evaluating six constraints using
+three supporting measurement rules. Use `--config test_time/configs/experiment_v1.json` to reproduce the original profile.
 SVDD-PM now defaults to K=10 and greedy selection at all 999 stochastic reverse steps.
 This full-guidance configuration has not yet been evaluated; earlier results used shorter guidance windows.
 Larger experiments and their budgets will be decided separately; `--trials` controls their size.
@@ -113,8 +115,8 @@ The Markdown can be pasted into HackMD; no document has been published there aut
 ## GPU room extraction and rewards
 
 The default `--reward_backend gpu` runs intermediate graph extraction, constraint searches and
-proposal selection with PyTorch tensors on the model's device. All six scored checks and auxiliary
-C034 are retained, including the shared bed placement for C033/C035. Final saved candidates
+proposal selection with PyTorch tensors on the model's device. All six scored checks use the
+supporting rules C034/C079/C080, including the shared bed placement for C033/C035. Final saved candidates
 are audited with the existing CPU checker; reports and overall validity always use that audit.
 
 On Northflank, to generate **four final designs** with the current full-guidance defaults:
@@ -129,7 +131,7 @@ python -m test_time.run --method svdd_pm --trials 4 --seed 1000 \
 and estimated time remaining. It covers all 1,000 reverse steps; a step processes the whole batch,
 including SVDD proposals when guided. Final validation and export follow the bar. Use `--no-progress`
 to hide it. Output locations are printed at startup;
-the default is a new directory under `test_time/outputs/001_constraints/`.
+the default is a new directory under `test_time/outputs/004_feasible_constraints/`.
 Best-of-N uses the same GPU backend by default. Pass `--reward_backend cpu` to opt into the
 reference CPU guidance implementation. Historical saved CPU runs retain their original backend.
 
@@ -242,10 +244,38 @@ python -m test_time.audit \
 
 ## Scope of the scores
 
-`configs/constraints_v1.json` defines every enabled checker, threshold, weight and assumption.
+`configs/constraints_v2.json` contains nine implemented entries, with explicit groups, roles
+and assumptions. The default profile is:
+
+| Role | IDs | Meaning |
+|---|---|---|
+| Six scored checks, retained | C033, C035, C036, C076, C077, C078 | Bedroom/bathroom feasibility and habitable area/volume |
+| Three active supporting rules | C034, C079, C080 | Bed sizes; declared wall-area model; area exclusions |
+
+The six scored checks contribute to energy and overall validity. The three supporting rules
+define their measurements and add no separate reward or pass/fail result. A check that is
+inconclusive for an individual design remains unknown. The selected set is fixed across all
+four launcher variants. Reports include these IDs and per-group metrics.
+
+List the configuration without model loading or generation:
+
+```bash
+python -m test_time.run --method baseline --list-constraints
+```
+
+C079 explicitly retains the existing **zero-thickness area proxy**; it does not infer actual wall
+thickness. C080 centralizes room-class exclusions and excludes floor area below 1.80 m under the
+declared uniform-height scenario (exactly 1.80 m is included). V2 area/volume checks become unknown
+when height is missing or `habitable_area_mode` is `unknown`. Physical room areas used for bed/bath
+placement remain unchanged. At the existing 2.5 m height, the new area rules retain the original
+area estimates. C079/C080 add supporting definitions, not two new independent scored constraints.
+
+The original `constraints_v1.json` and `scenario_v1.json` remain available through the v1 experiment
+configuration. See the [constraint implementation report](experiments/004_feasible_constraints/REPORT.md).
+
 C033/C035 share one bed placement when both pass. Finite placement-search misses are `unknown`;
-they are not proofs of infeasibility. C034 supplies bed dimensions and an auxiliary footprint check,
-so it does not inflate the six-constraint compliance denominator. C036 is empty-bathroom feasibility.
+they are not proofs of infeasibility. C034 supplies bed dimensions as a supporting rule;
+its legacy v1 auxiliary footprint diagnostic is retained only in v1. C036 is empty-bathroom feasibility.
 C076 uses `(area AND height) OR volume`; C077/C078 use the occupancy breakpoint after four people.
 Main rooms are living/bedroom; estimated habitable area includes living, bedroom, kitchen and bathroom,
 and excludes storage, balcony and outside. These are zero-thickness polygon estimates.
@@ -273,7 +303,7 @@ This is approximate SVDD-PM, not an exact sampler from the reward-tilted target 
 The headline **overall validity** requires a structurally valid graph and every applicable scored
 constraint to measurably pass. Any structural defect or failed scored check makes the sample invalid.
 Without a confirmed failure, unresolved checks make it unknown; no applicable scored checks makes
-it not applicable. Neither counts as valid. Auxiliary C034 and individual inapplicable checks are excluded.
+it not applicable. Neither counts as valid. Supporting C034/C079/C080 and individual inapplicable checks are excluded.
 The overall-valid rate divides confirmed valid samples by **all selected designs**.
 This covers the six implemented scored checks, not every constraint in the assessment.
 

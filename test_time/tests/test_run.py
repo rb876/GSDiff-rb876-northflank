@@ -91,6 +91,23 @@ def test_nonpositive_batch_size_rejected_before_loading_models(monkeypatch, flag
     assert error.value.code == 2
 
 
+@pytest.mark.parametrize("legacy", [False, True])
+def test_constraint_listing_needs_no_models_and_preserves_legacy_profile(monkeypatch, capsys, legacy):
+    def no_models(**kwargs):
+        pytest.fail("Constraint listing must not load pretrained models")
+
+    monkeypatch.setattr(adapter, "GSDiffAdapter", no_models)
+    arguments = ["run", "--method", "baseline", "--list-constraints"]
+    if legacy:
+        arguments += ["--config", str(run.Path(run.__file__).parent / "configs/experiment_v1.json")]
+    monkeypatch.setattr(sys, "argv", arguments)
+    run.main()
+    selected = json.loads(capsys.readouterr().out)
+    assert set(selected["active_scored_ids"]) == {"C033", "C035", "C036", "C076", "C077", "C078"}
+    assert selected["constraint_counts"]["registered"] == (7 if legacy else 9)
+    assert selected["disabled_constraints"] == []
+
+
 @pytest.mark.parametrize("method", ["baseline", "best_of_n", "svdd_pm"])
 def test_default_gpu_dispatch_metadata_and_final_cpu_results(monkeypatch, tmp_path, method):
     from test_time import gpu_constraints, gpu_sampling, policy

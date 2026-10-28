@@ -13,7 +13,7 @@ from .types import Scenario, overall_validity, read_json, write_json
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--config", type=Path, default=Path(__file__).parent / "configs/experiment_v1.json")
+    parser.add_argument("--config", type=Path, default=Path(__file__).parent / "configs/experiment_v2.json")
     parser.add_argument("--method", required=True, choices=["baseline", "best_of_n", "svdd_pm"])
     for name in ("trials", "seed", "n", "k", "guided_steps"):
         parser.add_argument("--" + name, type=int)
@@ -28,6 +28,8 @@ def main():
     parser.add_argument("--node-checkpoint")
     parser.add_argument("--edge-checkpoint")
     parser.add_argument("--no-progress", action="store_true", help="Hide the diffusion progress bar")
+    parser.add_argument("--list-constraints", action="store_true",
+                        help="List configured checks and supporting rules without loading models")
     args = parser.parse_args()
     config_path = args.config.resolve()
     config = {"batch_size": 4, "inference_batch_size": 10, "reward_backend": "gpu", **read_json(config_path)}
@@ -44,6 +46,15 @@ def main():
     from .constraints import load_specs
     from .policy import ConstraintEvaluator
     specs = load_specs(config_path.parent / config["constraints"])
+    from .evaluate import constraint_selection
+    selection = constraint_selection(specs)
+    if args.list_constraints:
+        print(json.dumps(selection, indent=2))
+        return
+    print("Scored constraints: " + ", ".join(selection["active_scored_ids"]), flush=True)
+    print("Supporting rules: " + ", ".join(selection["active_supporting_ids"]), flush=True)
+    if selection["disabled_constraints"]:
+        print("Not assessed: " + ", ".join(item["id"] for item in selection["disabled_constraints"]), flush=True)
     evaluator = ConstraintEvaluator(specs, validity_weight=config["validity_weight"])
     from .adapter import GSDiffAdapter, file_hash
     from . import sampling
@@ -76,6 +87,7 @@ def main():
     except (FileNotFoundError, subprocess.CalledProcessError):
         commit = None
     snapshot = {**config, "scenario": asdict(scenario), "constraints": [asdict(spec) for spec in specs],
+                "constraint_selection": selection,
                 "adapter": adapter.metadata, "repo_commit": commit,
                 "guidance": {"backend": config["reward_backend"], "device": str(adapter.device),
                              "tensor_settings": tensor_evaluator.metadata if tensor_evaluator else None,
@@ -146,6 +158,8 @@ def main():
                         candidate.candidate_id = f"trial-{trial:03d}-{candidate.candidate_id}"
                         candidate.sample.metadata.update({"config_file": "config.json", "trial": trial,
                                                           "trial_seed": seed, "candidate_id": candidate.candidate_id,
+                                                          "active_scored_ids": selection["active_scored_ids"],
+                                                          "not_assessed_ids": [item["id"] for item in selection["disabled_constraints"]],
                                                           "overall_validity": overall_validity(candidate.evaluation)})
                         prefix = output / "samples" / candidate.candidate_id
                         write_json(prefix.with_suffix(".json"), candidate.sample.to_dict())

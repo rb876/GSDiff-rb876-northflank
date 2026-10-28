@@ -29,8 +29,11 @@ def save_sample(sample, evaluation, output_prefix):
     prefix.parent.mkdir(parents=True, exist_ok=True)
     text_lines = []
     for result in evaluation["results"]:
-        auxiliary = " [auxiliary]" if not result.get("counts_toward_compliance", True) else ""
+        auxiliary = (" [supporting definition]" if result.get("role") == "supporting_rule" else
+                     " [auxiliary]" if not result.get("counts_toward_compliance", True) else "")
         text_lines.append((f"{result['id']}: {result['status']}{auxiliary}", STATUS_COLORS[result["status"]]))
+        if result.get("claim_level"):
+            text_lines.append(("Evidence: " + result["claim_level"], "#555555"))
         for label, values in (("Observed", result.get("observed_values", {})),
                               ("Thresholds", result.get("threshold_values", {}))):
             text_lines.extend((line, "#333333") for line in textwrap.wrap(f"{label}: {compact(values)}", 76))
@@ -65,6 +68,12 @@ def save_sample(sample, evaluation, output_prefix):
     provenance = scenario.get("scale_provenance", "missing")
     scale = scenario.get("coordinate_scale_m_per_model_unit")
     text(20, 44, f"Scale: {provenance}, {scale} m/drawing pixel. Geometry/scenario checks; not verified building compliance.")
+    metadata = sample.get("metadata", {})
+    if "active_scored_ids" in metadata:
+        selection = "Scored: " + ", ".join(metadata["active_scored_ids"])
+        if metadata.get("not_assessed_ids"):
+            selection += f". Not assessed: {len(metadata['not_assessed_ids'])} IDs (see config/report)."
+        text(20, 65, selection)
     finite_points = [p[:2] for p in sample["nodes"] if len(p) >= 2 and all(math.isfinite(x) for x in p[:2])]
     if finite_points:
         xmin, xmax = min(p[0] for p in finite_points), max(p[0] for p in finite_points)

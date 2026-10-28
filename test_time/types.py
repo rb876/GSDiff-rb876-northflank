@@ -23,8 +23,11 @@ class Scenario:
     assumptions: list[str] = field(default_factory=list)
     geometry_grid_m: float = 0.25
     geometry_refine_m: float = 0.05
+    habitable_area_mode: str = "zero_thickness_proxy"
 
     def __post_init__(self):
+        if self.habitable_area_mode not in {"zero_thickness_proxy", "unknown"}:
+            raise ValueError("habitable_area_mode must be zero_thickness_proxy or unknown")
         if self.scale_provenance not in {"missing", "assumed", "verified"}:
             raise ValueError("scale_provenance must be missing, assumed, or verified")
         scale = self.coordinate_scale_m_per_model_unit
@@ -75,6 +78,12 @@ class ConstraintSpec:
     source_id: str
     counts_toward_compliance: bool = True
     enabled: bool = True
+    group: str = "ungrouped"
+    role: str = "check"
+    tier: str = "graph_plus_scenario"
+    claim_level: str = "assumption_based"
+    depends_on: list[str] = field(default_factory=list)
+    disabled_reason: str | None = None
 
 
 @dataclass
@@ -90,6 +99,11 @@ class ConstraintResult:
     assumption_flags: list[str] = field(default_factory=list)
     explanation: str = ""
     counts_toward_compliance: bool = True
+    group: str = "ungrouped"
+    role: str = "check"
+    tier: str = "graph_plus_scenario"
+    claim_level: str = "assumption_based"
+    missing_fields: list[str] = field(default_factory=list)
 
 
 @dataclass

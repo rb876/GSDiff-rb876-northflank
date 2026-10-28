@@ -28,7 +28,7 @@ guided_steps="${GUIDED_STEPS:-999}"
 late_guided_steps="${LATE_GUIDED_STEPS:-200}"
 temperature="${TEMPERATURE:-0}"
 python_bin="${GSDIFF_PYTHON:-python}"
-config="${EVAL_CONFIG:-test_time/configs/experiment_v1.json}"
+config="${EVAL_CONFIG:-test_time/configs/experiment_v2.json}"
 output_root="${EVAL_OUTPUT:-test_time/outputs/evaluation_$(date -u +%Y%m%dT%H%M%SZ)}"
 
 if [[ ! "$trials" =~ ^[1-9][0-9]*$ ]] || (( ${#batch_seeds[@]} == 0 )); then

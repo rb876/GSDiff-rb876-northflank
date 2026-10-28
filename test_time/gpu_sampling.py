@@ -121,6 +121,10 @@ def _evaluation_record(values, index, evaluator):
                   "applicable": bool(values["applicable"][index, column]),
                   "measurable": bool(values["measurable"][index, column]),
                   "counts_toward_compliance": spec.counts_toward_compliance,
+                  "source_id": getattr(spec, "source_id", ""),
+                  "group": getattr(spec, "group", "ungrouped"),
+                  "role": getattr(spec, "role", "check"),
+                  "claim_level": getattr(spec, "claim_level", "assumption_based"),
                   "assumption_flags": [*spec.assumptions, "tensor_gpu_finite_grid"]}
         if "severity" in values:
             result["severity"] = _finite(values["severity"][index, column]) if result["measurable"] else None

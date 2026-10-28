@@ -228,7 +228,9 @@ def test_best_of_n_uses_gpu_selection_and_preserves_every_cpu_audit():
         assert all(candidate.sample.metadata["selection_backend"] == "tensor_gpu" for candidate in result.candidates)
 
 
-def test_real_tensor_room_and_constraint_layers_work_through_guided_sampler(monkeypatch):
+@pytest.mark.parametrize("version", [1, 2])
+def test_real_tensor_room_and_constraint_layers_work_through_guided_sampler(monkeypatch, version):
+    from pathlib import Path
     from test_time.constraints import load_specs
     from test_time.gpu_constraints import TensorConstraintEvaluator
     from test_time.gpu_graph import extract_rooms
@@ -248,7 +250,8 @@ def test_real_tensor_room_and_constraint_layers_work_through_guided_sampler(monk
 
     monkeypatch.setattr(gpu_sampling, "_extract_rooms", lambda graph: extract_rooms(**graph))
     adapter = RectangleAdapter()
-    policy = TensorConstraintEvaluator(load_specs(), max_positions=64)
+    registry = Path(__file__).parents[1] / "configs" / f"constraints_v{version}.json"
+    policy = TensorConstraintEvaluator(load_specs(registry), max_positions=64)
     audit = CpuAudit(adapter)
     scenario = Scenario(coordinate_scale_m_per_model_unit=1, scale_provenance="assumed")
     threads = torch.get_num_threads()
@@ -272,4 +275,4 @@ def test_real_tensor_room_and_constraint_layers_work_through_guided_sampler(monk
         assert [item["id"] for item in score["results"]] == policy.ids
         assert metadata["guidance_backend_settings"]["backend"] == "torch_finite_grid_v1"
         assert result.trace[0]["selected_index"] == 0
-        assert len(result.trace[0]["candidates"][0]["evaluation"]["results"]) == 7
+        assert len(result.trace[0]["candidates"][0]["evaluation"]["results"]) == (7 if version == 1 else 9)

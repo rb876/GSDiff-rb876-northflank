@@ -1,0 +1,20 @@
+{
+  "building_use": "residential",
+  "accessible_dwelling": true,
+  "intended_occupants": 2,
+  "ceiling_height_m": 2.5,
+  "coordinate_scale_m_per_model_unit": 0.025,
+  "scale_provenance": "assumed",
+  "assumptions": [
+    "User-approved experimental scale: 0.025 metres per drawing pixel; the 512-pixel canvas spans 12.8 metres. This is not a recovered RPLAN physical scale.",
+    "Uniform ceiling height of 2.5 metres is a scenario input, not generated geometry.",
+    "Bedroom checks place one standard bed; other furniture and door swings are unobserved.",
+    "Bathroom checks use empty-room geometry; fixtures and door swings are unobserved.",
+    "Habitable area is estimated from room polygon unions with zero-thickness walls and no headroom map.",
+    "C079/C080 support the area estimator only; no independent compliance success is awarded.",
+    "Uniform declared headroom below 1.80 m excludes all habitable area; exactly 1.80 m is included. Unrepresented area exclusions remain unverified."
+  ],
+  "geometry_grid_m": 0.25,
+  "geometry_refine_m": 0.05,
+  "habitable_area_mode": "zero_thickness_proxy"
+}

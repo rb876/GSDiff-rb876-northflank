@@ -1,0 +1,17 @@
+{
+  "name": "004_feasible_constraints",
+  "variant": "unconstrained_rplan",
+  "scenario": "scenario_v2.json",
+  "constraints": "constraints_v2.json",
+  "trials": 1,
+  "batch_size": 4,
+  "inference_batch_size": 10,
+  "reward_backend": "gpu",
+  "seed": 42,
+  "n": 4,
+  "k": 10,
+  "guided_steps": 999,
+  "temperature": 0.0,
+  "validity_weight": 100.0,
+  "output_root": "test_time/outputs/004_feasible_constraints"
+}

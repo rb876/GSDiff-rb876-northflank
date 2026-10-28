@@ -8,6 +8,8 @@ does not claim numerical equivalence with the Shapely/polylabel evaluator.
 import math
 import torch
 
+from .area import area_policy
+
 PASS, FAIL, UNKNOWN, NOT_APPLICABLE = 0, 1, 2, 3
 EPS = 1e-8
 
@@ -227,6 +229,17 @@ class TensorConstraintEvaluator:
         starts, ends, edge_mask = _edges(metric, vertex_mask)
         cross = starts[..., 0] * ends[..., 1] - starts[..., 1] * ends[..., 0]
         areas = torch.where(vertex_mask, cross, 0).sum(-1).abs() / 2
+        area_rules = area_policy(self.all_specs, scenario)
+        self.metadata["habitable_area_policy"] = area_rules
+        habitable_areas = areas
+        if area_rules["enabled"]:
+            included = room_mask & _labels_in(labels, area_rules["included_room_labels"])
+            if not area_rules["available"]:
+                habitable_areas = torch.full_like(areas, torch.nan)
+            elif area_rules["excluded_by_height"]:
+                habitable_areas = torch.zeros_like(areas)
+            else:
+                habitable_areas = torch.where(included, areas, 0)
         valid_room = finite & torch.isfinite(areas) & (vertex_mask.sum(-1) >= 3) & (areas > EPS) & (labels >= 0) & (labels <= 6)
         valid = rooms["structurally_valid"].bool() & room_mask.any(-1) & (~room_mask | valid_room).all(-1)
         if "has_holes" in rooms:
@@ -291,12 +304,18 @@ class TensorConstraintEvaluator:
             return torch.where(passed, PASS, torch.where(failed, FAIL, UNKNOWN))
 
         for column, spec in enumerate(self.specs):
+            if spec.checker in {"area_definition", "bed_definition"}:
+                status[:, column] = NOT_APPLICABLE
+                continue
             applicable = scenario.building_use == "residential" and (spec.applicability == "residential" or scenario.accessible_dwelling)
             if not applicable:
                 status[:, column] = NOT_APPLICABLE
                 continue
             available = {"scale": scale, "occupants": scenario.intended_occupants, "ceiling_height": scenario.ceiling_height_m}
             if any(name in available and available[name] is None for name in spec.required_observations):
+                continue
+            if (spec.checker in {"minimum_main_room", "minimum_surface", "minimum_volume"}
+                    and area_rules["enabled"] and not area_rules["available"]):
                 continue
             limits = spec.thresholds
             measured = torch.zeros(batch, device=device, dtype=dtype)
@@ -328,22 +347,25 @@ class TensorConstraintEvaluator:
                 measured = torch.where(current == PASS, 0, measured)
             elif spec.checker == "minimum_main_room":
                 target = room_mask & _labels_in(labels, limits["main_room_labels"])
+                if area_rules["enabled"]:
+                    target &= _labels_in(labels, area_rules["included_room_labels"])
                 height = scenario.ceiling_height_m
-                area_deficit = ((limits["area_m2"] - areas) / limits["area_m2"]).clamp_min(0)
+                area_deficit = ((limits["area_m2"] - habitable_areas) / limits["area_m2"]).clamp_min(0)
                 height_deficit = max(0.0, (limits["height_m"] - height) / limits["height_m"])
-                volume_deficit = ((limits["volume_m3"] - areas * height) / limits["volume_m3"]).clamp_min(0)
+                volume_deficit = ((limits["volume_m3"] - habitable_areas * height) / limits["volume_m3"]).clamp_min(0)
                 room_severity = torch.minimum(torch.maximum(area_deficit, area_deficit.new_tensor(height_deficit)), volume_deficit)
                 measured = room_severity.masked_fill(~target, torch.inf).amin(-1)
                 measured = torch.where(target.any(-1), measured, 1.0)
                 current = torch.where(measured <= EPS, PASS, FAIL)
             elif spec.checker in {"minimum_surface", "minimum_volume"}:
                 occupants = scenario.intended_occupants
+                observed = (torch.where(room_mask, habitable_areas, 0).sum(-1) if area_rules["enabled"]
+                            else area_for(limits["included_room_labels"]))
                 if spec.checker == "minimum_surface":
                     minimum = limits["first_four_m2"] * min(occupants, 4) + limits["additional_m2"] * max(occupants - 4, 0)
-                    observed = area_for(limits["included_room_labels"])
                 else:
                     minimum = limits["first_four_m3"] * min(occupants, 4) + limits["additional_m3"] * max(occupants - 4, 0)
-                    observed = area_for(limits["included_room_labels"]) * scenario.ceiling_height_m
+                    observed = observed * scenario.ceiling_height_m
                 measured = ((minimum - observed) / minimum).clamp_min(0)
                 current = torch.where(measured <= EPS, PASS, FAIL)
             else:
@@ -364,6 +386,9 @@ class TensorConstraintEvaluator:
                 "assumption_based_count": (counted & assume_flags[None]).sum(-1),
                 "validity_penalty": (~valid).to(dtype), "diagnostics": rooms["diagnostics"],
                 "room_areas_m2": areas}
+        if area_rules["enabled"]:
+            result.update(habitable_room_areas_m2=habitable_areas,
+                          habitable_area_m2=torch.where(room_mask, habitable_areas, 0).sum(-1))
         result.update({"geometry_" + name: value for name, value in geometry.items()
                        if isinstance(value, torch.Tensor)})
         return result

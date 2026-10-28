@@ -8,7 +8,7 @@ from pathlib import Path
 from PIL import Image
 import pytest
 
-from test_time.evaluate import comparison_group, summarize_run, write_comparison, write_report
+from test_time.evaluate import constraint_selection, comparison_group, summarize_run, write_comparison, write_report
 from test_time.types import ConstraintResult, FloorplanSample, PolicyEvaluation, Room, write_json
 from test_time.visualize import save_sample
 
@@ -293,3 +293,102 @@ def test_gpu_metadata_never_overrides_cpu_final_metrics_and_counters_export(tmp_
         saved = next(csv.DictReader(stream))
     assert saved["reward_backend"] == "gpu"
     assert saved["gpu_candidate_evaluations"] == "100" and saved["cpu_candidate_evaluations"] == "1"
+
+
+def registry_v2():
+    groups = {"bedroom_accessibility": ["C033", "C034", "C035"],
+              "bathroom_fixtures_turning": ["C036"],
+              "habitability": ["C076", "C077", "C078", "C079", "C080"]}
+    supporting = {"C034", "C079", "C080"}
+    return [{"id": identifier, "group": group,
+             "role": "supporting_rule" if identifier in supporting else "check",
+             "counts_toward_compliance": identifier not in supporting,
+             "enabled": True}
+            for group, identifiers in groups.items() for identifier in identifiers]
+
+
+def set_registry(directory, specs):
+    config = json.loads((directory / "config.json").read_text())
+    config["constraints"] = specs
+    write_json(directory / "config.json", config)
+
+
+def test_registry_selection_counts_and_legacy_auxiliary_role():
+    selected = constraint_selection(registry_v2())
+    assert selected["constraint_counts"] == {"registered": 9, "scored": 6, "supporting": 3,
+                                             "active": 9, "active_scored": 6, "active_supporting": 3, "disabled": 0}
+    assert selected["active_scored_ids"] == ["C033", "C035", "C036", "C076", "C077", "C078"]
+    assert selected["active_supporting_ids"] == ["C034", "C079", "C080"]
+    assert selected["disabled_constraints"] == []
+    legacy = constraint_selection([{"id": "C034", "role": "check", "counts_toward_compliance": False},
+                                   {"id": "C076"}, {"id": "C030", "enabled": False}])
+    assert legacy["active_supporting_ids"] == ["C034"] and legacy["active_scored_ids"] == ["C076"]
+    assert "reason not recorded" in legacy["disabled_constraints"][0]["reason"]
+
+
+def test_v2_groups_and_supporting_rules_do_not_inflate_denominators(tmp_path):
+    ids = ["C033", "C035", "C036", "C076", "C077", "C078"]
+    first = [result(identifier, "pass") for identifier in ids]
+    second = [result(identifier, "unknown" if identifier == "C033" else "fail" if identifier == "C036" else "pass")
+              for identifier in ids]
+    for checks in (first, second):
+        # Registry roles must remain authoritative even if a stored result used
+        # default counts=True.
+        checks.extend([result("C034", "fail"), result("C079", "unknown"), result("C080", "pass")])
+    directory = make_run(tmp_path / "v2", [candidate(0, first), candidate(1, second)])
+    set_registry(directory, registry_v2())
+    saved_rows = (directory / "candidates.jsonl").read_text()
+    summary = write_report(directory)
+    assert summary["constraint_counts"]["registered"] == 9
+    assert summary["applicable_count"] == 12 and summary["measurable_count"] == 11
+    assert summary["pass"] == 10 and summary["fail"] == summary["unknown"] == 1
+    assert summary["compliance"] == pytest.approx(10 / 11)
+    assert summary["overall_valid_rate"] == 0.5
+    assert set(summary["per_constraint"]) == set(ids)
+    assert set(summary["auxiliary_checks"]) == {"C034", "C079", "C080"}
+    assert summary["all_candidates"]["applicable_count"] == 12
+    bedroom = summary["per_group"]["bedroom_accessibility"]
+    assert bedroom["overall_validity_counts"] == {"valid": 1, "invalid": 0, "unknown": 1,
+                                                 "not_applicable": 0, "not_assessed": 0}
+    assert bedroom["check_pass_rate"] == 0.75 and bedroom["compliance"] == 1.0
+    assert summary["per_group"]["habitability"]["overall_valid_rate"] == 1.0
+    assert set(summary["per_group"]) == {"bedroom_accessibility", "bathroom_fixtures_turning", "habitability"}
+    assert all(group["status"] == "assessed" for group in summary["per_group"].values())
+    assert (directory / "candidates.jsonl").read_text() == saved_rows
+    markdown = (directory / "report.md").read_text()
+    assert "9 IDs" in markdown and "6 scored checks" in markdown
+    assert "disabled" not in markdown.lower() and "not_assessed" not in markdown
+    comparison = write_comparison(tmp_path, [summary])[0]
+    assert comparison["registered_constraint_ids"] == 9 and comparison["disabled_constraint_count"] == 0
+    assert "disabled" not in (tmp_path / "comparison.md").read_text().lower()
+    assert comparison["active_scored_count"] == 6 and comparison["active_supporting_count"] == 3
+
+
+def test_missing_active_evaluation_cannot_become_headline_or_group_pass(tmp_path):
+    checks = [result(identifier, "pass") for identifier in ["C033", "C035", "C036", "C076", "C077"]]
+    directory = make_run(tmp_path / "missing", [candidate(0, checks)])
+    set_registry(directory, registry_v2())
+    saved = (directory / "candidates.jsonl").read_text()
+    summary = write_report(directory)
+    assert summary["overall_valid_rate"] == 0
+    assert summary["overall_validity_counts"]["unknown"] == 1
+    assert summary["per_constraint"]["C078"]["unknown"] == 1
+    assert summary["per_constraint"]["C078"]["measurable_count"] == 0
+    assert summary["missing_active_results"] == [{"trial": 0, "candidate_id": "0", "ids": ["C078"]}]
+    group = summary["per_group"]["habitability"]
+    assert group["overall_valid_rate"] == 0 and group["overall_validity_counts"]["unknown"] == 1
+    assert group["missing_result_count"] == 1
+    assert (directory / "candidates.jsonl").read_text() == saved
+
+
+def test_group_with_only_supporting_rules_is_not_assessed(tmp_path):
+    directory = make_run(tmp_path / "supporting", [candidate(0, [result("C034", "unknown"), result("C030", "fail")])])
+    specs = [{"id": "C034", "group": "bedroom", "enabled": True, "role": "supporting_rule"},
+             {"id": "C030", "group": "programme", "enabled": False, "disabled_reason": "No WC metadata"}]
+    set_registry(directory, specs)
+    summary = write_report(directory)
+    assert summary["overall_valid_rate"] == 0 and summary["overall_validity_counts"]["not_applicable"] == 1
+    assert summary["applicable_count"] == summary["pass"] == summary["unknown"] == 0
+    assert summary["per_group"]["bedroom"]["status"] == "not_assessed"
+    assert summary["per_group"]["programme"]["status"] == "not_assessed"
+    assert summary["per_group"]["bedroom"]["active_supporting_ids"] == ["C034"]
