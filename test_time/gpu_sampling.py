@@ -9,7 +9,7 @@ import math
 
 import torch
 
-from .sampling import (_batch_inputs, _candidate_seed, _finish_batch, _scored_sample,
+from .sampling import (_batch_inputs, _candidate_seed, _finish_batch, _reverse_steps, _scored_sample,
                        _start, _svdd_parameters, baseline_batch)
 from .types import SamplingResult
 
@@ -159,11 +159,12 @@ def _finish(adapter, started, counts, results, inference_batch_size):
 @torch.no_grad()
 def svdd_pm_batch_gpu(adapter, cpu_evaluator, scenario, seeds, k=10, guided_steps=999,
                       temperature=0.0, inference_batch_size=10, tensor_evaluator=None,
-                      progress_callback=None):
+                      progress_callback=None, progress=None):
     seeds = _batch_inputs(seeds, inference_batch_size)
     parameters = _svdd_parameters(adapter, k, guided_steps, temperature)
     if k == 1 or guided_steps == 0:
-        results, stats = baseline_batch(adapter, cpu_evaluator, scenario, seeds, inference_batch_size)
+        results, stats = baseline_batch(adapter, cpu_evaluator, scenario, seeds, inference_batch_size,
+                                        progress=progress)
         for result in results:
             result.candidates[0].sample.metadata.update({"method": "svdd_pm", "method_parameters": parameters,
                                                         "guidance_backend": "tensor_gpu", "guidance_applied": False,
@@ -188,7 +189,7 @@ def svdd_pm_batch_gpu(adapter, cpu_evaluator, scenario, seeds, k=10, guided_step
                                 generator=torch.Generator(device=device).manual_seed(_candidate_seed(seed, 0x53564444)))
                                 for seed in seeds])
     records, timesteps = [], []
-    for step in range(adapter.steps - 1, -1, -1):
+    for step in _reverse_steps(adapter, progress):
         parent_clean = adapter.predict_x0_batch(states, step, batch_size=inference_batch_size)
         if not 1 <= step <= guided_steps:
             states = [adapter.sample_transition(state, step, rng, x0=clean)
@@ -241,7 +242,7 @@ def svdd_pm_batch_gpu(adapter, cpu_evaluator, scenario, seeds, k=10, guided_step
 
 @torch.no_grad()
 def best_of_n_batch_gpu(adapter, cpu_evaluator, scenario, seeds, n=4,
-                        inference_batch_size=10, tensor_evaluator=None):
+                        inference_batch_size=10, tensor_evaluator=None, progress=None):
     seeds = _batch_inputs(seeds, inference_batch_size)
     if not isinstance(n, int) or n < 1:
         raise ValueError("n must be a positive integer")
@@ -250,7 +251,7 @@ def best_of_n_batch_gpu(adapter, cpu_evaluator, scenario, seeds, n=4,
     candidate_seeds = [_candidate_seed(seed, index) for seed in seeds for index in range(n)]
     rngs = [adapter.new_rng(seed) for seed in candidate_seeds]
     states = [adapter.initial_state(rng) for rng in rngs]
-    for step in range(adapter.steps - 1, -1, -1):
+    for step in _reverse_steps(adapter, progress):
         clean = adapter.predict_x0_batch(states, step, batch_size=inference_batch_size)
         states = [adapter.sample_transition(state, step, rng, x0=x0)
                   for state, rng, x0 in zip(states, rngs, clean)]

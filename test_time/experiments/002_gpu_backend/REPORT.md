@@ -52,6 +52,10 @@ The first node test exposed older-PyTorch incompatibilities. Tuple-dimension `an
 now use flattened single-dimension reductions, and boolean scatter reductions use integer buffers.
 A regression test enforces those older API restrictions locally; the corrected CUDA run remains pending.
 
+The runner now displays a `tqdm` bar for each batch across all methods/backends, showing reverse
+steps, elapsed time, approximate speed and ETA. The bar covers diffusion; final audits and export
+follow. `--no-progress` hides the display. Sampling settings and random streams are unchanged.
+
 ## Node commands
 
 Run unit tests and check the saved pilot using CUDA, without generating new designs:

@@ -124,8 +124,11 @@ python -m test_time.run --method svdd_pm --trials 4 --seed 1000 \
   --batch_size 4 --inference_batch_size 10
 ```
 
-`--inference_batch_size` also limits the number of graphs scored together. Progress is printed
-at the first, every 50th and last guided step. Output locations are printed at startup;
+`--inference_batch_size` also limits the number of graphs scored together. All methods show a
+`tqdm` bar per batch with diffusion steps completed, elapsed time, approximate steps/s (or s/step),
+and estimated time remaining. It covers all 1,000 reverse steps; a step processes the whole batch,
+including SVDD proposals when guided. Final validation and export follow the bar. Use `--no-progress`
+to hide it. Output locations are printed at startup;
 the default is a new directory under `test_time/outputs/001_constraints/`.
 Best-of-N uses the same GPU backend by default. Pass `--reward_backend cpu` to opt into the
 reference CPU guidance implementation. Historical saved CPU runs retain their original backend.
@@ -161,12 +164,22 @@ Preview it from the repository root (no models run and no outputs are created):
 bash test_time/launch_eval.sh
 ```
 
-Its proposed defaults are five batches of 200 trials: **1,000 selected designs per method**.
-Each batch uses a different range of 200 design seeds, shared by all three methods.
-Baseline, Best-of-2 and SVDD-PM (K=10, 999 guided steps, temperature 0) run serially,
-with method order rotated between batches. Best-of-2 remains a provisional launcher setting;
-it has not been calibrated against full-guidance SVDD-PM. Recalibrate `BEST_N` using measured
-runtime before a larger comparison.
+Its default is one seed batch starting at 10000, with 100 trials: **100 selected designs per variant**, or
+**400 selected designs total**. The batch shares its 100 design seeds across four variants:
+
+| Variant directory | Configuration |
+|---|---|
+| `baseline` | Unconstrained generation |
+| `best_of_n` | Best-of-2 |
+| `svdd_pm_full` | K=10, temperature 0, guidance at `t=999,...,1` |
+| `svdd_pm_last20` | K=10, temperature 0, guidance at `t=200,...,1` |
+
+Every trajectory still denoises for all 1,000 steps. The late variant guides only the final
+200 stochastic steps (approximately 20%); neither variant guides deterministic `t=0`.
+Both SVDD variants use `--method svdd_pm` with different `--guided_steps` values.
+Variants run serially, with order rotated between batches. Their compute budgets differ;
+Best-of-2 is provisional and does not automatically match either SVDD variant's cost.
+See the [pending guidance-window experiment](experiments/003_guidance_window/REPORT.md).
 
 The following is the explicit launch command for later, inside the activated Northflank environment:
 
@@ -175,7 +188,8 @@ bash test_time/launch_eval.sh --run
 ```
 
 Override settings through `EVAL_SEEDS` (space-separated batch start seeds), `TRIALS_PER_RUN`,
-`BEST_N`, `SVDD_K`, `GUIDED_STEPS`, `TEMPERATURE`, `BATCH_SIZE`, `INFERENCE_BATCH_SIZE`, `REWARD_BACKEND`,
+`BEST_N`, `SVDD_K`, `GUIDED_STEPS` (full variant, default 999), `LATE_GUIDED_STEPS` (late variant, default 200),
+`TEMPERATURE`, `BATCH_SIZE`, `INFERENCE_BATCH_SIZE`, `REWARD_BACKEND`,
 `EVAL_CONFIG`, `EVAL_OUTPUT`, or `GSDIFF_PYTHON`.
 For example, preview one small calibration batch:
 
@@ -187,9 +201,10 @@ The launcher defaults to `REWARD_BACKEND=gpu`; set `REWARD_BACKEND=cpu` for refe
 Recalibrate matched compute after
 changing this backend; CPU-guided timings do not establish a budget for GPU guidance.
 
-Each batch gets method logs, saved candidates, reports and its own comparison table.
+Each batch gets separate variant directories, logs, configs, saved candidates and reports;
+its comparison table includes both SVDD variants.
 The script stops on failure; interrupted-run resume is not implemented.
-The existing evaluator does **not** pool the five batches or calculate confidence intervals,
+The existing evaluator does **not** pool results across batches or calculate confidence intervals,
 near-duplicate rates, or geometric/structural diversity distances. Those reporting additions
 and compute-budget calibration remain to be done
 before treating this as the final evaluation. Aggregate by paired trial seed, not the Best-of-N winner's seed.

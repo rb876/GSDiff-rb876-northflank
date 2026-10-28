@@ -13,6 +13,7 @@ import math
 import time
 
 import numpy as np
+from tqdm.auto import tqdm
 
 from .types import Candidate, SamplingResult
 
@@ -214,6 +215,11 @@ def _batch_inputs(seeds, inference_batch_size):
     return seeds
 
 
+def _reverse_steps(adapter, progress=None):
+    return tqdm(range(adapter.steps - 1, -1, -1), desc=progress, unit="step",
+                disable=progress is None, dynamic_ncols=True, mininterval=1)
+
+
 def _finish_batch(adapter, started, counts, results, inference_batch_size):
     """Actual calls/time belong to the batch; trial timings are amortized."""
     stats = _stats(adapter, started, counts,
@@ -232,13 +238,13 @@ def _finish_batch(adapter, started, counts, results, inference_batch_size):
     return results, stats
 
 
-def baseline_batch(adapter, evaluator, scenario, seeds, inference_batch_size=10):
+def baseline_batch(adapter, evaluator, scenario, seeds, inference_batch_size=10, progress=None):
     """Generate independent trajectories with shared neural-network forwards."""
     seeds = _batch_inputs(seeds, inference_batch_size)
     started, counts = _start(adapter)
     rngs = [adapter.new_rng(seed) for seed in seeds]
     states = [adapter.initial_state(rng) for rng in rngs]
-    for step in range(adapter.steps - 1, -1, -1):
+    for step in _reverse_steps(adapter, progress):
         clean = adapter.predict_x0_batch(states, step, batch_size=inference_batch_size)
         states = [adapter.sample_transition(state, step, rng, x0=x0)
                   for state, rng, x0 in zip(states, rngs, clean)]
@@ -249,13 +255,14 @@ def baseline_batch(adapter, evaluator, scenario, seeds, inference_batch_size=10)
     return _finish_batch(adapter, started, counts, results, inference_batch_size)
 
 
-def best_of_n_batch(adapter, evaluator, scenario, seeds, n=4, inference_batch_size=10):
+def best_of_n_batch(adapter, evaluator, scenario, seeds, n=4, inference_batch_size=10, progress=None):
     seeds = _batch_inputs(seeds, inference_batch_size)
     if not isinstance(n, int) or n < 1:
         raise ValueError("n must be a positive integer")
     started, counts = _start(adapter)
     candidate_seeds = [_candidate_seed(seed, index) for seed in seeds for index in range(n)]
-    completed, _ = baseline_batch(adapter, evaluator, scenario, candidate_seeds, inference_batch_size)
+    completed, _ = baseline_batch(adapter, evaluator, scenario, candidate_seeds, inference_batch_size,
+                                  progress=progress)
     results = []
     for trial, seed in enumerate(seeds):
         candidates = [result.candidates[0] for result in completed[trial * n:(trial + 1) * n]]
@@ -273,12 +280,13 @@ def best_of_n_batch(adapter, evaluator, scenario, seeds, n=4, inference_batch_si
 
 
 def svdd_pm_batch(adapter, evaluator, scenario, seeds, k=10, guided_steps=999,
-                  temperature=0.0, inference_batch_size=10):
+                  temperature=0.0, inference_batch_size=10, progress=None):
     """Batch trial/proposal model calls; retain independent per-trial RNGs."""
     seeds = _batch_inputs(seeds, inference_batch_size)
     parameters = _svdd_parameters(adapter, k, guided_steps, temperature)
     if k == 1 or guided_steps == 0:
-        results, stats = baseline_batch(adapter, evaluator, scenario, seeds, inference_batch_size)
+        results, stats = baseline_batch(adapter, evaluator, scenario, seeds, inference_batch_size,
+                                        progress=progress)
         for result in results:
             result.candidates[0].sample.metadata.update({"method": "svdd_pm",
                                                         "method_parameters": parameters})
@@ -291,7 +299,7 @@ def svdd_pm_batch(adapter, evaluator, scenario, seeds, k=10, guided_steps=999,
     choice_rngs = [np.random.default_rng(np.random.SeedSequence([seed, 0x53564444])) for seed in seeds]
     states = [adapter.initial_state(rng) for rng in rngs]
     traces = [[] for _ in seeds]
-    for step in range(adapter.steps - 1, -1, -1):
+    for step in _reverse_steps(adapter, progress):
         parent_clean = adapter.predict_x0_batch(states, step, batch_size=inference_batch_size)
         if not 1 <= step <= guided_steps:
             states = [adapter.sample_transition(state, step, rng, x0=clean)

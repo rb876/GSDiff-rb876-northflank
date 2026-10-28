@@ -18,6 +18,7 @@ These Markdown files are ready to paste into HackMD.
 | 000 — baseline | Can we reproduce released unconstrained inference? | [Report](experiments/000_baseline/REPORT.md) |
 | 001 — constraints | Implementation verified; three-trial pilot inspected | [Report](experiments/001_constraints/REPORT.md) |
 | 002 — GPU backend | Tensor geometry and guidance; offline implementation audit | [Report](experiments/002_gpu_backend/REPORT.md) |
+| 003 — guidance window | Pending: full SVDD guidance versus the final 200 stochastic steps | [Report](experiments/003_guidance_window/REPORT.md) |
 
 ## Measurement policy
 
@@ -48,6 +49,12 @@ are retained, with finite-search limitations recorded. Final exported designs al
 audit. Reports count batch time once and separate forward calls from processed states.
 H100 throughput and memory for the new backend have not yet been benchmarked.
 The launcher also defaults to `REWARD_BACKEND=gpu`; set it to `cpu` for the reference comparison.
+The planned evaluation uses one seed batch starting at 10000, with 100 selected designs for each of four variants:
+baseline, Best-of-2, full SVDD-PM and SVDD-PM guided only at `t=200,...,1` (approximately the final 20%).
+This gives **100 selected designs per variant, 400 total**, using paired design seeds.
+All trajectories denoise for 1,000 steps; both SVDD variants use K=10 and temperature 0 and leave
+deterministic `t=0` unguided. Their compute budgets differ and are not automatically matched.
+This evaluation has not been launched.
 
 ## Current status
 

@@ -27,6 +27,7 @@ def main():
     parser.add_argument("--device", default="cuda:0")
     parser.add_argument("--node-checkpoint")
     parser.add_argument("--edge-checkpoint")
+    parser.add_argument("--no-progress", action="store_true", help="Hide the diffusion progress bar")
     args = parser.parse_args()
     config_path = args.config.resolve()
     config = {"batch_size": 4, "inference_batch_size": 10, "reward_backend": "gpu", **read_json(config_path)}
@@ -110,7 +111,9 @@ def main():
                 trial_ids = list(range(first_trial, min(first_trial + config["batch_size"], config["trials"])))
                 seeds = [config["seed"] + trial for trial in trial_ids]
                 arguments = (adapter, evaluator, scenario, seeds)
-                batch_options = {"inference_batch_size": config["inference_batch_size"]}
+                batch_options = {"inference_batch_size": config["inference_batch_size"],
+                                 "progress": None if args.no_progress else
+                                 f"{args.method} trials {first_trial + 1}-{trial_ids[-1] + 1}"}
                 if args.method == "baseline":
                     results, batch_stats = sampling.baseline_batch(*arguments, **batch_options)
                 elif tensor_evaluator is not None:
@@ -121,10 +124,7 @@ def main():
                     else:
                         results, batch_stats = gpu_sampling.svdd_pm_batch_gpu(
                             *arguments, k=config["k"], guided_steps=config["guided_steps"],
-                            temperature=config["temperature"], tensor_evaluator=tensor_evaluator,
-                            progress_callback=lambda current, total: print(
-                                f"svdd_pm trials {first_trial + 1}-{trial_ids[-1] + 1}: "
-                                f"guided step {current}/{total}", flush=True), **batch_options)
+                            temperature=config["temperature"], tensor_evaluator=tensor_evaluator, **batch_options)
                 elif args.method == "best_of_n":
                     results, batch_stats = sampling.best_of_n_batch(*arguments, n=config["n"], **batch_options)
                 else:
