@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Preview by default. Run manually inside Northflank with --run after calibration.
+# Preview by default. Run manually inside Northflank with --run.
 set -euo pipefail
 
 case "${1:---dry-run}" in
@@ -22,7 +22,6 @@ trials="${TRIALS_PER_RUN:-100}"
 batch_size="${BATCH_SIZE:-4}"
 inference_batch_size="${INFERENCE_BATCH_SIZE:-10}"
 reward_backend="${REWARD_BACKEND:-gpu}"
-best_n="${BEST_N:-2}"
 svdd_k="${SVDD_K:-10}"
 guided_steps="${GUIDED_STEPS:-999}"
 late_guided_steps="${LATE_GUIDED_STEPS:-200}"
@@ -30,6 +29,29 @@ temperature="${TEMPERATURE:-0}"
 python_bin="${GSDIFF_PYTHON:-python}"
 config="${EVAL_CONFIG:-test_time/configs/experiment_v2.json}"
 output_root="${EVAL_OUTPUT:-test_time/outputs/evaluation_$(date -u +%Y%m%dT%H%M%SZ)}"
+
+# Match evaluated denoiser states, not batched forward calls or elapsed time.
+# SVDD uses T + K*G states per output; K=1 takes the baseline shortcut.
+denoising_steps=1000
+if [[ -n "${BEST_N:-}" ]]; then
+  echo "BEST_N is now calculated from full SVDD. Unset BEST_N to match its denoiser budget." >&2
+  exit 2
+fi
+if [[ ! "$svdd_k" =~ ^[1-9][0-9]*$ ]]; then
+  echo "SVDD_K must be a positive integer." >&2
+  exit 2
+fi
+for steps in "$guided_steps" "$late_guided_steps"; do
+  if [[ ! "$steps" =~ ^(0|[1-9][0-9]*)$ ]] || (( steps >= denoising_steps )); then
+    echo "GUIDED_STEPS and LATE_GUIDED_STEPS must be integers from 0 to 999." >&2
+    exit 2
+  fi
+done
+full_states=$((denoising_steps + (svdd_k > 1 ? svdd_k * guided_steps : 0)))
+late_states=$((denoising_steps + (svdd_k > 1 ? svdd_k * late_guided_steps : 0)))
+# N must be an integer: round to the nearest complete trajectory, ties upward.
+best_n=$(((full_states + denoising_steps / 2) / denoising_steps))
+variants=(baseline best_of_n svdd_pm_last20 svdd_pm_full)
 
 if [[ ! "$trials" =~ ^[1-9][0-9]*$ ]] || (( ${#batch_seeds[@]} == 0 )); then
   echo "TRIALS_PER_RUN must be positive and EVAL_SEEDS must contain batch start seeds." >&2
@@ -49,14 +71,18 @@ for ((i=0; i<${#batch_seeds[@]}; i++)); do
 done
 
 printf 'Mode: %s\n' "$([[ "$dry_run" == true ]] && echo preview || echo run)"
-printf 'Plan: %s batches x %s trials = %s selected outputs per variant (four variants).\n' \
-  "${#batch_seeds[@]}" "$trials" "$(( ${#batch_seeds[@]} * trials ))"
-printf 'Best-of-%s; SVDD K=%s, full guidance=%s steps, late guidance=%s steps, temperature=%s.\n' \
-  "$best_n" "$svdd_k" "$guided_steps" "$late_guided_steps" "$temperature"
+printf 'Plan: %s batches x %s trials = %s selected outputs per variant (%s variants).\n' \
+  "${#batch_seeds[@]}" "$trials" "$(( ${#batch_seeds[@]} * trials ))" "${#variants[@]}"
+printf 'SVDD K=%s, full guidance=%s steps, late guidance=%s steps, temperature=%s.\n' \
+  "$svdd_k" "$guided_steps" "$late_guided_steps" "$temperature"
+printf 'Target denoiser states per output: full SVDD=%s vs Best-of-%s=%s.\n' \
+  "$full_states" "$best_n" "$((best_n * denoising_steps))"
+printf 'Late SVDD uses %s states per output and is a separate, unmatched comparison.\n' "$late_states"
+printf 'N uses nearest-integer rounding. Reports verify measured counts; edge models, rewards and runtime are not matched.\n'
 printf 'Both SVDD variants denoise all 1000 steps; t=0 is deterministic and unguided.\n'
 printf 'Generation batch size=%s; maximum neural inference batch size=%s.\n' "$batch_size" "$inference_batch_size"
 printf 'Reward backend=%s; final evaluation uses the CPU reference checker.\n' "$reward_backend"
-printf 'Compute matching is provisional until calibrated. Output: %s\n' "$output_root"
+printf 'Output: %s\n' "$output_root"
 
 if [[ "$dry_run" == false ]]; then
   if [[ -e "$output_root" ]]; then
@@ -65,6 +91,19 @@ if [[ "$dry_run" == false ]]; then
   fi
   mkdir -p "$output_root"
   cp -- "$repo_dir/test_time/launch_eval.sh" "$output_root/launcher.sh"
+  cat > "$output_root/compute_budget.json" <<EOF
+{
+  "metric": "denoiser_evaluated_states_per_selected_output",
+  "denoising_steps": $denoising_steps,
+  "svdd_k": $svdd_k,
+  "rounding": "nearest integer N, ties upward",
+  "runtime_matched": false,
+  "pairs": [
+    {"best_of_n": "best_of_n", "svdd": "svdd_pm_full", "n": $best_n,
+     "guided_steps": $guided_steps, "svdd_states": $full_states, "best_of_n_states": $((best_n * denoising_steps))}
+  ]
+}
+EOF
 fi
 
 execute() {
@@ -74,14 +113,12 @@ execute() {
   fi
 }
 
-variants=(baseline best_of_n svdd_pm_last20 svdd_pm_full)
 for ((batch=0; batch<${#batch_seeds[@]}; batch++)); do
   seed="${batch_seeds[batch]}"
   batch_dir="$output_root/batch_$((batch + 1))_seed_${seed}"
   printf '\nBatch %s: paired design seeds %s..%s\n' "$((batch + 1))" "$seed" "$((seed + trials - 1))"
-  # Run serially on the same GPU; rotate variant order across batches.
-  for ((offset=0; offset<${#variants[@]}; offset++)); do
-    variant="${variants[(batch + offset) % ${#variants[@]}]}"
+  # Keep the shorter SVDD comparison before full-trajectory guidance.
+  for variant in "${variants[@]}"; do
     method="$variant"
     extra=()
     case "$variant" in

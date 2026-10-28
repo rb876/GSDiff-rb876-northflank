@@ -150,6 +150,7 @@ def test_batched_compute_preserves_calls_states_and_total_time(tmp_path):
     assert summary["parameters"]["inference_batch_size"] == 10
     assert summary["compute"]["total_wall_seconds"] == 12
     assert summary["compute"]["wall_seconds_per_trial"] == 3
+    assert summary["compute"]["node_samples_per_trial"] == 1000
     assert (summary["compute"]["node_calls"], summary["compute"]["node_samples"]) == (1000, 4000)
     assert (summary["compute"]["edge_calls"], summary["compute"]["edge_samples"]) == (1, 4)
     report = (directory / "report.md").read_text()
@@ -161,6 +162,7 @@ def test_batched_compute_preserves_calls_states_and_total_time(tmp_path):
     with (tmp_path / "comparison.csv").open() as stream:
         saved = next(csv.DictReader(stream))
     assert saved["node_calls"] == "1000" and saved["node_samples"] == "4000"
+    assert saved["node_samples_per_trial"] == "1000.0"
 
 
 def test_legacy_state_counts_are_unknown_and_batching_defaults_to_one(tmp_path):
@@ -168,6 +170,7 @@ def test_legacy_state_counts_are_unknown_and_batching_defaults_to_one(tmp_path):
     summary = write_report(directory)
     assert summary["parameters"]["batch_size"] == summary["parameters"]["inference_batch_size"] == 1
     assert summary["compute"]["node_samples"] is None and summary["compute"]["edge_samples"] is None
+    assert summary["compute"]["node_samples_per_trial"] is None
     assert summary["parameters"]["reward_backend"] == "cpu"
     assert summary["compute"]["gpu_candidate_evaluations"] is None
     assert summary["compute"]["cpu_candidate_evaluations"] is None
@@ -180,7 +183,75 @@ def test_legacy_state_counts_are_unknown_and_batching_defaults_to_one(tmp_path):
     write_comparison(tmp_path, [summary])
     with (tmp_path / "comparison.csv").open() as stream:
         row = next(csv.DictReader(stream))
-    assert row["node_samples"] == row["edge_samples"] == ""
+    assert row["node_samples"] == row["edge_samples"] == row["node_samples_per_trial"] == ""
+
+
+def denoiser_run(path, method, evaluations, trial_ids=(0, 1), **settings):
+    directory = make_run(path, [candidate(trial, [result("C076", "pass")]) for trial in trial_ids],
+                         method=method)
+    config = json.loads((directory / "config.json").read_text())
+    config.update(seed=10000, batch_size=4, inference_batch_size=10, **settings)
+    write_json(directory / "config.json", config)
+    run = json.loads((directory / "run.json").read_text())
+    run.update(status="complete", node_samples=evaluations * len(trial_ids) if evaluations is not None else None)
+    write_json(directory / "run.json", run)
+    return directory
+
+
+def test_denoiser_matching_uses_recorded_states_for_both_svdd_budgets(tmp_path):
+    directories = [
+        denoiser_run(tmp_path / "best_late", "best_of_n", 3000, n=3),
+        denoiser_run(tmp_path / "svdd_late", "svdd_pm", 3000, k=10, guided_steps=200),
+        denoiser_run(tmp_path / "best_full", "best_of_n", 11000, n=11),
+        denoiser_run(tmp_path / "svdd_full", "svdd_pm", 10990, k=10, guided_steps=999),
+    ]
+    summaries = [write_report(directory) for directory in directories]
+    rows = write_comparison(tmp_path, summaries)
+    assert [row["node_samples_per_trial"] for row in rows] == [3000, 3000, 11000, 10990]
+    # Every fake run records identical calls and time; matches must use states instead.
+    saved = json.loads((tmp_path / "denoiser_comparison.json").read_text())
+    assert saved["metric"] == "node_samples_per_selected_output"
+    pairs = {(pair["best_of_n"], pair["svdd"]): pair for pair in saved["comparisons"]}
+    assert len(pairs) == 4
+    late = pairs["best_late", "svdd_late"]
+    assert late["matched"] and late["exact"] and late["ratio_best_of_n_to_svdd"] == 1
+    full = pairs["best_full", "svdd_full"]
+    assert full["matched"] and not full["exact"]
+    assert full["relative_difference"] == pytest.approx(10 / 10990)
+    assert not pairs["best_late", "svdd_full"]["matched"]
+    assert not pairs["best_full", "svdd_late"]["matched"]
+    markdown = (tmp_path / "comparison.md").read_text()
+    assert "0.091%" in markdown and "within 1%" in markdown
+    assert "Edge prediction, constraint checks and elapsed time are not matched" in markdown
+    assert "Approximately matched compute" not in markdown
+
+
+@pytest.mark.parametrize("difference", ["seed", "unknown_seed", "batch_size", "inference_batch_size", "partial", "trials", "trial_ids"])
+def test_denoiser_matching_requires_complete_paired_compatible_runs(tmp_path, difference):
+    best_dir = denoiser_run(tmp_path / "best", "best_of_n", 3000)
+    trials = (0,) if difference == "trials" else (0, 2) if difference == "trial_ids" else (0, 1)
+    svdd_dir = denoiser_run(tmp_path / "svdd", "svdd_pm", 3000, trial_ids=trials)
+    config = json.loads((svdd_dir / "config.json").read_text())
+    if difference in {"seed", "unknown_seed"}:
+        config["seed"] = 20000 if difference == "seed" else None
+    elif difference in {"batch_size", "inference_batch_size"}:
+        config[difference] = 1
+    elif difference == "partial":
+        config["trials"] = 100
+    write_json(svdd_dir / "config.json", config)
+    write_comparison(tmp_path, [write_report(best_dir), write_report(svdd_dir)])
+    saved = json.loads((tmp_path / "denoiser_comparison.json").read_text())
+    assert saved["comparisons"] == []
+
+
+def test_denoiser_matching_preserves_unknown_counts(tmp_path):
+    best = write_report(denoiser_run(tmp_path / "best", "best_of_n", None))
+    svdd = write_report(denoiser_run(tmp_path / "svdd", "svdd_pm", 3000))
+    write_comparison(tmp_path, [best, svdd])
+    pair = json.loads((tmp_path / "denoiser_comparison.json").read_text())["comparisons"][0]
+    assert pair["best_of_n_evaluations_per_output"] is None
+    assert pair["ratio_best_of_n_to_svdd"] is pair["relative_difference"] is pair["matched"] is pair["exact"] is None
+    assert "| unknown |" in (tmp_path / "comparison.md").read_text()
 
 
 @pytest.mark.parametrize("batch_size,inference_batch_size", [(4, 1), (1, 10)])

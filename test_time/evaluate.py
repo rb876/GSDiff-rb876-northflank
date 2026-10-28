@@ -271,6 +271,7 @@ def summarize_run(run_dir):
         "comparison_group": comparison_group(config), "scenario": config.get("scenario", {}),
         "status": status, "expected_trials": expected_trials,
         "selected_trials": count, "saved_final_candidates": len(rows),
+        "trial_seed_start": config.get("seed"), "selected_trial_ids": sorted(trial_ids),
         "selected_candidate_ids": [r.get("candidate_id", "") for r in selected],
         **selection,
         "missing_active_results": [{"trial": row["trial"], "candidate_id": row.get("candidate_id", ""),
@@ -305,6 +306,7 @@ def summarize_run(run_dir):
             "gpu_candidate_evaluations", "cpu_candidate_evaluations",
             "peak_gpu_allocated_bytes", "peak_gpu_reserved_bytes", "fallback_count")},
             "wall_seconds_per_trial": wall / count if wall is not None else None,
+            "node_samples_per_trial": run["node_samples"] / count if run.get("node_samples") is not None else None,
             "time_per_trial_interpretation": "amortized throughput, not isolated latency" if config.get("batch_size", 1) > 1
                                              else "wall time per selected trial"},
         "examples": {"best": example(best), "failure": example(worst) if worst else None},
@@ -360,6 +362,7 @@ def write_report(run_dir):
              f"| Wall time per selected trial | {number(result['compute']['wall_seconds_per_trial'])} s |",
              f"| Node / edge forward calls | {recorded_count(result['compute']['node_calls'])} / {recorded_count(result['compute']['edge_calls'])} |",
              f"| Node / edge evaluated states | {recorded_count(result['compute']['node_samples'])} / {recorded_count(result['compute']['edge_samples'])} |",
+             f"| Denoiser evaluations per selected output | {recorded_count(result['compute']['node_samples_per_trial'])} |",
              f"| Tensor / CPU-reference constraint evaluations | {recorded_count(result['compute']['gpu_candidate_evaluations'])} / {recorded_count(result['compute']['cpu_candidate_evaluations'])} |",
              f"| Complete graph evaluations | {result['compute']['candidate_evaluations']} |", "",
              "| ID | Pass | Fail | Unknown | N/A | Compliance | Measurable coverage |",
@@ -419,6 +422,37 @@ def write_report(run_dir):
     return result
 
 
+def denoiser_comparisons(experiment_dir, summaries):
+    """Compare recorded denoiser work only for compatible, paired complete runs."""
+    root = Path(experiment_dir).resolve()
+    comparisons = []
+    for best in (summary for summary in summaries if summary["method"] == "best_of_n"):
+        for svdd in (summary for summary in summaries if summary["method"] == "svdd_pm"):
+            if (best["status"] != "complete" or svdd["status"] != "complete"
+                    or best["comparison_group"] != svdd["comparison_group"]
+                    or best.get("trial_seed_start") is None
+                    or best["trial_seed_start"] != svdd.get("trial_seed_start")
+                    or best["selected_trials"] != svdd["selected_trials"]
+                    or best.get("selected_trial_ids") != svdd.get("selected_trial_ids")):
+                continue
+            left = best["compute"].get("node_samples_per_trial")
+            right = svdd["compute"].get("node_samples_per_trial")
+            known = all(value is not None and math.isfinite(value) and value > 0 for value in (left, right))
+            ratio = left / right if known else None
+            difference = abs(ratio - 1) if known else None
+            comparisons.append({
+                "best_of_n": str(Path(best["run_dir"]).resolve().relative_to(root)),
+                "svdd": str(Path(svdd["run_dir"]).resolve().relative_to(root)),
+                "trial_seed_start": best["trial_seed_start"], "trials": best["selected_trials"],
+                "best_of_n_evaluations_per_output": left, "svdd_evaluations_per_output": right,
+                "ratio_best_of_n_to_svdd": ratio, "relative_difference": difference,
+                "exact": left == right if known else None,
+                "matched": abs(left - right) <= 0.01 * right if known else None,
+            })
+    return {"metric": "node_samples_per_selected_output", "relative_tolerance": 0.01,
+            "comparisons": comparisons}
+
+
 def write_comparison(experiment_dir, summaries):
     experiment_dir = Path(experiment_dir)
     baselines = {s["comparison_group"]: s for s in summaries if s["method"] == "baseline" and s["status"] == "complete"}
@@ -430,6 +464,7 @@ def write_comparison(experiment_dir, summaries):
         rows.append({"run": str(Path(s["run_dir"]).resolve().relative_to(experiment_dir.resolve())), "method": s["method"], **s["parameters"],
                      "status": s["status"],
                      "comparison_group": s["comparison_group"], "trials": s["selected_trials"],
+                     "trial_seed_start": s.get("trial_seed_start"),
                      "final_candidates": s["saved_final_candidates"],
                      "registered_constraint_ids": s.get("constraint_counts", {}).get("registered"),
                      "active_scored_count": s.get("constraint_counts", {}).get("active_scored"),
@@ -451,6 +486,7 @@ def write_comparison(experiment_dir, summaries):
                      "compute_multiplier": runtime / reference if runtime is not None and reference else None,
                      "node_calls": s["compute"]["node_calls"], "edge_calls": s["compute"]["edge_calls"],
                      "node_samples": s["compute"]["node_samples"], "edge_samples": s["compute"]["edge_samples"],
+                     "node_samples_per_trial": s["compute"].get("node_samples_per_trial"),
                      "gpu_candidate_evaluations": s["compute"]["gpu_candidate_evaluations"],
                      "cpu_candidate_evaluations": s["compute"]["cpu_candidate_evaluations"],
                      "time_per_trial_interpretation": s["compute"]["time_per_trial_interpretation"],
@@ -461,11 +497,13 @@ def write_comparison(experiment_dir, summaries):
         writer = csv.DictWriter(stream, fieldnames=list(rows[0]))
         writer.writeheader()
         writer.writerows(rows)
+    denoiser = denoiser_comparisons(experiment_dir, summaries)
+    write_json(experiment_dir / "denoiser_comparison.json", denoiser)
     lines = ["# Measured comparison", "", "Runtime multipliers use measured wall time per selected trial, relative to a baseline with the same scenario, "
              "constraint definitions, checkpoint hashes, guidance backend and batching controls. Older configs without batching fields mean batch_size=1 and inference_batch_size=1. "
              "For batch_size > 1, seconds/trial is amortized throughput, not isolated latency. "
              "Setup/inference timing boundaries are recorded in each run. Small runs are plumbing checks, not statistical evidence.", "",
-             "| Run | Status | Settings | Trials | Overall valid | Structurally valid | Compliance | Measurable | Unknown checks | Severity | Seconds/trial | Node/edge calls | Node/edge states | Compute |",
+             "| Run | Status | Settings | Trials | Overall valid | Structurally valid | Compliance | Measurable | Unknown checks | Severity | Seconds/trial | Node/edge calls | Node/edge states | Runtime vs baseline |",
              "|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|"]
     for row in rows:
         settings = ", ".join(f"{key}={row[key]}" for key in ("n", "k", "guided_steps", "temperature", "batch_size", "inference_batch_size", "reward_backend") if row[key] is not None)
@@ -486,7 +524,8 @@ def write_comparison(experiment_dir, summaries):
                   "A failure makes the result invalid; unresolved checks without a failure remain unknown. "
                   "A structurally valid graph with no applicable counted checks is not_applicable, not a success. All selected samples remain in the denominator. "
                   "CSV `validity_rate` is a legacy alias for `structural_valid_rate`, not overall validity.", "",
-                  "Approximately matched compute (within 20% wall time per trial): " + ("; ".join(matched) if matched else "none measured yet") + ".", "",
+                  "Similar measured runtime (within 20% wall time per trial): " + ("; ".join(matched) if matched else "none measured yet") + ". "
+                  "CSV `compute_multiplier` is the legacy name for this runtime multiplier, not a denoiser-count match.", "",
                   "Supporting rules (including C034/C079/C080 where configured) are excluded from compliance denominators. "
                   "CSV records active scored/supporting IDs and registry counts; per-run reports list group metrics. "
                   "Do not compare percentages across different active pools without their denominators and assumptions. "
@@ -495,6 +534,28 @@ def write_comparison(experiment_dir, summaries):
                   "No RPLAN-based FID/KID was measured.", ""])
     if any(s.get("disabled_constraints") for s in summaries):
         lines.extend(["Disabled IDs are excluded from compliance denominators; per-run reports list their reasons.", ""])
+    lines.extend(["## Denoiser evaluation matching", "",
+                  "The selected compute metric is evaluated denoiser states (`node_samples`) per selected output, "
+                  "not batched forward calls (`node_calls`) or wall time. Counts include every Best-of-N candidate "
+                  "and every SVDD proposal. Matching here means within 1%; exact matches are identified separately. "
+                  "Edge prediction, constraint checks and elapsed time are not matched by this criterion.", "",
+                  "Only complete runs with matching scenario, model, backend, batching, trial seed start and trial IDs "
+                  "are paired. Missing recorded counts remain unknown. Details are saved in `denoiser_comparison.json`.", ""])
+    if denoiser["comparisons"]:
+        lines.extend(["| Best-of-N run | SVDD run | BoN evaluations/output | SVDD evaluations/output | BoN / SVDD | Difference | Matched |",
+                      "|---|---|---:|---:|---:|---:|---|"])
+        for pair in denoiser["comparisons"]:
+            difference = pair["relative_difference"]
+            difference_text = "unknown" if difference is None else f"{100 * difference:.3f}%"
+            match = "unknown" if pair["matched"] is None else "exact" if pair["exact"] else "within 1%" if pair["matched"] else "no"
+            ratio = pair["ratio_best_of_n_to_svdd"]
+            ratio_text = "unknown" if ratio is None else f"{ratio:.6f}"
+            lines.append(f"| {pair['best_of_n']} | {pair['svdd']} | "
+                         f"{recorded_count(pair['best_of_n_evaluations_per_output'])} | "
+                         f"{recorded_count(pair['svdd_evaluations_per_output'])} | "
+                         f"{ratio_text} | {difference_text} | {match} |")
+    else:
+        lines.append("No compatible complete Best-of-N/SVDD pair with recorded trial seed metadata is available yet.")
     (experiment_dir / "comparison.md").write_text("\n".join(lines))
     return rows
 

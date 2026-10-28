@@ -149,6 +149,7 @@ def test_tensor_guidance_keeps_cpu_audit_final_only_and_preserves_microbatch_res
             progress_callback=lambda current, total: progress.append((current, total)))
         outputs.append([(result.candidates[0].sample.to_dict(), result.trace) for result in results])
         assert audit.calls == 3
+        assert stats["node_samples"] == 3 * (adapter.steps + 3 * 2)
         assert stats["gpu_candidate_evaluations"] == 3 * (3 * 2 + 1)
         assert stats["cpu_candidate_evaluations"] == 3
         assert stats["candidate_evaluations"] == stats["graph_completions"] == 24
@@ -208,16 +209,19 @@ def test_k1_and_disabled_guidance_match_ordinary_generation(k, guided_steps):
     assert [result.candidates[0].sample.raw_nodes for result in results] == [result.candidates[0].sample.raw_nodes for result in reference]
     assert [result.candidates[0].sample.nodes for result in results] == [result.candidates[0].sample.nodes for result in reference]
     assert not policy.sizes
+    assert stats["node_samples"] == len(seeds) * adapter.steps
     assert stats["gpu_candidate_evaluations"] == 0
     assert stats["cpu_candidate_evaluations"] == 2
 
 
-def test_best_of_n_uses_gpu_selection_and_preserves_every_cpu_audit():
+@pytest.mark.parametrize("microbatch", [1, 2, 10])
+def test_best_of_n_uses_gpu_selection_and_preserves_every_cpu_audit(microbatch):
     adapter, policy = TensorAdapter(), TensorPolicy()
     audit = CpuAudit(adapter, reverse_energy=True)
     results, stats = gpu_sampling.best_of_n_batch_gpu(adapter, audit, Scenario(), [42, 43],
-                                                      n=3, inference_batch_size=2, tensor_evaluator=policy)
+                                                      n=3, inference_batch_size=microbatch, tensor_evaluator=policy)
     assert audit.calls == 6
+    assert stats["node_samples"] == 2 * 3 * adapter.steps
     assert stats["gpu_candidate_evaluations"] == stats["cpu_candidate_evaluations"] == 6
     assert stats["candidate_evaluations"] == stats["graph_completions"] == 12
     for result in results:

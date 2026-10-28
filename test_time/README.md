@@ -88,8 +88,10 @@ output equality is not guaranteed. CPU tests check seed independence and selecti
 
 Timing is recorded once per generation batch. Per-trial seconds are the batch time divided by its
 trial count (amortized throughput), not isolated latency. Reports record both actual forward calls
-and `node_samples`/`edge_samples` (states processed). Compute comparisons require the same batching
-settings and still need measured runtime calibration on the H100.
+and `node_samples`/`edge_samples` (states processed). The selected compute budget is denoiser
+states per selected output: the launcher matches Best-of-N to full SVDD using this count.
+Keep the same batching settings for comparisons. This does not match elapsed time, edge-model
+work or constraint-checking work; those costs are reported separately.
 
 Each run records every complete candidate in `candidates.jsonl`, selected IDs,
 PNG/SVG/JSON files, the config and source hashes, timings, model call counts, and a `report.md`.
@@ -159,8 +161,7 @@ python -m test_time.audit_gpu --experiment_dir test_time/outputs/pilot_check \
 
 ## Proposed larger evaluation: launcher
 
-The launcher is prepared, but no larger evaluation has been launched.
-Preview it from the repository root (no models run and no outputs are created):
+Preview the launcher from the repository root (no models run and no outputs are created):
 
 ```bash
 bash test_time/launch_eval.sh
@@ -172,17 +173,28 @@ Its default is one seed batch starting at 10000, with 100 trials: **100 selected
 | Variant directory | Configuration |
 |---|---|
 | `baseline` | Unconstrained generation |
-| `best_of_n` | Best-of-2 |
+| `best_of_n` | Best-of-11 by default; N derived from full SVDD's denoiser budget |
 | `svdd_pm_last20` | K=10, temperature 0, guidance at `t=200,...,1` |
 | `svdd_pm_full` | K=10, temperature 0, guidance at `t=999,...,1` |
 
 Every trajectory still denoises for all 1,000 steps. The late variant guides only the final
 200 stochastic steps (approximately 20%); neither variant guides deterministic `t=0`.
 Both SVDD variants use `--method svdd_pm` with different `--guided_steps` values.
-The default single batch runs in the order above, so late SVDD finishes before full SVDD.
-Variants run serially, with order rotated for additional seed batches. Their compute budgets differ;
-Best-of-2 is provisional and does not automatically match either SVDD variant's cost.
-See the [pending guidance-window experiment](experiments/003_guidance_window/REPORT.md).
+Every seed batch runs serially in the order above, so late SVDD finishes before full SVDD.
+Best-of-N is matched only to full SVDD. Late SVDD remains a shorter-budget comparison.
+
+For T denoising steps, K proposals and G guided steps, full SVDD evaluates T + K × G node states
+per output; Best-of-N evaluates N × T. The launcher chooses the nearest integer N, rounding ties
+upward. With T=1000, K=10 and G=999, the budgets are **10,990 for full SVDD** and **11,000 for
+Best-of-11**, a **0.091% difference**. Late SVDD evaluates 3,000 states per output. If K=1 or G=0,
+the sampler takes its baseline shortcut, and the matched N is 1.
+
+The root `compute_budget.json` records the planned match. Reports verify actual
+`node_samples / selected_trials`, with differences within 1% labelled approximately matched.
+Other K/G settings may have a larger rounding gap, which the report exposes. This is a denoiser
+evaluation match, not a runtime or total-compute match.
+See the [denoiser-budget report](experiments/005_denoiser_budget/REPORT.md), which supersedes
+the provisional Best-of-2 plan in the [guidance-window report](experiments/003_guidance_window/REPORT.md).
 
 The following is the explicit launch command for later, inside the activated Northflank environment:
 
@@ -191,26 +203,29 @@ bash test_time/launch_eval.sh --run
 ```
 
 Override settings through `EVAL_SEEDS` (space-separated batch start seeds), `TRIALS_PER_RUN`,
-`BEST_N`, `SVDD_K`, `GUIDED_STEPS` (full variant, default 999), `LATE_GUIDED_STEPS` (late variant, default 200),
+`SVDD_K`, `GUIDED_STEPS` (full variant, default 999), `LATE_GUIDED_STEPS` (late variant, default 200),
 `TEMPERATURE`, `BATCH_SIZE`, `INFERENCE_BATCH_SIZE`, `REWARD_BACKEND`,
 `EVAL_CONFIG`, `EVAL_OUTPUT`, or `GSDIFF_PYTHON`.
-For example, preview one small calibration batch:
+`BEST_N` is rejected by the launcher because N is derived from the full SVDD settings; unset any
+old override before launching. A standalone `python -m test_time.run --method best_of_n --n ...`
+still accepts an explicit N, but does not automatically match another run.
+For example, preview one small batch:
 
 ```bash
 EVAL_SEEDS="1000" TRIALS_PER_RUN=20 bash test_time/launch_eval.sh --dry-run
 ```
 
 The launcher defaults to `REWARD_BACKEND=gpu`; set `REWARD_BACKEND=cpu` for reference CPU guidance.
-Recalibrate matched compute after
-changing this backend; CPU-guided timings do not establish a budget for GPU guidance.
+The denoiser-count formula holds for both backends. Their elapsed times differ, so CPU-guided
+timings do not predict GPU-guided runtime.
 
 Each batch gets separate variant directories, logs, configs, saved candidates and reports;
 its comparison table includes both SVDD variants.
 The script stops on failure; interrupted-run resume is not implemented.
 The existing evaluator does **not** pool results across batches or calculate confidence intervals,
 near-duplicate rates, or geometric/structural diversity distances. Those reporting additions
-and compute-budget calibration remain to be done
-before treating this as the final evaluation. Aggregate by paired trial seed, not the Best-of-N winner's seed.
+remain to be done before treating this as the final evaluation. Aggregate by paired trial seed,
+not the Best-of-N winner's seed.
 
 ## Checkpoints and baseline audit
 
@@ -317,8 +332,10 @@ Rebuild reports from saved evaluations without loading models or generating desi
 python -m test_time.evaluate --experiment_dir test_time/outputs/pilot_check/batch_1_seed_1000
 ```
 
-Measured compute includes sampling and checking; loading/rendering/export time is recorded separately.
-Matched-compute labels require measured times within 20%. No RPLAN-relative FID/KID is claimed without reference data.
+Measured runtime includes sampling and checking; loading/rendering/export time is recorded separately.
+The chosen budget uses measured denoiser states per output, with a 1% tolerance for approximate
+matches. Runtime similarity within 20% is reported separately and is not the budget criterion.
+No RPLAN-relative FID/KID is claimed without reference data.
 
 References: [GSDiff](https://arxiv.org/abs/2408.16258), [SVDD](https://arxiv.org/abs/2408.08252),
 and the supplied `Technical_assessment_TTC.pdf`, Appendix A.

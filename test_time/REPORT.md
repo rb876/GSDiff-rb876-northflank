@@ -20,6 +20,7 @@ These Markdown files are ready to paste into HackMD.
 | 002 — GPU backend | Tensor geometry and guidance; offline implementation audit | [Report](experiments/002_gpu_backend/REPORT.md) |
 | 003 — guidance window | Pending: full SVDD guidance versus the final 200 stochastic steps | [Report](experiments/003_guidance_window/REPORT.md) |
 | 004 — feasible constraints | Six GPU-compatible checks with three supporting measurement rules | [Report](experiments/004_feasible_constraints/REPORT.md) |
+| 005 — denoiser budget | Match Best-of-N to full SVDD by evaluated denoiser states | [Report](experiments/005_denoiser_budget/REPORT.md) |
 
 ## Measurement policy
 
@@ -42,8 +43,12 @@ Both use the selected guidance backend. Final metrics share the CPU reference ev
 Selection prioritizes structural validity and measurement coverage before energy.
 The new SVDD defaults are K=10, all 999 stochastic reverse steps, and temperature 0,
 following the [paper's full-process, greedy configuration](https://arxiv.org/html/2408.08252v3).
-These defaults have not yet been evaluated. The launcher's Best-of-2 setting remains provisional
-and needs runtime calibration before a compute-matched comparison.
+The launcher now matches Best-of-N to full SVDD by evaluated denoiser states per selected output.
+Full SVDD evaluates 1000 + 10 × 999 = 10,990 states; Best-of-11 evaluates 11,000, a 0.091%
+difference. N is derived from the configured full-guidance budget and rounded to the nearest
+integer, with ties upward. K=1 or no guidance takes the baseline shortcut and gives N=1.
+This replaces the earlier provisional Best-of-2 plan; it does not equalize runtime, edge-model
+calls or reward evaluation costs.
 
 Generation now batches up to four independent trials, with at most ten states per neural-network call.
 SVDD proposals and Best-of-N candidates use these batched calls; each design retains its own random
@@ -54,11 +59,14 @@ audit. Reports count batch time once and separate forward calls from processed s
 H100 throughput and memory for the new backend have not yet been benchmarked.
 The launcher also defaults to `REWARD_BACKEND=gpu`; set it to `cpu` for the reference comparison.
 The planned evaluation uses one seed batch starting at 10000, with 100 selected designs for each of four variants:
-baseline, Best-of-2, full SVDD-PM and SVDD-PM guided only at `t=200,...,1` (approximately the final 20%).
+baseline, Best-of-11, SVDD-PM guided only at `t=200,...,1` (approximately the final 20%), then full SVDD-PM.
 This gives **100 selected designs per variant, 400 total**, using paired design seeds.
 All trajectories denoise for 1,000 steps; both SVDD variants use K=10 and temperature 0 and leave
-deterministic `t=0` unguided. Their compute budgets differ and are not automatically matched.
-This evaluation has not been launched.
+deterministic `t=0` unguided. Late SVDD remains an unmatched shorter-budget comparison, with
+3,000 denoiser states per output. This order is fixed across seed batches.
+`compute_budget.json` saves the planned full-SVDD match. Reports use actual `node_samples` per
+selected trial and a 1% tolerance for approximate denoiser matches; runtime comparisons remain
+separate. The launcher rejects old `BEST_N` overrides so the chosen budget cannot silently change.
 
 ## Current status
 
@@ -66,7 +74,8 @@ The historical CPU-guided pilot has three trials per method (seeds 1000–1002):
 designs. All nine selected designs fail C035. Structural validity is 2/3 for baseline and 3/3 for both guided methods.
 This small pilot does not establish an improvement; larger evaluation design remains pending.
 The original 48-test suite passed locally and on Northflank; the batching update passed 92 local tests.
-The current suite passes **186 tests** locally, with three CUDA checks skipped because CUDA is unavailable.
+The prior constraint update passed **186 tests** locally, with three CUDA checks skipped because CUDA is unavailable.
+The denoiser-budget update passes **205 tests**, with the same three CUDA checks skipped locally.
 The GPU backend's offline audit matches room geometry and structural validity on all 12 saved pilot
 candidates, and every constraint status on all 10 structurally valid candidates. Invalid graphs skip
 GPU searches. This is a small implementation check, not evidence of improved generation or speed.
