@@ -173,13 +173,14 @@ Its default is one seed batch starting at 10000, with 100 trials: **100 selected
 |---|---|
 | `baseline` | Unconstrained generation |
 | `best_of_n` | Best-of-2 |
-| `svdd_pm_full` | K=10, temperature 0, guidance at `t=999,...,1` |
 | `svdd_pm_last20` | K=10, temperature 0, guidance at `t=200,...,1` |
+| `svdd_pm_full` | K=10, temperature 0, guidance at `t=999,...,1` |
 
 Every trajectory still denoises for all 1,000 steps. The late variant guides only the final
 200 stochastic steps (approximately 20%); neither variant guides deterministic `t=0`.
 Both SVDD variants use `--method svdd_pm` with different `--guided_steps` values.
-Variants run serially, with order rotated between batches. Their compute budgets differ;
+The default single batch runs in the order above, so late SVDD finishes before full SVDD.
+Variants run serially, with order rotated for additional seed batches. Their compute budgets differ;
 Best-of-2 is provisional and does not automatically match either SVDD variant's cost.
 See the [pending guidance-window experiment](experiments/003_guidance_window/REPORT.md).
 

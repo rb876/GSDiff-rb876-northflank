@@ -74,7 +74,7 @@ execute() {
   fi
 }
 
-variants=(baseline best_of_n svdd_pm_full svdd_pm_last20)
+variants=(baseline best_of_n svdd_pm_last20 svdd_pm_full)
 for ((batch=0; batch<${#batch_seeds[@]}; batch++)); do
   seed="${batch_seeds[batch]}"
   batch_dir="$output_root/batch_$((batch + 1))_seed_${seed}"
