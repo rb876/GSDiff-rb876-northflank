@@ -1,4 +1,4 @@
-# Experiment 001 — implementation ready, experiment design pending
+# Experiment 001 — implementation and initial pilot
 
 ## Question
 
@@ -9,8 +9,9 @@ Can inference-time selection improve the selected feasibility checks while retai
 Frozen unconstrained RPLAN checkpoint, 1,000 DDPM steps, H100.
 Scenario: two occupants, 2.5 m ceiling height, **assumed** 0.025 m per drawing pixel.
 Six scored IDs: C033, C035, C036, C076, C077, C078. C034 is an auxiliary bed-footprint check.
-Available methods: baseline, Best-of-N, and SVDD-PM. CLI defaults are one trial;
-N=4 and K=4 with ten late stochastic steps are smoke-test settings, not an agreed experiment budget.
+Available methods: baseline, Best-of-N, and SVDD-PM. Current CLI defaults are one trial,
+N=4, and SVDD-PM with K=10, 999 guided stochastic steps and temperature 0.
+The historical smoke tests and pilot below retain their original settings.
 
 ## Status
 
@@ -27,8 +28,40 @@ Full smoke outputs are stored in `test_time/outputs/code_verification/` and `tes
 [Verification record](verification.json) · [Annotated baseline smoke output](figures/baseline_smoke.png).
 
 These checks establish that the code runs; they are not evidence of general improvements.
-No eight-seed comparison or larger experiment has been launched. We will choose the seed set,
-budgets, ablations and evaluation questions together before running experiments.
+
+## Initial pilot
+
+The user ran three paired trials (seeds 1000–1002) per method. Overall validity requires a valid
+structure and all applicable scored checks to measurably pass; unknowns cannot establish validity.
+C034 is auxiliary and excluded. These metrics cover the six implemented scored checks.
+
+| Method | Overall valid | Structurally valid | Measurable checks passing | Unknown checks |
+|---|---:|---:|---:|---:|
+| Baseline | 0/3 | 2/3 | 15/18 (83.3%) | 0 |
+| Best-of-2 | 0/3 | 3/3 | 14/18 (77.8%) | 0 |
+| SVDD-PM, K=4, ten guided steps, temperature=0 | 0/3 | 3/3 | 13/17 (76.5%) | 1 |
+
+All nine selected designs fail C035 (bedroom circulation). High per-check compliance therefore
+does not imply an overall-valid design. Best-of-2 and SVDD take about 21.1 and 16.4 seconds per trial,
+respectively, so this pilot does not satisfy our 20% compute-matching rule.
+Three trials are insufficient to conclude that either method improves constraint satisfaction.
+
+Full outputs: `test_time/outputs/pilot_check/batch_1_seed_1000/` (ignored by Git).
+Reports and figure labels were updated offline from saved evaluations; no new generation was needed.
+All 52 tests pass locally after this reporting update.
+Larger seed sets, compute calibration, diversity metrics and confidence intervals remain to be agreed.
+
+## Next configuration — not yet evaluated
+
+The user selected K=10, guidance at every stochastic reverse step (`t=999,...,1`),
+and greedy selection (temperature 0), following [SVDD §§4.2 and 6.1](https://arxiv.org/html/2408.08252v3).
+The deterministic final step is not duplicated. No result above measures this new configuration.
+The launcher still uses Best-of-2; it must be recalibrated against full-guidance runtime before
+claiming a compute-matched comparison.
+
+```bash
+python -m test_time.run --method svdd_pm --k 10 --guided_steps 999 --temperature 0
+```
 
 ## Limits
 

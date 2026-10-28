@@ -1,6 +1,7 @@
 """Reporting denominators, compute comparisons and annotated output artifacts."""
 
 from dataclasses import asdict
+import csv
 import json
 from pathlib import Path
 
@@ -72,6 +73,53 @@ def test_all_unknown_is_not_perfect_or_zero_severity(tmp_path):
     assert summary["severity"]["mean"] is None
     assert summary["measurable_fraction"] == 0
     assert summary["all_measurable_pass_fraction"] == 0
+    assert summary["overall_valid_rate"] == 0
+    assert summary["overall_validity_counts"]["unknown"] == 1
+    assert summary["overall_validity_counts"]["invalid"] == 0
+
+
+def test_overall_validity_and_structural_validity_have_separate_denominators(tmp_path):
+    rows = [
+        candidate(0, [result("C076", "pass")]),
+        candidate(1, [result("C076", "pass")], valid=False),
+        candidate(2, [result("C076", "fail"), result("C033", "unknown")]),
+        candidate(3, [result("C076", "unknown")]),
+        candidate(4, [result("C076", "pass"), result("C034", "fail", auxiliary=True)]),
+        candidate(5, [result("C076", "pass"), result("C033", "not_applicable")]),
+        candidate(6, [result("C033", "not_applicable")]),
+        candidate(7, []),
+        candidate(0, [result("C076", "pass")], selected=False),
+    ]
+    summary = write_report(make_run(tmp_path / "overall", rows))
+    assert summary["overall_validity_counts"] == {"valid": 3, "invalid": 2, "unknown": 1, "not_applicable": 2}
+    assert summary["overall_valid_count"] == 3
+    assert summary["overall_valid_rate"] == 3 / 8
+    assert summary["structural_valid_count"] == summary["valid_count"] == 7
+    assert summary["structural_valid_rate"] == summary["validity_rate"] == 7 / 8
+    assert summary["validity_definitions"]["legacy_aliases"]["validity_rate"] == "structural_valid_rate"
+    all_candidates = summary["all_candidates"]
+    assert all_candidates["overall_validity_counts"] == {"valid": 4, "invalid": 2, "unknown": 1, "not_applicable": 2}
+    assert all_candidates["overall_valid_rate"] == 4 / 9
+    assert all_candidates["structural_valid_rate"] == 8 / 9
+    report = (tmp_path / "overall" / "report.md").read_text()
+    assert report.index("**Overall valid**") < report.index("Structurally valid")
+    assert "not_applicable and does not count as success" in report
+
+
+def test_comparison_labels_overall_and_structural_validity_explicitly(tmp_path):
+    summary = write_report(make_run(tmp_path / "baseline", [candidate(0, [result("C076", "fail")])]))
+    table = write_comparison(tmp_path, [summary])
+    assert table[0]["overall_valid_rate"] == 0
+    assert table[0]["structural_valid_rate"] == table[0]["validity_rate"] == 1
+    assert table[0]["overall_invalid_count"] == 1
+    with (tmp_path / "comparison.csv").open() as stream:
+        row = next(csv.DictReader(stream))
+    assert row["overall_valid_rate"] == "0.0"
+    assert row["structural_valid_rate"] == "1.0"
+    assert row["validity_rate_alias_of"] == "structural_valid_rate"
+    markdown = (tmp_path / "comparison.md").read_text()
+    assert "Overall valid | Structurally valid" in markdown
+    assert "unresolved checks without a failure remain unknown" in markdown
 
 
 def test_runtime_multiplier_is_per_trial_and_scenario_matched(tmp_path):
@@ -111,3 +159,11 @@ def test_png_and_svg_include_actual_checks_and_assumptions(tmp_path):
     svg = Path(paths["svg"]).read_text()
     assert "C076: fail" in svg and "C033: unknown" in svg
     assert "area_min_m2" in svg and "area_m2" in svg and "assumed" in svg
+
+
+@pytest.mark.parametrize("check_status,overall_label", [("fail", "INVALID"), ("unknown", "UNKNOWN")])
+def test_svg_distinguishes_overall_from_structural_validity(tmp_path, check_status, overall_label):
+    row = candidate(0, [result("C076", check_status)], valid=True)
+    paths = save_sample(row["sample"], row["evaluation"], tmp_path / check_status)
+    svg = Path(paths["svg"]).read_text()
+    assert f"overall: {overall_label} | structure: valid" in svg

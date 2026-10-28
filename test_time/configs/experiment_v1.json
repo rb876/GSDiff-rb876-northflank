@@ -6,8 +6,8 @@
   "trials": 1,
   "seed": 42,
   "n": 4,
-  "k": 4,
-  "guided_steps": 10,
+  "k": 10,
+  "guided_steps": 999,
   "temperature": 0.0,
   "validity_weight": 100.0,
   "output_root": "test_time/outputs/001_constraints"

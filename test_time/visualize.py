@@ -9,6 +9,8 @@ import textwrap
 
 from PIL import Image, ImageDraw, ImageFont
 
+from .types import overall_validity
+
 
 COLORS = {0: "#f4f1de", 1: "#eab69f", 2: "#6b705c", 3: "#e07a5f",
           4: "#5f797b", 5: "#f2cc8f", 6: "#222222"}
@@ -54,9 +56,11 @@ def save_sample(sample, evaluation, output_prefix):
         svg.append(f'<text x="{x}" y="{y + (16 if title else 12)}" fill="{color}" font-family="sans-serif" '
                    f'font-size="{16 if title else 12}">{escape(value)}</text>')
 
-    valid = evaluation["structurally_valid"]
-    text(20, 16, f"GSDiff | {'valid' if valid else 'INVALID'} graph | energy={evaluation['energy']:.4g}",
-         "#167343" if valid else "#b42318", title=True)
+    status = overall_validity(evaluation)
+    structural = "valid" if evaluation["structurally_valid"] else "INVALID"
+    color = {"valid": "#167343", "invalid": "#b42318", "unknown": "#946200", "not_applicable": "#666666"}[status]
+    text(20, 16, f"GSDiff | overall: {status.upper()} | structure: {structural} | energy={evaluation['energy']:.4g}",
+         color, title=True)
     scenario = sample.get("scenario", {})
     provenance = scenario.get("scale_provenance", "missing")
     scale = scenario.get("coordinate_scale_m_per_model_unit")

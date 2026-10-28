@@ -43,11 +43,13 @@ python -m pytest -q test_time/tests
 
 python -m test_time.run --method baseline
 python -m test_time.run --method best_of_n --n 4
-python -m test_time.run --method svdd_pm --k 4 --guided_steps 10 --temperature 0
+python -m test_time.run --method svdd_pm --k 10 --guided_steps 999 --temperature 0
 python -m test_time.evaluate --experiment_dir test_time/outputs/001_constraints
 ```
 
-Defaults are one smoke-test trial, seed 42, and the same scenario/checkpoints for all methods.
+Defaults are one trial, seed 42, and the same scenario/checkpoints for all methods.
+SVDD-PM now defaults to K=10 and greedy selection at all 999 stochastic reverse steps.
+This full-guidance configuration has not yet been evaluated; earlier results used shorter guidance windows.
 Larger experiments and their budgets will be decided separately; `--trials` controls their size.
 Use `--config path.json` to change the experiment, or `--output_dir path` for a new explicit run directory.
 `--n`, `--k`, `--guided_steps`, `--temperature`, and `--seed` override JSON settings.
@@ -82,9 +84,10 @@ bash test_time/launch_eval.sh
 
 Its proposed defaults are five batches of 200 trials: **1,000 selected designs per method**.
 Each batch uses a different range of 200 design seeds, shared by all three methods.
-Baseline, Best-of-2 and SVDD-PM (K=4, ten guided steps, temperature 0) run serially,
-with method order rotated between batches. These are provisional settings; similar runtime
-in one smoke test does not establish matched compute for a full evaluation.
+Baseline, Best-of-2 and SVDD-PM (K=10, 999 guided steps, temperature 0) run serially,
+with method order rotated between batches. Best-of-2 remains a provisional launcher setting;
+it has not been calibrated against full-guidance SVDD-PM. Recalibrate `BEST_N` using measured
+runtime before a larger comparison.
 
 The following is the explicit launch command for later, inside the activated Northflank environment:
 
@@ -103,8 +106,8 @@ EVAL_SEEDS="1000" TRIALS_PER_RUN=20 bash test_time/launch_eval.sh --dry-run
 Each batch gets method logs, saved candidates, reports and its own comparison table.
 The script stops on failure; interrupted-run resume is not implemented.
 The existing evaluator does **not** pool the five batches or calculate confidence intervals,
-near-duplicate rates, or geometric/structural diversity distances. Those reporting additions,
-the combined valid-and-all-checks-passed metric, and compute-budget calibration remain to be done
+near-duplicate rates, or geometric/structural diversity distances. Those reporting additions
+and compute-budget calibration remain to be done
 before treating this as the final evaluation. Aggregate by paired trial seed, not the Best-of-N winner's seed.
 
 ## Checkpoints and baseline audit
@@ -161,10 +164,29 @@ ID that was measurable in the first candidate. This prevents swapping an expensi
 The guard is conservative and order-dependent; it can reject improvements with different unresolved checks.
 SVDD applies the same coverage guard to surrogate candidates and falls back to an ordinary proposal
 when none is scorable. It scores predicted clean nodes but continues from the selected **noisy** state.
-Guided steps are `t=10,...,1` by default; the deterministic final step `t=0` is never duplicated.
+Guided steps are `t=999,...,1` by default; the deterministic final step `t=0` is never duplicated.
+This follows the [SVDD paper's §§4.2 and 6.1](https://arxiv.org/html/2408.08252v3):
+guide throughout the reverse process, use greedy selection (alpha=0), and choose 5–20 proposals;
+its experiments use 10 proposals outside image generation. Our graph-validity and coverage guards
+remain GSDiff-specific adaptations.
 This is approximate SVDD-PM, not an exact sampler from the reward-tilted target distribution.
 
-Reports always pair measurable compliance with coverage, unknown fraction, assumptions and structural validity.
+The headline **overall validity** requires a structurally valid graph and every applicable scored
+constraint to measurably pass. Any structural defect or failed scored check makes the sample invalid.
+Without a confirmed failure, unresolved checks make it unknown; no applicable scored checks makes
+it not applicable. Neither counts as valid. Auxiliary C034 and individual inapplicable checks are excluded.
+The overall-valid rate divides confirmed valid samples by **all selected designs**.
+This covers the six implemented scored checks, not every constraint in the assessment.
+
+Reports retain structural validity, per-check compliance, coverage, unknown fraction and assumptions
+as diagnostics. JSON uses `overall_valid_rate`, `overall_validity_counts` and `structural_valid_rate`;
+legacy `valid_count` and `validity_rate` remain structural aliases. Figures show both overall and structural status.
+Rebuild reports from saved evaluations without loading models or generating designs:
+
+```bash
+python -m test_time.evaluate --experiment_dir test_time/outputs/pilot_check/batch_1_seed_1000
+```
+
 Measured compute includes sampling and checking; loading/rendering/export time is recorded separately.
 Matched-compute labels require measured times within 20%. No RPLAN-relative FID/KID is claimed without reference data.
 

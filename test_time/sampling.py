@@ -1,4 +1,4 @@
-"""Baseline, complete-trajectory reranking, and late-step SVDD-PM.
+"""Baseline, complete-trajectory reranking, and SVDD-PM.
 
 Selection is valid first, then coverage, then energy. Within a validity class,
 the first candidate anchors which constraint IDs may remain unknown: another
@@ -126,7 +126,7 @@ def best_of_n(adapter, evaluator, scenario, seed, n=4):
     return SamplingResult(candidates, selected, stats=stats)
 
 
-def svdd_pm(adapter, evaluator, scenario, seed, k=4, guided_steps=10, temperature=0.0):
+def svdd_pm(adapter, evaluator, scenario, seed, k=10, guided_steps=999, temperature=0.0):
     if not isinstance(k, int) or k < 1:
         raise ValueError("k must be a positive integer")
     if not isinstance(guided_steps, int) or not 0 <= guided_steps < adapter.steps:

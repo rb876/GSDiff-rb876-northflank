@@ -8,7 +8,7 @@ from pathlib import Path
 import subprocess
 import time
 
-from .types import Scenario, read_json, write_json
+from .types import Scenario, overall_validity, read_json, write_json
 
 
 def main():
@@ -65,7 +65,7 @@ def main():
                 "source_sha256": {str(path.relative_to(repo)): file_hash(path)
                                   for path in sorted((repo / "test_time").glob("*.py"))},
                 "metric_scope": "Assumption-based scenario and geometric feasibility checks; not verified building compliance.",
-                "selection_order": "best validity class; no new unknown IDs relative to its first candidate; fewest unknown checks, energy, seed",
+                "selection_order": "best structural validity class; no new unknown IDs relative to its first candidate; fewest unknown checks, energy, seed",
                 "runtime_scope": "sum of timed sampling plus policy evaluation, excluding loading/rendering/serialization"}
     snapshot.update(n=(1 if args.method == "baseline" else config["n"] if args.method == "best_of_n" else None),
                     k=config["k"] if args.method == "svdd_pm" else None,
@@ -96,12 +96,14 @@ def main():
                 for index, candidate in enumerate(result.candidates):
                     candidate.candidate_id = f"trial-{trial:03d}-{candidate.candidate_id}"
                     candidate.sample.metadata.update({"config_file": "config.json", "trial": trial,
-                                                      "trial_seed": seed, "candidate_id": candidate.candidate_id})
+                                                      "trial_seed": seed, "candidate_id": candidate.candidate_id,
+                                                      "overall_validity": overall_validity(candidate.evaluation)})
                     prefix = output / "samples" / candidate.candidate_id
                     write_json(prefix.with_suffix(".json"), candidate.sample.to_dict())
                     artifacts = save_sample(candidate.sample, candidate.evaluation, prefix)
                     row = {**asdict(candidate), "trial": trial, "method": args.method,
                            "selected": index == result.selected_index,
+                           "overall_validity": overall_validity(candidate.evaluation),
                            "artifacts": {key: str(Path(value).relative_to(output)) for key, value in artifacts.items()}}
                     candidates_file.write(json.dumps(row, allow_nan=False) + "\n")
                 candidates_file.flush()
@@ -117,7 +119,8 @@ def main():
                 write_json(output / "run.json", run)
                 chosen = result.candidates[result.selected_index]
                 print(f"{args.method} trial {trial + 1}/{config['trials']}: seed={seed}, "
-                      f"valid={chosen.evaluation.structurally_valid}, energy={chosen.evaluation.energy:.4f}, "
+                      f"overall={overall_validity(chosen.evaluation)}, structural_valid={chosen.evaluation.structurally_valid}, "
+                      f"energy={chosen.evaluation.energy:.4f}, "
                       f"unknown={chosen.evaluation.unknown_count}, seconds={result.stats['wall_seconds']:.2f}", flush=True)
         run["parameters_unchanged"] = before == adapter.parameter_hash()
         if not run["parameters_unchanged"]:
@@ -130,7 +133,8 @@ def main():
         run["end_to_end_seconds"] = time.perf_counter() - started
         write_json(output / "run.json", run)
     summary = write_report(output)
-    print(f"Saved {output / 'report.md'}; validity={summary['validity_rate']:.1%}", flush=True)
+    print(f"Saved {output / 'report.md'}; overall_validity={summary['overall_valid_rate']:.1%}, "
+          f"structural_validity={summary['structural_valid_rate']:.1%}", flush=True)
 
 
 if __name__ == "__main__":

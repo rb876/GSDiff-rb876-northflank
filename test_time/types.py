@@ -106,6 +106,26 @@ class PolicyEvaluation:
     measurable_count: int = 0
 
 
+def overall_validity(evaluation):
+    """Overall status under the configured checks, distinct from graph validity.
+
+    Unknown checks cannot establish validity. With no applicable scored checks,
+    report not_applicable rather than a vacuous regulatory success.
+    """
+    data = evaluation if isinstance(evaluation, dict) else asdict(evaluation)
+    if not data["structurally_valid"]:
+        return "invalid"
+    checks = [result for result in data["results"]
+              if result.get("counts_toward_compliance", True) and result["applicable"]]
+    if any(result["status"] == "fail" for result in checks):
+        return "invalid"
+    if not checks:
+        return "not_applicable"
+    if any(result["status"] != "pass" or not result["measurable"] for result in checks):
+        return "unknown"
+    return "valid"
+
+
 @dataclass
 class Candidate:
     sample: FloorplanSample

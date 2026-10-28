@@ -9,7 +9,7 @@ import math
 from pathlib import Path
 from statistics import mean, median
 
-from .types import read_json, write_json
+from .types import overall_validity, read_json, write_json
 
 
 ROOM_NAMES = {0: "living", 1: "bedroom", 2: "storage", 3: "kitchen",
@@ -53,6 +53,21 @@ def check_summary(results):
             "severity": describe(severities)}
 
 
+def validity_summary(rows):
+    counts = Counter(overall_validity(row["evaluation"]) for row in rows)
+    structural_count = sum(bool(row["evaluation"]["structurally_valid"]) for row in rows)
+    return {
+        "overall_valid_count": counts["valid"],
+        "overall_valid_rate": fraction(counts["valid"], len(rows)),
+        "overall_validity_counts": {status: counts[status] for status in ("valid", "invalid", "unknown", "not_applicable")},
+        "structural_valid_count": structural_count,
+        "structural_valid_rate": fraction(structural_count, len(rows)),
+        # Historical field names mean structural validity, never overall validity.
+        "valid_count": structural_count,
+        "validity_rate": fraction(structural_count, len(rows)),
+    }
+
+
 def polygon_area(points):
     if len(points) < 3:
         return 0.0
@@ -89,7 +104,6 @@ def summarize_run(run_dir):
             target = per_id if result.get("counts_toward_compliance", True) else auxiliary
             target[result["id"]].append(result)
     aggregate = check_summary(results)
-    validity = sum(bool(row["evaluation"]["structurally_valid"]) for row in selected)
     all_measurable_pass = 0
     all_applicable_pass = 0
     for row in selected:
@@ -122,6 +136,14 @@ def summarize_run(run_dir):
                 "failed_ids": [r["id"] for r in counted_results(row) if r["status"] == "fail"],
                 "unknown_ids": [r["id"] for r in counted_results(row) if r["status"] == "unknown"]}
     return {
+        "metric_schema_version": 2,
+        "validity_definitions": {
+            "overall": "Structurally valid and every applicable counted constraint measurably passes; at least one must apply.",
+            "unknown": "No confirmed failure, but a required counted result is not measurable; not a confirmed valid sample.",
+            "not_applicable": "Structurally valid, but no counted constraints apply; not a confirmed overall-valid sample.",
+            "rate_denominator": "Every sample in the relevant selected/all-candidate population, including invalid, unknown and not_applicable.",
+            "legacy_aliases": {"valid_count": "structural_valid_count", "validity_rate": "structural_valid_rate"},
+        },
         "run_dir": str(run_dir), "method": config.get("method", run.get("method")),
         "parameters": {
             "n": 1 if config.get("method") == "baseline" else config.get("n") if config.get("method") == "best_of_n" else None,
@@ -133,7 +155,7 @@ def summarize_run(run_dir):
         "status": status, "expected_trials": expected_trials,
         "selected_trials": count, "saved_final_candidates": len(rows),
         "selected_candidate_ids": [r.get("candidate_id", "") for r in selected],
-        "valid_count": validity, "validity_rate": validity / count,
+        **validity_summary(selected),
         **aggregate,
         "all_measurable_pass_fraction": all_measurable_pass / count,
         "all_applicable_pass_fraction": all_applicable_pass / count,
@@ -141,7 +163,7 @@ def summarize_run(run_dir):
         "auxiliary_checks": {key: check_summary(value) for key, value in sorted(auxiliary.items())},
         "all_candidates": {
             "count": len(rows),
-            "validity_rate": fraction(sum(bool(r["evaluation"]["structurally_valid"]) for r in rows), len(rows)),
+            **validity_summary(rows),
             **check_summary([result for row in rows for result in counted_results(row)]),
         },
         "graph_statistics": {
@@ -182,11 +204,14 @@ def write_report(run_dir):
              f"Scale: **{scenario.get('scale_provenance', 'missing')}**, {scenario.get('coordinate_scale_m_per_model_unit')} m/drawing pixel. "
              "Results under declared geometry/scenario assumptions are not verified real-world compliance.", "",
              "| Measure | Result |", "|---|---:|",
+             f"| **Overall valid** | **{result['overall_valid_count']}/{result['selected_trials']} ({percent(result['overall_valid_rate'])})** |",
+             f"| Structurally valid | {result['structural_valid_count']}/{result['selected_trials']} ({percent(result['structural_valid_rate'])}) |",
+             f"| Overall invalid / unknown / not applicable | {result['overall_validity_counts']['invalid']} / "
+             f"{result['overall_validity_counts']['unknown']} / {result['overall_validity_counts']['not_applicable']} |",
              f"| Measurable-constraint compliance | {percent(result['compliance'])} |",
              f"| Applicable checks | {result['applicable_count']} |",
              f"| Measurable / unknown coverage | {percent(result['measurable_fraction'])} / {percent(result['unknown_fraction'])} |",
              f"| Assumption-based applicable checks | {percent(result['assumption_based_fraction'])} |",
-             f"| Structural validity | {result['valid_count']}/{result['selected_trials']} ({percent(result['validity_rate'])}) |",
              f"| Mean / median normalized severity | {number(result['severity']['mean'])} / {number(result['severity']['median'])} |",
              f"| All measurable checks pass | {percent(result['all_measurable_pass_fraction'])} |",
              f"| All applicable checks measurably pass | {percent(result['all_applicable_pass_fraction'])} |",
@@ -200,8 +225,13 @@ def write_report(run_dir):
                      f"{percent(stats['compliance'])} | {percent(stats['measurable_fraction'])} |")
     if result["auxiliary_checks"]:
         lines.extend(["", "Auxiliary checks excluded from compliance: " + ", ".join(result["auxiliary_checks"]) + "."])
-    lines.extend(["", "Invalid samples remain in the validity denominator. Unknown and inapplicable checks contribute no numeric severity; "
+    lines.extend(["", "**Overall valid** means structurally valid AND every applicable counted check measurably passes. "
+                  "A structural defect or failed counted check makes it invalid; otherwise unresolved checks make it unknown. "
+                  "Auxiliary checks and individual not-applicable checks are excluded. For a structurally valid graph with no applicable counted checks, "
+                  "the overall status is not_applicable and does not count as success. All selected samples remain in the rate denominator.", "",
+                  "Unknown and inapplicable checks contribute no numeric severity; "
                   "unknowns never count as passes. All-pass fractions use every selected trial, and require at least one evaluable/applicable check.", "",
+                  "Legacy JSON fields `valid_count` and `validity_rate` remain aliases for **structural** validity; use `overall_valid_rate` for the headline.", "",
                   f"Mean junctions / edges / rooms: {number(result['graph_statistics']['junctions']['mean'])} / "
                   f"{number(result['graph_statistics']['edges']['mean'])} / {number(result['graph_statistics']['rooms']['mean'])}. "
                   "No RPLAN reference data: distribution statistics are descriptive, with no FID/KID claim.", ""])
@@ -229,9 +259,16 @@ def write_comparison(experiment_dir, summaries):
         rows.append({"run": str(Path(s["run_dir"]).resolve().relative_to(experiment_dir.resolve())), "method": s["method"], **s["parameters"],
                      "status": s["status"],
                      "comparison_group": s["comparison_group"], "trials": s["selected_trials"],
-                     "final_candidates": s["saved_final_candidates"], "compliance": s["compliance"],
+                     "final_candidates": s["saved_final_candidates"],
+                     "overall_valid_count": s["overall_valid_count"], "overall_valid_rate": s["overall_valid_rate"],
+                     "overall_invalid_count": s["overall_validity_counts"]["invalid"],
+                     "overall_unknown_count": s["overall_validity_counts"]["unknown"],
+                     "overall_not_applicable_count": s["overall_validity_counts"]["not_applicable"],
+                     "structural_valid_count": s["structural_valid_count"], "structural_valid_rate": s["structural_valid_rate"],
+                     "compliance": s["compliance"],
                      "measurable_fraction": s["measurable_fraction"], "unknown_fraction": s["unknown_fraction"],
                      "assumption_based_fraction": s["assumption_based_fraction"], "validity_rate": s["validity_rate"],
+                     "validity_rate_alias_of": "structural_valid_rate",
                      "mean_severity": s["severity"]["mean"], "median_severity": s["severity"]["median"],
                      "wall_seconds_per_trial": runtime,
                      "compute_multiplier": runtime / reference if runtime is not None and reference else None,
@@ -245,12 +282,13 @@ def write_comparison(experiment_dir, summaries):
         writer.writerows(rows)
     lines = ["# Measured comparison", "", "Runtime multipliers use measured wall time per selected trial, relative to a baseline with the same scenario, "
              "constraint definitions and checkpoint hashes. Setup/inference timing boundaries are recorded in each run. Small runs are plumbing checks, not statistical evidence.", "",
-             "| Run | Status | Settings | Trials | Compliance | Measurable | Unknown | Valid | Severity | Seconds/trial | Compute |",
-             "|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|"]
+             "| Run | Status | Settings | Trials | Overall valid | Structurally valid | Compliance | Measurable | Unknown checks | Severity | Seconds/trial | Compute |",
+             "|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|"]
     for row in rows:
         settings = ", ".join(f"{key}={row[key]}" for key in ("n", "k", "guided_steps", "temperature") if row[key] is not None)
-        lines.append(f"| [{row['run']}]({row['run']}/report.md) | {row['status']} | {settings} | {row['trials']} | {percent(row['compliance'])} | "
-                     f"{percent(row['measurable_fraction'])} | {percent(row['unknown_fraction'])} | {percent(row['validity_rate'])} | "
+        lines.append(f"| [{row['run']}]({row['run']}/report.md) | {row['status']} | {settings} | {row['trials']} | "
+                     f"{percent(row['overall_valid_rate'])} | {percent(row['structural_valid_rate'])} | {percent(row['compliance'])} | "
+                     f"{percent(row['measurable_fraction'])} | {percent(row['unknown_fraction'])} | "
                      f"{number(row['mean_severity'])} | {number(row['wall_seconds_per_trial'])} | {number(row['compute_multiplier'])}x |")
     matched = []
     for index, a in enumerate(rows):
@@ -259,7 +297,11 @@ def write_comparison(experiment_dir, summaries):
             if (a["status"] == b["status"] == "complete" and a["comparison_group"] == b["comparison_group"]
                     and ta and tb and max(ta, tb) / min(ta, tb) <= 1.2):
                 matched.append(f"`{a['run']}` vs `{b['run']}` ({max(ta, tb) / min(ta, tb):.2f}x time ratio)")
-    lines.extend(["", "Approximately matched compute (within 20% wall time per trial): " + ("; ".join(matched) if matched else "none measured yet") + ".", "",
+    lines.extend(["", "Overall valid = structurally valid AND all applicable counted checks measurably pass. "
+                  "A failure makes the result invalid; unresolved checks without a failure remain unknown. "
+                  "A structurally valid graph with no applicable counted checks is not_applicable, not a success. All selected samples remain in the denominator. "
+                  "CSV `validity_rate` is a legacy alias for `structural_valid_rate`, not overall validity.", "",
+                  "Approximately matched compute (within 20% wall time per trial): " + ("; ".join(matched) if matched else "none measured yet") + ".", "",
                   "C034 is auxiliary where configured; see per-run reports for check counts and assumptions. "
                   "Unknown values are not zero violations or passes. No RPLAN-based FID/KID was measured.", ""])
     (experiment_dir / "comparison.md").write_text("\n".join(lines))
