@@ -109,7 +109,7 @@ def test_constraint_listing_needs_no_models_and_preserves_legacy_profile(monkeyp
 
 
 @pytest.mark.parametrize("method", ["baseline", "best_of_n", "svdd_pm"])
-def test_default_gpu_dispatch_metadata_and_final_cpu_results(monkeypatch, tmp_path, method):
+def test_default_gpu_dispatch_metadata_and_final_cpu_results(monkeypatch, tmp_path, capsys, method):
     from test_time import gpu_constraints, gpu_sampling, policy
     import torch
 
@@ -188,6 +188,9 @@ def test_default_gpu_dispatch_metadata_and_final_cpu_results(monkeypatch, tmp_pa
                                     "--n", "2", "--k", "2", "--guided_steps", "2", "--output_dir", str(output)])
     run.main()
 
+    trial_logs = [line for line in capsys.readouterr().out.splitlines() if "amortized_seconds=" in line]
+    assert len(trial_logs) == 3
+    assert all("failed=[C076], unknown_ids=[]" in line for line in trial_logs)
     assert [len(seeds) for seeds in dispatched] == [2, 1]
     snapshot = json.loads((output / "config.json").read_text())
     assert snapshot["reward_backend"] == snapshot["guidance"]["backend"] == "gpu"

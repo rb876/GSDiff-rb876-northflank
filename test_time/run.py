@@ -175,9 +175,14 @@ def main():
                     run["completed_trials"] += 1
                     write_json(output / "run.json", run)
                     chosen = result.candidates[result.selected_index]
+                    checks = [check for check in chosen.evaluation.results
+                              if check.counts_toward_compliance and check.applicable]
+                    failed_ids = ",".join(check.id for check in checks if check.status == "fail")
+                    unknown_ids = ",".join(check.id for check in checks if check.status == "unknown")
                     print(f"{args.method} trial {trial + 1}/{config['trials']}: seed={seed}, "
                           f"overall={overall_validity(chosen.evaluation)}, structural_valid={chosen.evaluation.structurally_valid}, "
                           f"energy={chosen.evaluation.energy:.4f}, unknown={chosen.evaluation.unknown_count}, "
+                          f"failed=[{failed_ids}], unknown_ids=[{unknown_ids}], "
                           f"amortized_seconds={result.stats['wall_seconds']:.2f}", flush=True)
         run["parameters_unchanged"] = before == adapter.parameter_hash()
         if not run["parameters_unchanged"]:

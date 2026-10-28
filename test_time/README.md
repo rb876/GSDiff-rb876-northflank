@@ -95,6 +95,8 @@ work or constraint-checking work; those costs are reported separately.
 
 Each run records every complete candidate in `candidates.jsonl`, selected IDs,
 PNG/SVG/JSON files, the config and source hashes, timings, model call counts, and a `report.md`.
+Each trial log also lists failed and unresolved scored constraint IDs, for example
+`failed=[C035], unknown_ids=[]`, using the selected design's final CPU reference evaluation.
 With CPU rewards, SVDD additionally saves every intermediate surrogate graph/evaluation and selection
 in `traces/`. With K=10 and 999 guided steps, that is 9,990 intermediate graphs per trial;
 full-trace storage must be budgeted separately before a large evaluation.
