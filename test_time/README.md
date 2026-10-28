@@ -17,6 +17,7 @@ test_time/
   policy.py                 # shared energy and structural validity
   sampling.py               # baseline, Best-of-N, SVDD-PM
   run.py                    # one experiment entry point
+  launch_eval.sh            # preview/run paired batches; no automatic launch
   evaluate.py               # saved-result summaries and comparisons
   visualize.py              # annotated PNG/SVG
   tests/                    # small synthetic tests; no weights required
@@ -69,6 +70,42 @@ northflank download service file \
 Commit code, configs and concise experiment reports. Keep full generated runs in ignored `outputs/`.
 Copy a few useful figures into the relevant experiment's `figures/` folder for a reviewable report.
 The Markdown can be pasted into HackMD; no document has been published there automatically.
+
+## Proposed larger evaluation: launcher
+
+The launcher is prepared, but no larger evaluation has been launched.
+Preview it from the repository root (no models run and no outputs are created):
+
+```bash
+bash test_time/launch_eval.sh
+```
+
+Its proposed defaults are five batches of 200 trials: **1,000 selected designs per method**.
+Each batch uses a different range of 200 design seeds, shared by all three methods.
+Baseline, Best-of-2 and SVDD-PM (K=4, ten guided steps, temperature 0) run serially,
+with method order rotated between batches. These are provisional settings; similar runtime
+in one smoke test does not establish matched compute for a full evaluation.
+
+The following is the explicit launch command for later, inside the activated Northflank environment:
+
+```bash
+bash test_time/launch_eval.sh --run
+```
+
+Override settings through `EVAL_SEEDS` (space-separated batch start seeds), `TRIALS_PER_RUN`,
+`BEST_N`, `SVDD_K`, `GUIDED_STEPS`, `TEMPERATURE`, `EVAL_CONFIG`, `EVAL_OUTPUT`, or `GSDIFF_PYTHON`.
+For example, preview one small calibration batch:
+
+```bash
+EVAL_SEEDS="1000" TRIALS_PER_RUN=20 bash test_time/launch_eval.sh --dry-run
+```
+
+Each batch gets method logs, saved candidates, reports and its own comparison table.
+The script stops on failure; interrupted-run resume is not implemented.
+The existing evaluator does **not** pool the five batches or calculate confidence intervals,
+near-duplicate rates, or geometric/structural diversity distances. Those reporting additions,
+the combined valid-and-all-checks-passed metric, and compute-budget calibration remain to be done
+before treating this as the final evaluation. Aggregate by paired trial seed, not the Best-of-N winner's seed.
 
 ## Checkpoints and baseline audit
 
