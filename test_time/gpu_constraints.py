@@ -128,7 +128,8 @@ def _bed_search(starts, ends, masks, low, high, areas, circles, circle_mask,
                 width, length, radius, clearances, steps, budget, chunk):
     rooms = starts.shape[0]
     device, dtype = starts.device, starts.dtype
-    bed_found = torch.zeros(rooms, device=device, dtype=torch.bool)
+    # PyTorch 2.1 CUDA scatter_reduce_ does not dispatch boolean reductions.
+    bed_found = torch.zeros(rooms, device=device, dtype=torch.long)
     turning_found, circulation_found, joint_found = bed_found.clone(), bed_found.clone(), bed_found.clone()
     bed_witness = torch.zeros((rooms, 4), device=device, dtype=dtype)
     circle_witness = torch.zeros((rooms, 2), device=device, dtype=dtype)
@@ -148,12 +149,12 @@ def _bed_search(starts, ends, masks, low, high, areas, circles, circle_mask,
                 selected, bottom, top = selected[keep], bottom[keep], top[keep]
                 if selected.numel() == 0:
                     continue
-                bed_found.scatter_reduce_(0, selected, torch.ones_like(selected, dtype=torch.bool), reduce="amax", include_self=True)
+                bed_found.scatter_reduce_(0, selected, torch.ones_like(selected), reduce="amax", include_self=True)
                 centers = circles[selected]
                 offset = torch.maximum(torch.maximum(bottom[:, None] - centers, centers - top[:, None]), torch.zeros_like(centers))
                 free = ((offset * offset).sum(-1) + EPS >= radius**2) & circle_mask[selected]
                 turning = free.any(-1)
-                turning_found.scatter_reduce_(0, selected, turning, reduce="amax", include_self=True)
+                turning_found.scatter_reduce_(0, selected, turning.long(), reduce="amax", include_self=True)
                 circulation = torch.zeros_like(turning)
                 for side, foot in clearances:
                     for direction in (1, -1):
@@ -171,9 +172,9 @@ def _bed_search(starts, ends, masks, low, high, areas, circles, circle_mask,
                         accepted = _rectangles_fit(envelope_low[positions], envelope_high[positions],
                                                    starts[selected[positions]], ends[selected[positions]], masks[selected[positions]])
                         circulation[positions] |= accepted
-                circulation_found.scatter_reduce_(0, selected, circulation, reduce="amax", include_self=True)
+                circulation_found.scatter_reduce_(0, selected, circulation.long(), reduce="amax", include_self=True)
                 joint = turning & circulation
-                joint_found.scatter_reduce_(0, selected, joint, reduce="amax", include_self=True)
+                joint_found.scatter_reduce_(0, selected, joint.long(), reduce="amax", include_self=True)
                 # Select one deterministic (lowest packed index) joint witness per room.
                 index = torch.arange(selected.shape[0], device=device)
                 chosen = torch.full((rooms,), selected.shape[0], device=device, dtype=torch.long)
@@ -183,8 +184,8 @@ def _bed_search(starts, ends, masks, low, high, areas, circles, circle_mask,
                 bed_witness[witness_rooms] = torch.cat((bottom[chosen_indices], top[chosen_indices]), -1)
                 which_circle = free[chosen_indices].to(torch.long).argmax(-1)
                 circle_witness[witness_rooms] = centers[chosen_indices, which_circle]
-    return {"bed": bed_found, "turning": turning_found, "circulation": circulation_found,
-            "joint": joint_found, "bed_witness": bed_witness,
+    return {"bed": bed_found.bool(), "turning": turning_found.bool(), "circulation": circulation_found.bool(),
+            "joint": joint_found.bool(), "bed_witness": bed_witness,
             "circle_witness": circle_witness, "positions_examined": examined}
 
 
@@ -219,7 +220,7 @@ class TensorConstraintEvaluator:
         labels = rooms["labels"]
         batch, room_slots = room_mask.shape
         device, dtype = polygons.device, polygons.dtype
-        finite = (torch.isfinite(polygons) | ~vertex_mask[..., None]).all((-1, -2))
+        finite = (torch.isfinite(polygons) | ~vertex_mask[..., None]).flatten(-2).all(-1)
         polygons = torch.nan_to_num(polygons)
         scale = scenario.coordinate_scale_m_per_model_unit
         metric = polygons * (scale if scale is not None else 1.0)

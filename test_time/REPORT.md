@@ -55,7 +55,7 @@ The historical CPU-guided pilot has three trials per method (seeds 1000–1002):
 designs. All nine selected designs fail C035. Structural validity is 2/3 for baseline and 3/3 for both guided methods.
 This small pilot does not establish an improvement; larger evaluation design remains pending.
 The original 48-test suite passed locally and on Northflank; the batching update passed 92 local tests.
-The current suite passes **146 tests** locally, with two CUDA checks skipped because CUDA is unavailable.
+The current suite passes **147 tests** locally, with two CUDA checks skipped because CUDA is unavailable.
 The GPU backend's offline audit matches room geometry and structural validity on all 12 saved pilot
 candidates, and every constraint status on all 10 structurally valid candidates. Invalid graphs skip
 GPU searches. This is a small implementation check, not evidence of improved generation or speed.

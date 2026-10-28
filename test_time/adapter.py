@@ -160,7 +160,7 @@ class GSDiffAdapter:
         for start in range(0, len(states), batch_size):
             state = torch.cat(states[start:start + batch_size], dim=0)
             size = state.shape[0]
-            finite = torch.isfinite(state).all(dim=(1, 2))
+            finite = torch.isfinite(state).flatten(1).all(dim=1)
             valid = (state[:, :, 9] == 0) & finite[:, None]
             order = torch.where(valid, positions, positions + 53).argsort(dim=1)
             count = valid.sum(dim=1)

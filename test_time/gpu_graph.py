@@ -71,7 +71,7 @@ def _intersections(xy, sources, targets, active, eps):
     forbidden = intersects & (~common | (collinear & positive_overlap))
     pair_mask = active[:, :, None] & active[:, None, :]
     pair_mask &= torch.triu(torch.ones_like(pair_mask, dtype=torch.bool), diagonal=1)
-    return (forbidden & pair_mask).any(dim=(-1, -2))
+    return (forbidden & pair_mask).flatten(1).any(dim=1)
 
 
 def _bridges(adjacency, sources, targets, active, dtype):
@@ -116,7 +116,7 @@ def _nested(polygons, vertex_mask, room_mask, eps):
     ray &= point[..., 0] < x_intersect
     inside = ((ray & edge_mask).sum(-1) % 2 == 1) & ~boundary
     pair_mask = room_mask[:, :, None] & room_mask[:, None, :]
-    return (inside & pair_mask).any(dim=(-1, -2))
+    return (inside & pair_mask).flatten(1).any(dim=1)
 
 
 @torch.no_grad()
@@ -149,7 +149,7 @@ def extract_rooms(xy, semantics, node_mask, adjacency):
     safe_xy = torch.where(torch.isfinite(xy), xy, torch.zeros_like(xy))
     same = (safe_xy[:, :, None] == safe_xy[:, None, :]).all(-1)
     same &= node_mask[:, :, None] & node_mask[:, None, :]
-    diagnostics |= torch.triu(same, diagonal=1).any(dim=(-1, -2)).long() * DUPLICATE_XY
+    diagnostics |= torch.triu(same, diagonal=1).flatten(1).any(dim=1).long() * DUPLICATE_XY
     active_pair = node_mask[:, :, None] & node_mask[:, None, :]
     diagnostics |= (adjacency.diagonal(dim1=1, dim2=2) & node_mask).any(-1).long() * SELF_LOOP
     upper = torch.triu(adjacency & active_pair, diagonal=1)
@@ -166,9 +166,10 @@ def extract_rooms(xy, semantics, node_mask, adjacency):
     chosen = chosen.clamp(max=nodes * nodes - 1)
     sources, targets = chosen // nodes, chosen % nodes
     # Build the bounded graph used for both reachability and the face walk.
-    bounded = torch.zeros_like(adjacency).reshape(batch, -1)
-    bounded.scatter_reduce_(1, chosen, edge_active, reduce="amax", include_self=True)
-    bounded = bounded.reshape(batch, nodes, nodes)
+    # Older CUDA PyTorch supports integer, but not bool, scatter reductions.
+    bounded = torch.zeros_like(adjacency, dtype=torch.long).reshape(batch, -1)
+    bounded.scatter_reduce_(1, chosen, edge_active.long(), reduce="amax", include_self=True)
+    bounded = bounded.reshape(batch, nodes, nodes).bool()
     bounded = bounded | bounded.transpose(1, 2)
     bridges = _bridges(bounded, sources, targets, edge_active, dtype)
     raw_crossing = _intersections(safe_xy, sources, targets, edge_active, eps)

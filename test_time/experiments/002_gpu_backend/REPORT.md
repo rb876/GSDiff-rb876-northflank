@@ -44,9 +44,13 @@ general equivalence or improved generation quality.
 
 Full local comparison: `test_time/outputs/gpu_backend_check/audit.json` (ignored by Git).
 Unit tests cover extraction, containment, shared placements, conservative unknowns, tensor selection,
-batching, random streams and final CPU auditing: **146 passed, 2 CUDA tests skipped** locally.
+batching, random streams and final CPU auditing: **147 passed, 2 CUDA tests skipped** locally.
 CUDA validation and H100 throughput remain unmeasured.
 Python dispatch and dynamic packing can still synchronize with the device; no speedup is claimed yet.
+
+The first node test exposed older-PyTorch incompatibilities. Tuple-dimension `any`/`all` calls
+now use flattened single-dimension reductions, and boolean scatter reductions use integer buffers.
+A regression test enforces those older API restrictions locally; the corrected CUDA run remains pending.
 
 ## Node commands
 

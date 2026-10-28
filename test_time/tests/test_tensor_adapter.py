@@ -52,3 +52,40 @@ def test_empty_tensor_graph_batch(adapter):
     assert result["xy"].shape == (0, 53, 2)
     assert result["adjacency"].shape == (0, 53, 53)
     assert not any(adapter.counters.values())
+
+
+def test_tensor_pipeline_uses_older_torch_compatible_reductions(adapter, monkeypatch):
+    from test_time.constraints import load_specs
+    from test_time.gpu_constraints import TensorConstraintEvaluator
+    from test_time.gpu_graph import extract_rooms
+    from test_time.tests.test_gpu_graph import graph
+    from test_time.types import Scenario
+
+    # Enforce the node's older API restrictions even on a newer local PyTorch.
+    def single_dimension_only(original):
+        def reduction(tensor, *args, **kwargs):
+            dim = kwargs.get("dim", args[0] if args else None)
+            if isinstance(dim, (tuple, list)):
+                raise TypeError("Older PyTorch requires a single any/all dimension")
+            return original(tensor, *args, **kwargs)
+        return reduction
+
+    for name in ("any", "all"):
+        monkeypatch.setattr(torch.Tensor, name, single_dimension_only(getattr(torch.Tensor, name)))
+    original_scatter = torch.Tensor.scatter_reduce_
+
+    def numeric_scatter(tensor, *args, **kwargs):
+        if tensor.dtype == torch.bool:
+            raise TypeError("Older CUDA PyTorch does not support bool scatter_reduce_")
+        return original_scatter(tensor, *args, **kwargs)
+
+    monkeypatch.setattr(torch.Tensor, "scatter_reduce_", numeric_scatter)
+    decoded = adapter.predict_graph_tensors([decoded_state(4)], [adapter.new_rng(42)])
+    assert decoded["node_mask"].sum() == 4
+    rooms = extract_rooms(**graph([(0, 0), (4, 0), (4, 4), (0, 4)],
+                                  [(0, 1), (1, 2), (2, 3), (0, 3)], label=1))
+    evaluator = TensorConstraintEvaluator(load_specs(), max_positions=64)
+    result = evaluator.evaluate(rooms, Scenario(coordinate_scale_m_per_model_unit=1,
+                                               scale_provenance="assumed"))
+    assert result["structurally_valid"].all()
+    assert result["status"][0, evaluator.ids.index("C034")] == 0
