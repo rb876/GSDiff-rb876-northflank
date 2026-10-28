@@ -145,6 +145,58 @@ class GSDiffAdapter:
         return self.complete_graph_batch([state], [self.active_rng if rng is None else rng], batch_size=1)[0]
 
     @torch.no_grad()
+    def predict_graph_tensors(self, states, rngs, batch_size=10):
+        """Decode nodes and predict edges without transferring geometry to CPU.
+
+        Valid junctions are compacted in their original order, matching the
+        reference decoder. Room extraction and checks are left to gpu_graph and
+        gpu_constraints. RNG state cloning preserves common proposal edge draws.
+        """
+        self._check_batch(states, batch_size)
+        if len(states) != len(rngs):
+            raise ValueError("Provide one trajectory RNG per state")
+        parts = {name: [] for name in ("xy", "semantics", "node_mask", "adjacency")}
+        positions = torch.arange(53, device=self.device)[None, :]
+        for start in range(0, len(states), batch_size):
+            state = torch.cat(states[start:start + batch_size], dim=0)
+            size = state.shape[0]
+            finite = torch.isfinite(state).all(dim=(1, 2))
+            valid = (state[:, :, 9] == 0) & finite[:, None]
+            order = torch.where(valid, positions, positions + 53).argsort(dim=1)
+            count = valid.sum(dim=1)
+            node_mask = positions < count[:, None]
+            clean = torch.nan_to_num(state)
+            xy = torch.trunc(clean[:, :, :2] * 256 + 256).gather(1, order[:, :, None].expand(-1, -1, 2))
+            semantics = clean[:, :, 2:9].round().gather(1, order[:, :, None].expand(-1, -1, 7))
+            xy = torch.where(node_mask[:, :, None], xy, 0)
+            semantics = torch.where(node_mask[:, :, None], semantics, 0)
+            adjacency = torch.zeros((size, 53, 53), dtype=torch.bool, device=self.device)
+            eligible = (count >= 3).nonzero(as_tuple=False).flatten()
+            if eligible.numel():
+                masks = node_mask[eligible]
+                corners = torch.where(masks[:, :, None], (xy[eligible] - 256) / 256, 0)
+                interpolation = [torch.rand((1, 2809, 1), device=self.device,
+                                            generator=torch.Generator(device=self.device).set_state(rng.get_state()))
+                                 for rng in rngs[start:start + batch_size]]
+                logits, _, _ = self.edge(corners, masks[:, :, None] & masks[:, None, :],
+                                         masks[:, :, None].to(torch.uint8), semantics[eligible],
+                                         random_lambda=torch.cat(interpolation, dim=0)[eligible])
+                predicted = logits.softmax(dim=2).argmax(dim=2).reshape(-1, 53, 53).bool()
+                adjacency[eligible] = torch.triu(predicted & masks[:, :, None] & masks[:, None, :])
+                self.counters["edge_calls"] += 1
+                self.counters["edge_samples"] += eligible.numel()
+            self.counters["graph_completions"] += size
+            for name, tensor in (("xy", xy), ("semantics", semantics),
+                                 ("node_mask", node_mask), ("adjacency", adjacency)):
+                parts[name].append(tensor)
+        if not states:
+            return {"xy": torch.empty((0, 53, 2), dtype=torch.float64, device=self.device),
+                    "semantics": torch.empty((0, 53, 7), dtype=torch.float64, device=self.device),
+                    "node_mask": torch.empty((0, 53), dtype=torch.bool, device=self.device),
+                    "adjacency": torch.empty((0, 53, 53), dtype=torch.bool, device=self.device)}
+        return {name: torch.cat(tensors, dim=0) for name, tensors in parts.items()}
+
+    @torch.no_grad()
     def complete_graph_batch(self, states, rngs, batch_size=10):
         """Batch edge prediction, retaining a separate RNG and padding per graph.
 

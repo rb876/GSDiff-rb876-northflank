@@ -81,7 +81,9 @@ def comparison_group(config):
     identity = {"scenario": config.get("scenario"), "constraints": config.get("constraints"),
                 "variant": adapter.get("variant"), "steps": adapter.get("steps"),
                 "checkpoints": checkpoints, "batch_size": config.get("batch_size", 1),
-                "inference_batch_size": config.get("inference_batch_size", 1)}
+                "inference_batch_size": config.get("inference_batch_size", 1),
+                "reward_backend": config.get("reward_backend", "cpu"),
+                "tensor_settings": config.get("guidance", {}).get("tensor_settings")}
     return hashlib.sha256(json.dumps(identity, sort_keys=True).encode()).hexdigest()[:12]
 
 
@@ -153,7 +155,9 @@ def summarize_run(run_dir):
             "temperature": config.get("temperature") if config.get("method") == "svdd_pm" else None,
             "batch_size": config.get("batch_size", 1),
             "inference_batch_size": config.get("inference_batch_size", 1),
+            "reward_backend": config.get("reward_backend", "cpu"),
         },
+        "guidance": config.get("guidance", {"backend": "cpu", "final_evaluator": "cpu_reference"}),
         "comparison_group": comparison_group(config), "scenario": config.get("scenario", {}),
         "status": status, "expected_trials": expected_trials,
         "selected_trials": count, "saved_final_candidates": len(rows),
@@ -181,6 +185,7 @@ def summarize_run(run_dir):
         },
         "compute": {**{key: run.get(key) for key in (
             "total_wall_seconds", "node_calls", "edge_calls", "node_samples", "edge_samples", "graph_completions", "candidate_evaluations",
+            "gpu_candidate_evaluations", "cpu_candidate_evaluations",
             "peak_gpu_allocated_bytes", "peak_gpu_reserved_bytes", "fallback_count")},
             "wall_seconds_per_trial": wall / count if wall is not None else None,
             "time_per_trial_interpretation": "amortized throughput, not isolated latency" if config.get("batch_size", 1) > 1
@@ -212,6 +217,8 @@ def write_report(run_dir):
              f"{result['saved_final_candidates']} complete final candidates saved. {parameters}.", "",
              f"Scale: **{scenario.get('scale_provenance', 'missing')}**, {scenario.get('coordinate_scale_m_per_model_unit')} m/drawing pixel. "
              "Results under declared geometry/scenario assumptions are not verified real-world compliance.", "",
+             f"Guidance backend: **{result['parameters']['reward_backend']}**. Reported final validity and compliance use the **CPU reference checker**. "
+             "GPU guidance uses conservative finite searches and can differ from the reference; its scores are saved separately in sample metadata.", "",
              "| Measure | Result |", "|---|---:|",
              f"| **Overall valid** | **{result['overall_valid_count']}/{result['selected_trials']} ({percent(result['overall_valid_rate'])})** |",
              f"| Structurally valid | {result['structural_valid_count']}/{result['selected_trials']} ({percent(result['structural_valid_rate'])}) |",
@@ -227,6 +234,7 @@ def write_report(run_dir):
              f"| Wall time per selected trial | {number(result['compute']['wall_seconds_per_trial'])} s |",
              f"| Node / edge forward calls | {recorded_count(result['compute']['node_calls'])} / {recorded_count(result['compute']['edge_calls'])} |",
              f"| Node / edge evaluated states | {recorded_count(result['compute']['node_samples'])} / {recorded_count(result['compute']['edge_samples'])} |",
+             f"| Tensor / CPU-reference constraint evaluations | {recorded_count(result['compute']['gpu_candidate_evaluations'])} / {recorded_count(result['compute']['cpu_candidate_evaluations'])} |",
              f"| Complete graph evaluations | {result['compute']['candidate_evaluations']} |", "",
              "| ID | Pass | Fail | Unknown | N/A | Compliance | Measurable coverage |",
              "|---|---:|---:|---:|---:|---:|---:|"]
@@ -287,6 +295,8 @@ def write_comparison(experiment_dir, summaries):
                      "compute_multiplier": runtime / reference if runtime is not None and reference else None,
                      "node_calls": s["compute"]["node_calls"], "edge_calls": s["compute"]["edge_calls"],
                      "node_samples": s["compute"]["node_samples"], "edge_samples": s["compute"]["edge_samples"],
+                     "gpu_candidate_evaluations": s["compute"]["gpu_candidate_evaluations"],
+                     "cpu_candidate_evaluations": s["compute"]["cpu_candidate_evaluations"],
                      "time_per_trial_interpretation": s["compute"]["time_per_trial_interpretation"],
                      "candidate_evaluations": s["compute"]["candidate_evaluations"]})
     if not rows:
@@ -296,13 +306,13 @@ def write_comparison(experiment_dir, summaries):
         writer.writeheader()
         writer.writerows(rows)
     lines = ["# Measured comparison", "", "Runtime multipliers use measured wall time per selected trial, relative to a baseline with the same scenario, "
-             "constraint definitions, checkpoint hashes and batching controls. Older configs without batching fields mean batch_size=1 and inference_batch_size=1. "
+             "constraint definitions, checkpoint hashes, guidance backend and batching controls. Older configs without batching fields mean batch_size=1 and inference_batch_size=1. "
              "For batch_size > 1, seconds/trial is amortized throughput, not isolated latency. "
              "Setup/inference timing boundaries are recorded in each run. Small runs are plumbing checks, not statistical evidence.", "",
              "| Run | Status | Settings | Trials | Overall valid | Structurally valid | Compliance | Measurable | Unknown checks | Severity | Seconds/trial | Node/edge calls | Node/edge states | Compute |",
              "|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|"]
     for row in rows:
-        settings = ", ".join(f"{key}={row[key]}" for key in ("n", "k", "guided_steps", "temperature", "batch_size", "inference_batch_size") if row[key] is not None)
+        settings = ", ".join(f"{key}={row[key]}" for key in ("n", "k", "guided_steps", "temperature", "batch_size", "inference_batch_size", "reward_backend") if row[key] is not None)
         lines.append(f"| [{row['run']}]({row['run']}/report.md) | {row['status']} | {settings} | {row['trials']} | "
                      f"{percent(row['overall_valid_rate'])} | {percent(row['structural_valid_rate'])} | {percent(row['compliance'])} | "
                      f"{percent(row['measurable_fraction'])} | {percent(row['unknown_fraction'])} | "
@@ -323,6 +333,7 @@ def write_comparison(experiment_dir, summaries):
                   "Approximately matched compute (within 20% wall time per trial): " + ("; ".join(matched) if matched else "none measured yet") + ".", "",
                   "C034 is auxiliary where configured; see per-run reports for check counts and assumptions. "
                   "Unknown values are not zero violations or passes. Missing evaluated-state counts are unknown (empty CSV cells), not inferred from forward calls. "
+                  "All final validity/compliance metrics use the CPU reference checker, including runs guided by tensor scores. "
                   "No RPLAN-based FID/KID was measured.", ""])
     (experiment_dir / "comparison.md").write_text("\n".join(lines))
     return rows

@@ -168,9 +168,15 @@ def test_legacy_state_counts_are_unknown_and_batching_defaults_to_one(tmp_path):
     summary = write_report(directory)
     assert summary["parameters"]["batch_size"] == summary["parameters"]["inference_batch_size"] == 1
     assert summary["compute"]["node_samples"] is None and summary["compute"]["edge_samples"] is None
+    assert summary["parameters"]["reward_backend"] == "cpu"
+    assert summary["compute"]["gpu_candidate_evaluations"] is None
+    assert summary["compute"]["cpu_candidate_evaluations"] is None
     assert "| Node / edge evaluated states | unknown / unknown |" in (directory / "report.md").read_text()
+    assert "| Tensor / CPU-reference constraint evaluations | unknown / unknown |" in (directory / "report.md").read_text()
     config = json.loads((directory / "config.json").read_text())
     assert comparison_group(config) == comparison_group({**config, "batch_size": 1, "inference_batch_size": 1})
+    assert comparison_group(config) == comparison_group({**config, "reward_backend": "cpu",
+                                                         "guidance": {"tensor_settings": None}})
     write_comparison(tmp_path, [summary])
     with (tmp_path / "comparison.csv").open() as stream:
         row = next(csv.DictReader(stream))
@@ -225,3 +231,65 @@ def test_svg_distinguishes_overall_from_structural_validity(tmp_path, check_stat
     paths = save_sample(row["sample"], row["evaluation"], tmp_path / check_status)
     svg = Path(paths["svg"]).read_text()
     assert f"overall: {overall_label} | structure: valid" in svg
+
+
+def test_gpu_comparison_matches_backend_and_search_settings_before_runtime(tmp_path):
+    def configured(name, method, seconds, backend="cpu", positions=20000):
+        directory = make_run(tmp_path / name, [candidate(0, [result("C076", "pass")])],
+                             method=method, seconds=seconds)
+        config = json.loads((directory / "config.json").read_text())
+        config["reward_backend"] = backend
+        config["guidance"] = {"backend": backend, "final_evaluator": "cpu_reference",
+                              "tensor_settings": {"backend": "torch_finite_grid_v1", "max_bed_positions_per_room": positions}
+                              if backend == "gpu" else None}
+        write_json(directory / "config.json", config)
+        return write_report(directory)
+
+    cpu_baseline = configured("cpu-baseline", "baseline", 10)
+    gpu_best = configured("gpu-best", "best_of_n", 40, "gpu")
+    first = write_comparison(tmp_path, [cpu_baseline, gpu_best])
+    assert first[1]["compute_multiplier"] is None
+    assert cpu_baseline["comparison_group"] != gpu_best["comparison_group"]
+
+    gpu_baseline = configured("gpu-baseline", "baseline", 20, "gpu")
+    changed_search = configured("gpu-different-search", "best_of_n", 40, "gpu", positions=1000)
+    table = write_comparison(tmp_path, [cpu_baseline, gpu_baseline, gpu_best, changed_search])
+    assert gpu_baseline["comparison_group"] == gpu_best["comparison_group"]
+    assert changed_search["comparison_group"] != gpu_best["comparison_group"]
+    assert [row["compute_multiplier"] for row in table] == [1, 1, 2, None]
+    assert [row["reward_backend"] for row in table] == ["cpu", "gpu", "gpu", "gpu"]
+    assert "guidance backend" in (tmp_path / "comparison.md").read_text()
+
+
+def test_gpu_metadata_never_overrides_cpu_final_metrics_and_counters_export(tmp_path):
+    row = candidate(0, [result("C076", "fail")])
+    row["sample"]["metadata"] = {
+        "guidance_backend": "tensor_gpu", "final_evaluation_backend": "cpu_reference",
+        "guidance_evaluation": {"structurally_valid": True, "energy": 0.0,
+                                "results": [{"id": "C076", "status": "pass"}]},
+    }
+    directory = make_run(tmp_path / "gpu", [row], method="svdd_pm")
+    config = json.loads((directory / "config.json").read_text())
+    config.update(reward_backend="gpu", guidance={"backend": "gpu", "final_evaluator": "cpu_reference",
+                                                 "tensor_settings": {"cpu_oracle_equivalence": False}})
+    write_json(directory / "config.json", config)
+    counters = json.loads((directory / "run.json").read_text())
+    counters.update(candidate_evaluations=101, gpu_candidate_evaluations=100, cpu_candidate_evaluations=1)
+    write_json(directory / "run.json", counters)
+
+    summary = write_report(directory)
+    assert summary["overall_valid_rate"] == 0 and summary["structural_valid_rate"] == 1
+    assert summary["compliance"] == 0 and summary["per_constraint"]["C076"]["fail"] == 1
+    assert summary["guidance"]["final_evaluator"] == "cpu_reference"
+    assert summary["compute"]["candidate_evaluations"] == 101
+    assert summary["compute"]["gpu_candidate_evaluations"] == 100
+    assert summary["compute"]["cpu_candidate_evaluations"] == 1
+    markdown = (directory / "report.md").read_text()
+    assert "Guidance backend: **gpu**" in markdown and "**CPU reference checker**" in markdown
+    assert "| Tensor / CPU-reference constraint evaluations | 100 / 1 |" in markdown
+    table = write_comparison(tmp_path, [summary])
+    assert table[0]["gpu_candidate_evaluations"] == 100 and table[0]["cpu_candidate_evaluations"] == 1
+    with (tmp_path / "comparison.csv").open() as stream:
+        saved = next(csv.DictReader(stream))
+    assert saved["reward_backend"] == "gpu"
+    assert saved["gpu_candidate_evaluations"] == "100" and saved["cpu_candidate_evaluations"] == "1"

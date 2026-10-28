@@ -20,6 +20,8 @@ def main():
     parser.add_argument("--batch_size", type=int, help="Independent design trials generated together (default config: 4)")
     parser.add_argument("--inference_batch_size", type=int,
                         help="Maximum states per neural-network call, including proposals (default config: 10)")
+    parser.add_argument("--reward_backend", choices=("cpu", "gpu"),
+                        help="Reward backend (default: gpu); final validation uses the CPU checker")
     parser.add_argument("--temperature", type=float)
     parser.add_argument("--output_dir", type=Path)
     parser.add_argument("--device", default="cuda:0")
@@ -27,14 +29,16 @@ def main():
     parser.add_argument("--edge-checkpoint")
     args = parser.parse_args()
     config_path = args.config.resolve()
-    config = {"batch_size": 4, "inference_batch_size": 10, **read_json(config_path)}
+    config = {"batch_size": 4, "inference_batch_size": 10, "reward_backend": "gpu", **read_json(config_path)}
     config.update({name: value for name, value in vars(args).items()
                    if name in {"method", "trials", "seed", "n", "k", "guided_steps", "temperature",
-                               "batch_size", "inference_batch_size"} and value is not None})
+                               "batch_size", "inference_batch_size", "reward_backend"} and value is not None})
     if config["trials"] < 1 or config["seed"] < 0:
         parser.error("trials must be positive and seed nonnegative")
     if any(type(config[key]) is not int or config[key] < 1 for key in ("batch_size", "inference_batch_size")):
         parser.error("batch_size and inference_batch_size must be positive integers")
+    if config["reward_backend"] not in {"cpu", "gpu"}:
+        parser.error("reward_backend must be cpu or gpu")
     scenario = Scenario(**read_json(config_path.parent / config["scenario"]))
     from .constraints import load_specs
     from .policy import ConstraintEvaluator
@@ -55,6 +59,10 @@ def main():
     except (FileNotFoundError, ImportError) as error:
         parser.exit(2, f"Setup needed: {error}\n")
     before = adapter.parameter_hash()
+    tensor_evaluator = None
+    if config["reward_backend"] == "gpu":
+        from .gpu_constraints import TensorConstraintEvaluator
+        tensor_evaluator = TensorConstraintEvaluator(specs, validity_weight=config["validity_weight"])
     setup_seconds = time.perf_counter() - setup_start
     stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S-%fZ")
     suffix = {"baseline": "", "best_of_n": f"-n{config['n']}",
@@ -68,6 +76,10 @@ def main():
         commit = None
     snapshot = {**config, "scenario": asdict(scenario), "constraints": [asdict(spec) for spec in specs],
                 "adapter": adapter.metadata, "repo_commit": commit,
+                "guidance": {"backend": config["reward_backend"], "device": str(adapter.device),
+                             "tensor_settings": tensor_evaluator.metadata if tensor_evaluator else None,
+                             "final_evaluator": "cpu_reference",
+                             "trace_format": "scores_and_selections" if tensor_evaluator else "full_candidate_graphs"},
                 "source_sha256": {str(path.relative_to(repo)): file_hash(path)
                                   for path in sorted([*(repo / "test_time").glob("*.py"),
                                                       repo / "gsdiff/house_nn1.py", repo / "gsdiff/house_nn2.py"])},
@@ -84,9 +96,11 @@ def main():
            "total_wall_seconds": 0.0, "setup_seconds": setup_seconds,
            "node_calls": 0, "edge_calls": 0, "graph_completions": 0,
            "node_samples": 0, "edge_samples": 0, "batches": [],
+           "gpu_candidate_evaluations": 0, "cpu_candidate_evaluations": 0,
            "candidate_evaluations": 0, "fallback_count": 0, "peak_gpu_allocated_bytes": 0}
     write_json(output / "run.json", run)
-    print(f"Run: {output}; batch_size={config['batch_size']}, inference_batch_size={config['inference_batch_size']}", flush=True)
+    print(f"Run: {output}; batch_size={config['batch_size']}, inference_batch_size={config['inference_batch_size']}, "
+          f"reward_backend={config['reward_backend']}, device={adapter.device}", flush=True)
     if adapter.device.type == "cuda":
         torch.cuda.reset_peak_memory_stats(adapter.device)
     started = time.perf_counter()
@@ -99,6 +113,18 @@ def main():
                 batch_options = {"inference_batch_size": config["inference_batch_size"]}
                 if args.method == "baseline":
                     results, batch_stats = sampling.baseline_batch(*arguments, **batch_options)
+                elif tensor_evaluator is not None:
+                    from . import gpu_sampling
+                    if args.method == "best_of_n":
+                        results, batch_stats = gpu_sampling.best_of_n_batch_gpu(
+                            *arguments, n=config["n"], tensor_evaluator=tensor_evaluator, **batch_options)
+                    else:
+                        results, batch_stats = gpu_sampling.svdd_pm_batch_gpu(
+                            *arguments, k=config["k"], guided_steps=config["guided_steps"],
+                            temperature=config["temperature"], tensor_evaluator=tensor_evaluator,
+                            progress_callback=lambda current, total: print(
+                                f"svdd_pm trials {first_trial + 1}-{trial_ids[-1] + 1}: "
+                                f"guided step {current}/{total}", flush=True), **batch_options)
                 elif args.method == "best_of_n":
                     results, batch_stats = sampling.best_of_n_batch(*arguments, n=config["n"], **batch_options)
                 else:
@@ -108,6 +134,8 @@ def main():
                 for key in ("node_calls", "edge_calls", "node_samples", "edge_samples", "graph_completions",
                             "candidate_evaluations", "fallback_count"):
                     run[key] += batch_stats.get(key, 0)
+                run["gpu_candidate_evaluations"] += batch_stats.get("gpu_candidate_evaluations", 0)
+                run["cpu_candidate_evaluations"] += batch_stats.get("cpu_candidate_evaluations", batch_stats["candidate_evaluations"])
                 run["total_wall_seconds"] += batch_stats["wall_seconds"]
                 run["batches"].append({"first_trial": first_trial, "trial_count": len(trial_ids), **batch_stats})
                 if adapter.device.type == "cuda":

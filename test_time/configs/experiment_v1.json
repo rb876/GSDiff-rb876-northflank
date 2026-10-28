@@ -6,6 +6,7 @@
   "trials": 1,
   "batch_size": 4,
   "inference_batch_size": 10,
+  "reward_backend": "gpu",
   "seed": 42,
   "n": 4,
   "k": 10,

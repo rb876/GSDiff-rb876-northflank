@@ -10,8 +10,8 @@ Frozen unconstrained RPLAN checkpoint, 1,000 DDPM steps, H100.
 Scenario: two occupants, 2.5 m ceiling height, **assumed** 0.025 m per drawing pixel.
 Six scored IDs: C033, C035, C036, C076, C077, C078. C034 is an auxiliary bed-footprint check.
 Available methods: baseline, Best-of-N, and SVDD-PM. Current CLI defaults are one trial,
-N=4, and SVDD-PM with K=10, 999 guided stochastic steps and temperature 0.
-The historical smoke tests and pilot below retain their original settings.
+N=4, GPU rewards, and SVDD-PM with K=10, 999 guided stochastic steps and temperature 0.
+The historical smoke tests and pilot below retain their original CPU guidance and settings.
 
 ## Status
 
@@ -60,8 +60,10 @@ The launcher still uses Best-of-2; it must be recalibrated against full-guidance
 claiming a compute-matched comparison.
 
 The runner now supports batched trials and proposal inference: defaults are `batch_size=4` and
-`inference_batch_size=10`. Every design keeps its own seed and candidate selection; CPU geometry
-checks remain per graph. These settings have no measured H100 results yet. Timing reports use
+`inference_batch_size=10`. Every design keeps its own seed and candidate selection. The
+[GPU backend](../002_gpu_backend/REPORT.md) now batches geometry and rewards by default;
+`--reward_backend cpu` opts into reference CPU guidance. Final evaluations remain on the CPU.
+These settings have no measured H100 results yet. Timing reports use
 amortized seconds per design and record both forward calls and the number of states processed.
 All 92 local tests pass after batching, including independent seeds, proposal selection, tail batches,
 adapter RNG handling and exported timing totals. These tests use tiny CPU networks, not pretrained generation.

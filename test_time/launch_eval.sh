@@ -21,6 +21,7 @@ read -r -a batch_seeds <<< "${EVAL_SEEDS:-10000 20000 30000 40000 50000}"
 trials="${TRIALS_PER_RUN:-200}"
 batch_size="${BATCH_SIZE:-4}"
 inference_batch_size="${INFERENCE_BATCH_SIZE:-10}"
+reward_backend="${REWARD_BACKEND:-gpu}"
 best_n="${BEST_N:-2}"
 svdd_k="${SVDD_K:-10}"
 guided_steps="${GUIDED_STEPS:-999}"
@@ -52,6 +53,7 @@ printf 'Plan: %s batches x %s trials = %s selected outputs per method.\n' \
 printf 'Best-of-%s; SVDD K=%s, guided steps=%s, temperature=%s.\n' \
   "$best_n" "$svdd_k" "$guided_steps" "$temperature"
 printf 'Generation batch size=%s; maximum neural inference batch size=%s.\n' "$batch_size" "$inference_batch_size"
+printf 'Reward backend=%s; final evaluation uses the CPU reference checker.\n' "$reward_backend"
 printf 'Compute matching is provisional until calibrated. Output: %s\n' "$output_root"
 
 if [[ "$dry_run" == false ]]; then
@@ -85,7 +87,8 @@ for ((batch=0; batch<${#batch_seeds[@]}; batch++)); do
     esac
     command=("$python_bin" -u -m test_time.run --config "$config" --method "$method"
              --trials "$trials" --seed "$seed" --batch_size "$batch_size"
-             --inference_batch_size "$inference_batch_size" --output_dir "$batch_dir/$method" "${extra[@]}")
+             --inference_batch_size "$inference_batch_size" --reward_backend "$reward_backend"
+             --output_dir "$batch_dir/$method" "${extra[@]}")
     if [[ "$dry_run" == false ]]; then
       mkdir -p "$batch_dir"
       execute "${command[@]}" 2>&1 | tee "$batch_dir/$method.log"

@@ -16,6 +16,10 @@ test_time/
   constraints.py            # config-driven checks
   policy.py                 # shared energy and structural validity
   sampling.py               # baseline, Best-of-N, SVDD-PM
+  gpu_graph.py               # tensor room extraction and graph checks
+  gpu_constraints.py         # tensor constraint searches
+  gpu_sampling.py            # GPU guidance and selection; final CPU audit
+  audit_gpu.py               # compare tensor checks against saved results
   run.py                    # one experiment entry point
   launch_eval.sh            # preview/run paired batches; no automatic launch
   evaluate.py               # saved-result summaries and comparisons
@@ -47,7 +51,7 @@ python -m test_time.run --method svdd_pm --k 10 --guided_steps 999 --temperature
 python -m test_time.evaluate --experiment_dir test_time/outputs/001_constraints
 ```
 
-Defaults are one trial, seed 42, and the same scenario/checkpoints for all methods.
+Defaults are one trial, seed 42, GPU rewards, and the same scenario/checkpoints for all methods.
 SVDD-PM now defaults to K=10 and greedy selection at all 999 stochastic reverse steps.
 This full-guidance configuration has not yet been evaluated; earlier results used shorter guidance windows.
 Larger experiments and their budgets will be decided separately; `--trials` controls their size.
@@ -71,7 +75,8 @@ python -m test_time.run --method svdd_pm --trials 8 --seed 1000 \
 
 This uses the current K=10, 999-step, temperature-0 defaults. Lower `--inference_batch_size`
 if the edge model needs too much GPU memory. Set both batch sizes to 1 for sequential inference.
-Geometry extraction and constraint checking remain per graph on the CPU.
+By default, intermediate geometry extraction and constraint checking use the batched GPU backend.
+Final saved designs still receive the CPU reference audit.
 
 Each trajectory has its own seeded random stream. Competing SVDD proposals share the same edge
 interpolation draw, as before. The edge network accepts optional precomputed interpolation draws
@@ -86,9 +91,10 @@ settings and still need measured runtime calibration on the H100.
 
 Each run records every complete candidate in `candidates.jsonl`, selected IDs,
 PNG/SVG/JSON files, the config and source hashes, timings, model call counts, and a `report.md`.
-SVDD additionally saves every intermediate surrogate graph/evaluation and selection in `traces/`.
-With K=10 and 999 guided steps, that is 9,990 intermediate graphs per trial; full-trace storage
-must be budgeted separately before a large evaluation.
+With CPU rewards, SVDD additionally saves every intermediate surrogate graph/evaluation and selection
+in `traces/`. With K=10 and 999 guided steps, that is 9,990 intermediate graphs per trial;
+full-trace storage must be budgeted separately before a large evaluation.
+GPU rewards use compact traces containing scores, check statuses and selection decisions.
 Failed or invalid candidates are retained. A partial run is not a completed benchmark.
 
 From Kraken, copy results back:
@@ -103,6 +109,48 @@ northflank download service file \
 Commit code, configs and concise experiment reports. Keep full generated runs in ignored `outputs/`.
 Copy a few useful figures into the relevant experiment's `figures/` folder for a reviewable report.
 The Markdown can be pasted into HackMD; no document has been published there automatically.
+
+## GPU room extraction and rewards
+
+The default `--reward_backend gpu` runs intermediate graph extraction, constraint searches and
+proposal selection with PyTorch tensors on the model's device. All six scored checks and auxiliary
+C034 are retained, including the shared bed placement for C033/C035. Final saved candidates
+are audited with the existing CPU checker; reports and overall validity always use that audit.
+
+On Northflank, to generate **four final designs** with the current full-guidance defaults:
+
+```bash
+python -m test_time.run --method svdd_pm --trials 4 --seed 1000 \
+  --batch_size 4 --inference_batch_size 10
+```
+
+`--inference_batch_size` also limits the number of graphs scored together. Progress is printed
+at the first, every 50th and last guided step. Output locations are printed at startup;
+the default is a new directory under `test_time/outputs/001_constraints/`.
+Best-of-N uses the same GPU backend by default. Pass `--reward_backend cpu` to opt into the
+reference CPU guidance implementation. Historical saved CPU runs retain their original backend.
+
+The GPU backend uses planar faces instead of polygon unions: verified, non-overlapping room
+areas can be summed directly. It uses the same configured .25/.05 m search grids and a maximum
+of 20,000 bed positions per room, retaining up to 32 directional circle witnesses. These finite
+searches can miss a valid placement; missed searches remain `unknown`. Bathroom failure requires
+a proven bounding-box/area bound. Structurally invalid graphs skip dimensional checks and get the
+structural penalty. This backend is therefore **not numerically identical** to the CPU checker.
+Run configs and sample metadata identify the backend; final GPU scores are saved separately.
+At positive temperature, GPU selection uses a separate PyTorch random stream and will not match
+the CPU NumPy selection stream exactly. Greedy temperature 0 is unchanged.
+
+Local synthetic tests and a saved-pilot comparison passed, but CUDA execution and H100 speedup
+have not been measured. Python dispatch, dynamic tensor packing and final CPU auditing still
+add overhead. This implementation does not guarantee full GPU utilization.
+See the [implementation audit](experiments/002_gpu_backend/REPORT.md).
+
+To check saved designs on the node without loading models or generating anything:
+
+```bash
+python -m test_time.audit_gpu --experiment_dir test_time/outputs/pilot_check \
+  --device cuda:0 --output test_time/outputs/gpu_backend_check/audit_cuda.json
+```
 
 ## Proposed larger evaluation: launcher
 
@@ -127,13 +175,17 @@ bash test_time/launch_eval.sh --run
 ```
 
 Override settings through `EVAL_SEEDS` (space-separated batch start seeds), `TRIALS_PER_RUN`,
-`BEST_N`, `SVDD_K`, `GUIDED_STEPS`, `TEMPERATURE`, `BATCH_SIZE`, `INFERENCE_BATCH_SIZE`,
+`BEST_N`, `SVDD_K`, `GUIDED_STEPS`, `TEMPERATURE`, `BATCH_SIZE`, `INFERENCE_BATCH_SIZE`, `REWARD_BACKEND`,
 `EVAL_CONFIG`, `EVAL_OUTPUT`, or `GSDIFF_PYTHON`.
 For example, preview one small calibration batch:
 
 ```bash
 EVAL_SEEDS="1000" TRIALS_PER_RUN=20 bash test_time/launch_eval.sh --dry-run
 ```
+
+The launcher defaults to `REWARD_BACKEND=gpu`; set `REWARD_BACKEND=cpu` for reference CPU guidance.
+Recalibrate matched compute after
+changing this backend; CPU-guided timings do not establish a budget for GPU guidance.
 
 Each batch gets method logs, saved candidates, reports and its own comparison table.
 The script stops on failure; interrupted-run resume is not implemented.
