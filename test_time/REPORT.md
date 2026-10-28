@@ -1,5 +1,9 @@
 # GSDiff: test-time constraint guidance
 
+The [concise technical report](../docs/technical_report.md) presents the model, constraints,
+reward and SVDD comparison, with results pending.
+[Technical notes](../docs/technical_notes.md) retain implementation details and assessment alignment.
+
 ## Goal
 
 Compare pretrained generation, Best-of-N, and SVDD-PM using the same frozen models,

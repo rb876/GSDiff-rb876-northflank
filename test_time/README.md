@@ -3,6 +3,9 @@
 Edit on Kraken, push the code, pull on Northflank, and run on its H100.
 The original GSDiff network architecture and pretrained weights are unchanged.
 
+Read the [concise technical report](../docs/technical_report.md) or consult the
+[technical notes](../docs/technical_notes.md) for full implementation and assessment details.
+
 ```text
 test_time/
   REPORT.md                 # concise project report, ready for HackMD
