@@ -4,6 +4,8 @@
   "scenario": "scenario_v1.json",
   "constraints": "constraints_v1.json",
   "trials": 1,
+  "batch_size": 4,
+  "inference_batch_size": 10,
   "seed": 42,
   "n": 4,
   "k": 10,

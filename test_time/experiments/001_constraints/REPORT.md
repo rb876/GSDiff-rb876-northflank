@@ -59,8 +59,16 @@ The deterministic final step is not duplicated. No result above measures this ne
 The launcher still uses Best-of-2; it must be recalibrated against full-guidance runtime before
 claiming a compute-matched comparison.
 
+The runner now supports batched trials and proposal inference: defaults are `batch_size=4` and
+`inference_batch_size=10`. Every design keeps its own seed and candidate selection; CPU geometry
+checks remain per graph. These settings have no measured H100 results yet. Timing reports use
+amortized seconds per design and record both forward calls and the number of states processed.
+All 92 local tests pass after batching, including independent seeds, proposal selection, tail batches,
+adapter RNG handling and exported timing totals. These tests use tiny CPU networks, not pretrained generation.
+
 ```bash
-python -m test_time.run --method svdd_pm --k 10 --guided_steps 999 --temperature 0
+python -m test_time.run --method svdd_pm --k 10 --guided_steps 999 --temperature 0 \
+  --batch_size 4 --inference_batch_size 10
 ```
 
 ## Limits

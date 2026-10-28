@@ -8,7 +8,7 @@ from pathlib import Path
 from PIL import Image
 import pytest
 
-from test_time.evaluate import summarize_run, write_comparison, write_report
+from test_time.evaluate import comparison_group, summarize_run, write_comparison, write_report
 from test_time.types import ConstraintResult, FloorplanSample, PolicyEvaluation, Room, write_json
 from test_time.visualize import save_sample
 
@@ -130,6 +130,64 @@ def test_runtime_multiplier_is_per_trial_and_scenario_matched(tmp_path):
     assert table[0]["compute_multiplier"] == 1
     assert table[1]["compute_multiplier"] == 2
     assert table[2]["compute_multiplier"] is None
+    assert "none measured yet" in (tmp_path / "comparison.md").read_text()
+
+
+def test_batched_compute_preserves_calls_states_and_total_time(tmp_path):
+    rows = [candidate(i, [result("C076", "pass")]) for i in range(4)]
+    for row in rows:
+        row["stats"] = {"wall_seconds": 3.0}
+    directory = make_run(tmp_path / "batched", rows, seconds=12)
+    config = json.loads((directory / "config.json").read_text())
+    config.update(batch_size=4, inference_batch_size=10)
+    write_json(directory / "config.json", config)
+    run = json.loads((directory / "run.json").read_text())
+    run.update(node_calls=1000, edge_calls=1, node_samples=4000, edge_samples=4)
+    write_json(directory / "run.json", run)
+
+    summary = write_report(directory)
+    assert summary["parameters"]["batch_size"] == 4
+    assert summary["parameters"]["inference_batch_size"] == 10
+    assert summary["compute"]["total_wall_seconds"] == 12
+    assert summary["compute"]["wall_seconds_per_trial"] == 3
+    assert (summary["compute"]["node_calls"], summary["compute"]["node_samples"]) == (1000, 4000)
+    assert (summary["compute"]["edge_calls"], summary["compute"]["edge_samples"]) == (1, 4)
+    report = (directory / "report.md").read_text()
+    assert "amortized throughput, not isolated latency" in report
+    assert "| Node / edge evaluated states | 4000 / 4 |" in report
+    table = write_comparison(tmp_path, [summary])
+    assert table[0]["node_samples"] == 4000 and table[0]["edge_samples"] == 4
+    assert table[0]["batch_size"] == 4 and table[0]["inference_batch_size"] == 10
+    with (tmp_path / "comparison.csv").open() as stream:
+        saved = next(csv.DictReader(stream))
+    assert saved["node_calls"] == "1000" and saved["node_samples"] == "4000"
+
+
+def test_legacy_state_counts_are_unknown_and_batching_defaults_to_one(tmp_path):
+    directory = make_run(tmp_path / "legacy", [candidate(0, [result("C076", "pass")])])
+    summary = write_report(directory)
+    assert summary["parameters"]["batch_size"] == summary["parameters"]["inference_batch_size"] == 1
+    assert summary["compute"]["node_samples"] is None and summary["compute"]["edge_samples"] is None
+    assert "| Node / edge evaluated states | unknown / unknown |" in (directory / "report.md").read_text()
+    config = json.loads((directory / "config.json").read_text())
+    assert comparison_group(config) == comparison_group({**config, "batch_size": 1, "inference_batch_size": 1})
+    write_comparison(tmp_path, [summary])
+    with (tmp_path / "comparison.csv").open() as stream:
+        row = next(csv.DictReader(stream))
+    assert row["node_samples"] == row["edge_samples"] == ""
+
+
+@pytest.mark.parametrize("batch_size,inference_batch_size", [(4, 1), (1, 10)])
+def test_compute_matching_requires_identical_batching_controls(tmp_path, batch_size, inference_batch_size):
+    baseline = write_report(make_run(tmp_path / "baseline", [candidate(0, [result("C076", "pass")])], seconds=10))
+    directory = make_run(tmp_path / "best", [candidate(0, [result("C076", "pass")])], method="best_of_n", seconds=10)
+    config = json.loads((directory / "config.json").read_text())
+    config.update(batch_size=batch_size, inference_batch_size=inference_batch_size)
+    write_json(directory / "config.json", config)
+    best = write_report(directory)
+    table = write_comparison(tmp_path, [baseline, best])
+    assert best["comparison_group"] != baseline["comparison_group"]
+    assert table[1]["compute_multiplier"] is None
     assert "none measured yet" in (tmp_path / "comparison.md").read_text()
 
 

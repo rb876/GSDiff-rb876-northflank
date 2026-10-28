@@ -124,8 +124,12 @@ class EdgeModel(nn.Module):
         )
 
 
-    def forward(self, corners, global_attn_matrix, corners_padding_mask, semantics):
-        '''Edge transformer'''
+    def forward(self, corners, global_attn_matrix, corners_padding_mask, semantics, random_lambda=None):
+        '''Edge transformer for [B, 53, ...] inputs.
+
+        Optional [B, 2809, 1] interpolation draws let callers preserve per-sample
+        RNG streams when batching. Omitting them retains the original draw.
+        '''
 
         '''edges_embedding (bs, 2809, 256) include padding, padding should be 0'''
         edge_coords_padding_mask = global_attn_matrix.reshape(corners.shape[0], -1, 1)
@@ -146,7 +150,10 @@ class EdgeModel(nn.Module):
 
 
 
-        random_lambda = torch.rand((corners.shape[0], 2809, 1), device=corners.device)
+        if random_lambda is None:
+            random_lambda = torch.rand((corners.shape[0], 2809, 1), device=corners.device)
+        elif random_lambda.shape != (corners.shape[0], 2809, 1):
+            raise ValueError('random_lambda must have shape [batch, 2809, 1]')
         edge_coords3 = edge_coords1 * random_lambda + edge_coords2 * (1 - random_lambda)
         edge_semans3 = torch.zeros_like(edge_semans1) # 随机插值点无法得知语义
 

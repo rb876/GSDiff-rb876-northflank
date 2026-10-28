@@ -38,13 +38,19 @@ following the [paper's full-process, greedy configuration](https://arxiv.org/htm
 These defaults have not yet been evaluated. The launcher's Best-of-2 setting remains provisional
 and needs runtime calibration before a compute-matched comparison.
 
+Generation now batches up to four independent trials, with at most ten states per neural-network call.
+SVDD proposals and Best-of-N candidates use these batched calls; each design retains its own random
+stream and selection. Geometry checks remain on the CPU. Reports count batch time once and separate
+forward calls from processed states. H100 throughput and memory have not yet been benchmarked.
+
 ## Current status
 
 The user-run pilot has three trials per method (seeds 1000–1002): all three methods have **0/3 overall-valid**
 designs. All nine selected designs fail C035. Structural validity is 2/3 for baseline and 3/3 for both guided methods.
 This small pilot does not establish an improvement; larger evaluation design remains pending.
-The original 48-test suite passed locally and on Northflank. After the reporting update, all **52 tests**
-pass locally; pilot reports and figures are rebuilt from saved results without new inference.
+The original 48-test suite passed locally and on Northflank. After the batching update, all **92 tests**
+pass locally, including serial/batched equivalence with tiny CPU networks and CLI output accounting.
+No pretrained batched generation has been run. Pilot reports and figures retain the saved earlier results.
 Missing local checkpoint files produce setup instructions.
 
 Implementation and exact run commands: [README](README.md).

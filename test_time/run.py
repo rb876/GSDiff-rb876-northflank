@@ -17,6 +17,9 @@ def main():
     parser.add_argument("--method", required=True, choices=["baseline", "best_of_n", "svdd_pm"])
     for name in ("trials", "seed", "n", "k", "guided_steps"):
         parser.add_argument("--" + name, type=int)
+    parser.add_argument("--batch_size", type=int, help="Independent design trials generated together (default config: 4)")
+    parser.add_argument("--inference_batch_size", type=int,
+                        help="Maximum states per neural-network call, including proposals (default config: 10)")
     parser.add_argument("--temperature", type=float)
     parser.add_argument("--output_dir", type=Path)
     parser.add_argument("--device", default="cuda:0")
@@ -24,11 +27,14 @@ def main():
     parser.add_argument("--edge-checkpoint")
     args = parser.parse_args()
     config_path = args.config.resolve()
-    config = read_json(config_path)
+    config = {"batch_size": 4, "inference_batch_size": 10, **read_json(config_path)}
     config.update({name: value for name, value in vars(args).items()
-                   if name in {"method", "trials", "seed", "n", "k", "guided_steps", "temperature"} and value is not None})
+                   if name in {"method", "trials", "seed", "n", "k", "guided_steps", "temperature",
+                               "batch_size", "inference_batch_size"} and value is not None})
     if config["trials"] < 1 or config["seed"] < 0:
         parser.error("trials must be positive and seed nonnegative")
+    if any(type(config[key]) is not int or config[key] < 1 for key in ("batch_size", "inference_batch_size")):
+        parser.error("batch_size and inference_batch_size must be positive integers")
     scenario = Scenario(**read_json(config_path.parent / config["scenario"]))
     from .constraints import load_specs
     from .policy import ConstraintEvaluator
@@ -63,10 +69,12 @@ def main():
     snapshot = {**config, "scenario": asdict(scenario), "constraints": [asdict(spec) for spec in specs],
                 "adapter": adapter.metadata, "repo_commit": commit,
                 "source_sha256": {str(path.relative_to(repo)): file_hash(path)
-                                  for path in sorted((repo / "test_time").glob("*.py"))},
+                                  for path in sorted([*(repo / "test_time").glob("*.py"),
+                                                      repo / "gsdiff/house_nn1.py", repo / "gsdiff/house_nn2.py"])},
                 "metric_scope": "Assumption-based scenario and geometric feasibility checks; not verified building compliance.",
                 "selection_order": "best structural validity class; no new unknown IDs relative to its first candidate; fewest unknown checks, energy, seed",
-                "runtime_scope": "sum of timed sampling plus policy evaluation, excluding loading/rendering/serialization"}
+                "runtime_scope": "sum of generation-batch sampling plus policy evaluation, each batch counted once; excludes loading/rendering/serialization",
+                "trial_timing_scope": "batch wall time divided by batch trial count; amortized throughput, not isolated trial latency"}
     snapshot.update(n=(1 if args.method == "baseline" else config["n"] if args.method == "best_of_n" else None),
                     k=config["k"] if args.method == "svdd_pm" else None,
                     guided_steps=config["guided_steps"] if args.method == "svdd_pm" else None,
@@ -75,53 +83,60 @@ def main():
     run = {"method": args.method, "status": "running", "planned_trials": config["trials"], "completed_trials": 0,
            "total_wall_seconds": 0.0, "setup_seconds": setup_seconds,
            "node_calls": 0, "edge_calls": 0, "graph_completions": 0,
+           "node_samples": 0, "edge_samples": 0, "batches": [],
            "candidate_evaluations": 0, "fallback_count": 0, "peak_gpu_allocated_bytes": 0}
     write_json(output / "run.json", run)
-    print(f"Run: {output}", flush=True)
+    print(f"Run: {output}; batch_size={config['batch_size']}, inference_batch_size={config['inference_batch_size']}", flush=True)
     if adapter.device.type == "cuda":
         torch.cuda.reset_peak_memory_stats(adapter.device)
     started = time.perf_counter()
     try:
         with (output / "candidates.jsonl").open("w") as candidates_file:
-            for trial in range(config["trials"]):
-                seed = config["seed"] + trial
-                arguments = (adapter, evaluator, scenario, seed)
+            for first_trial in range(0, config["trials"], config["batch_size"]):
+                trial_ids = list(range(first_trial, min(first_trial + config["batch_size"], config["trials"])))
+                seeds = [config["seed"] + trial for trial in trial_ids]
+                arguments = (adapter, evaluator, scenario, seeds)
+                batch_options = {"inference_batch_size": config["inference_batch_size"]}
                 if args.method == "baseline":
-                    result = sampling.baseline(*arguments)
+                    results, batch_stats = sampling.baseline_batch(*arguments, **batch_options)
                 elif args.method == "best_of_n":
-                    result = sampling.best_of_n(*arguments, n=config["n"])
+                    results, batch_stats = sampling.best_of_n_batch(*arguments, n=config["n"], **batch_options)
                 else:
-                    result = sampling.svdd_pm(*arguments, k=config["k"], guided_steps=config["guided_steps"],
-                                              temperature=config["temperature"])
-                for index, candidate in enumerate(result.candidates):
-                    candidate.candidate_id = f"trial-{trial:03d}-{candidate.candidate_id}"
-                    candidate.sample.metadata.update({"config_file": "config.json", "trial": trial,
-                                                      "trial_seed": seed, "candidate_id": candidate.candidate_id,
-                                                      "overall_validity": overall_validity(candidate.evaluation)})
-                    prefix = output / "samples" / candidate.candidate_id
-                    write_json(prefix.with_suffix(".json"), candidate.sample.to_dict())
-                    artifacts = save_sample(candidate.sample, candidate.evaluation, prefix)
-                    row = {**asdict(candidate), "trial": trial, "method": args.method,
-                           "selected": index == result.selected_index,
-                           "overall_validity": overall_validity(candidate.evaluation),
-                           "artifacts": {key: str(Path(value).relative_to(output)) for key, value in artifacts.items()}}
-                    candidates_file.write(json.dumps(row, allow_nan=False) + "\n")
-                candidates_file.flush()
-                if result.trace:
-                    write_json(output / "traces" / f"trial-{trial:03d}.json", result.trace)
-                for key in ("node_calls", "edge_calls", "graph_completions", "candidate_evaluations", "fallback_count"):
-                    run[key] += result.stats.get(key, 0)
-                run["total_wall_seconds"] += result.stats["wall_seconds"]
-                run["completed_trials"] += 1
+                    results, batch_stats = sampling.svdd_pm_batch(
+                        *arguments, k=config["k"], guided_steps=config["guided_steps"],
+                        temperature=config["temperature"], **batch_options)
+                for key in ("node_calls", "edge_calls", "node_samples", "edge_samples", "graph_completions",
+                            "candidate_evaluations", "fallback_count"):
+                    run[key] += batch_stats.get(key, 0)
+                run["total_wall_seconds"] += batch_stats["wall_seconds"]
+                run["batches"].append({"first_trial": first_trial, "trial_count": len(trial_ids), **batch_stats})
                 if adapter.device.type == "cuda":
                     run["peak_gpu_allocated_bytes"] = torch.cuda.max_memory_allocated(adapter.device)
                     run["peak_gpu_reserved_bytes"] = torch.cuda.max_memory_reserved(adapter.device)
-                write_json(output / "run.json", run)
-                chosen = result.candidates[result.selected_index]
-                print(f"{args.method} trial {trial + 1}/{config['trials']}: seed={seed}, "
-                      f"overall={overall_validity(chosen.evaluation)}, structural_valid={chosen.evaluation.structurally_valid}, "
-                      f"energy={chosen.evaluation.energy:.4f}, "
-                      f"unknown={chosen.evaluation.unknown_count}, seconds={result.stats['wall_seconds']:.2f}", flush=True)
+                for trial, seed, result in zip(trial_ids, seeds, results):
+                    for index, candidate in enumerate(result.candidates):
+                        candidate.candidate_id = f"trial-{trial:03d}-{candidate.candidate_id}"
+                        candidate.sample.metadata.update({"config_file": "config.json", "trial": trial,
+                                                          "trial_seed": seed, "candidate_id": candidate.candidate_id,
+                                                          "overall_validity": overall_validity(candidate.evaluation)})
+                        prefix = output / "samples" / candidate.candidate_id
+                        write_json(prefix.with_suffix(".json"), candidate.sample.to_dict())
+                        artifacts = save_sample(candidate.sample, candidate.evaluation, prefix)
+                        row = {**asdict(candidate), "trial": trial, "method": args.method,
+                               "selected": index == result.selected_index,
+                               "overall_validity": overall_validity(candidate.evaluation),
+                               "artifacts": {key: str(Path(value).relative_to(output)) for key, value in artifacts.items()}}
+                        candidates_file.write(json.dumps(row, allow_nan=False) + "\n")
+                    candidates_file.flush()
+                    if result.trace:
+                        write_json(output / "traces" / f"trial-{trial:03d}.json", result.trace)
+                    run["completed_trials"] += 1
+                    write_json(output / "run.json", run)
+                    chosen = result.candidates[result.selected_index]
+                    print(f"{args.method} trial {trial + 1}/{config['trials']}: seed={seed}, "
+                          f"overall={overall_validity(chosen.evaluation)}, structural_valid={chosen.evaluation.structurally_valid}, "
+                          f"energy={chosen.evaluation.energy:.4f}, unknown={chosen.evaluation.unknown_count}, "
+                          f"amortized_seconds={result.stats['wall_seconds']:.2f}", flush=True)
         run["parameters_unchanged"] = before == adapter.parameter_hash()
         if not run["parameters_unchanged"]:
             raise RuntimeError("Frozen model parameter check failed")

@@ -1,7 +1,7 @@
 # GSDiff test-time experiments
 
 Edit on Kraken, push the code, pull on Northflank, and run on its H100.
-The original GSDiff networks and pretrained weights are unchanged.
+The original GSDiff network architecture and pretrained weights are unchanged.
 
 ```text
 test_time/
@@ -55,9 +55,40 @@ Use `--config path.json` to change the experiment, or `--output_dir path` for a 
 `--n`, `--k`, `--guided_steps`, `--temperature`, and `--seed` override JSON settings.
 Positive temperature samples from stable softmax weights; zero selects greedily.
 
+## Batched generation
+
+All three methods support batching. `--batch_size` (default **4**) controls independent design
+trials processed together. `--inference_batch_size` (default **10**) limits the number of states
+in each neural-network call, including Best-of-N candidates and SVDD proposals. With one trial,
+SVDD still evaluates its ten proposals in batches. Remaining trials form a smaller final batch.
+
+For example, after pulling the code on Northflank:
+
+```bash
+python -m test_time.run --method svdd_pm --trials 8 --seed 1000 \
+  --batch_size 4 --inference_batch_size 10
+```
+
+This uses the current K=10, 999-step, temperature-0 defaults. Lower `--inference_batch_size`
+if the edge model needs too much GPU memory. Set both batch sizes to 1 for sequential inference.
+Geometry extraction and constraint checking remain per graph on the CPU.
+
+Each trajectory has its own seeded random stream. Competing SVDD proposals share the same edge
+interpolation draw, as before. The edge network accepts optional precomputed interpolation draws
+to preserve that behavior during batching; its default forward behavior and weights are unchanged.
+GPU kernels can produce small floating-point differences at different batch sizes, so exact CUDA
+output equality is not guaranteed. CPU tests check seed independence and selection consistency.
+
+Timing is recorded once per generation batch. Per-trial seconds are the batch time divided by its
+trial count (amortized throughput), not isolated latency. Reports record both actual forward calls
+and `node_samples`/`edge_samples` (states processed). Compute comparisons require the same batching
+settings and still need measured runtime calibration on the H100.
+
 Each run records every complete candidate in `candidates.jsonl`, selected IDs,
 PNG/SVG/JSON files, the config and source hashes, timings, model call counts, and a `report.md`.
 SVDD additionally saves every intermediate surrogate graph/evaluation and selection in `traces/`.
+With K=10 and 999 guided steps, that is 9,990 intermediate graphs per trial; full-trace storage
+must be budgeted separately before a large evaluation.
 Failed or invalid candidates are retained. A partial run is not a completed benchmark.
 
 From Kraken, copy results back:
@@ -96,7 +127,8 @@ bash test_time/launch_eval.sh --run
 ```
 
 Override settings through `EVAL_SEEDS` (space-separated batch start seeds), `TRIALS_PER_RUN`,
-`BEST_N`, `SVDD_K`, `GUIDED_STEPS`, `TEMPERATURE`, `EVAL_CONFIG`, `EVAL_OUTPUT`, or `GSDIFF_PYTHON`.
+`BEST_N`, `SVDD_K`, `GUIDED_STEPS`, `TEMPERATURE`, `BATCH_SIZE`, `INFERENCE_BATCH_SIZE`,
+`EVAL_CONFIG`, `EVAL_OUTPUT`, or `GSDIFF_PYTHON`.
 For example, preview one small calibration batch:
 
 ```bash

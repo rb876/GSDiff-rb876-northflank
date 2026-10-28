@@ -2,6 +2,9 @@
 
 Source: scripts/test_main.py, especially lines 40-65, 197-247 and 317-387.
 The upstream script has no importable sampler and runs dataset evaluation at import.
+Both models support a batch dimension with 53 padded junction slots. Batch helpers
+accept lists of [1, 53, 10] states and bound neural forwards by ``batch_size``;
+room extraction still runs independently for each graph.
 """
 
 from dataclasses import asdict
@@ -80,7 +83,8 @@ class GSDiffAdapter:
         for name, values in coefficients.items():
             setattr(self, name, torch.tensor(values, device=self.device))
         self.node_mask = torch.ones((1, 53, 53), dtype=torch.uint8, device=self.device)
-        self.counters = {"node_calls": 0, "edge_calls": 0, "graph_completions": 0}
+        self.counters = {"node_calls": 0, "edge_calls": 0, "graph_completions": 0,
+                         "node_samples": 0, "edge_samples": 0}
         self.new_rng(0)
 
     def new_rng(self, seed):
@@ -96,15 +100,35 @@ class GSDiffAdapter:
 
     @torch.no_grad()
     def predict_x0(self, state, t):
-        timestep = torch.tensor([t], device=self.device)
-        prediction = torch.cat(self.node(state, self.node_mask, timestep), dim=2)
+        """Predict clean states in one forward, accepting [B, 53, 10]."""
+        count = state.shape[0]
+        timestep = torch.full((count,), t, dtype=torch.long, device=self.device)
+        prediction = torch.cat(self.node(state, self.node_mask.expand(count, -1, -1), timestep), dim=2)
         self.counters["node_calls"] += 1
+        self.counters["node_samples"] += count
         x0 = (self.reciprocal[timestep][:, None, None].expand_as(state) * state
               - self.reciprocal_minus_one[timestep][:, None, None].expand_as(state) * prediction)
         x0[:, :, :2] = x0[:, :, :2].clamp(-1, 1)
         x0[:, :, 2:9] = x0[:, :, 2:9] >= 0.5
         x0[:, :, 9:10] = x0[:, :, 9:10] >= 0.75
         return x0
+
+    @staticmethod
+    def _check_batch(states, batch_size):
+        if isinstance(batch_size, bool) or not isinstance(batch_size, int) or batch_size < 1:
+            raise ValueError("batch_size must be a positive integer")
+        if any(state.shape != (1, 53, 10) for state in states):
+            raise ValueError("Each state must have shape [1, 53, 10]")
+
+    @torch.no_grad()
+    def predict_x0_batch(self, states, t, batch_size=10):
+        """Predict independent states with at most batch_size items per forward."""
+        self._check_batch(states, batch_size)
+        results = []
+        for start in range(0, len(states), batch_size):
+            prediction = self.predict_x0(torch.cat(states[start:start + batch_size], dim=0), t)
+            results.extend(prediction.split(1, dim=0))
+        return results
 
     @torch.no_grad()
     def sample_transition(self, state, t, rng, x0=None):
@@ -117,44 +141,69 @@ class GSDiffAdapter:
         return mean + torch.sqrt(self.variance[timestep][:, None, None].expand_as(state)) * noise
 
     @torch.no_grad()
-    def complete_graph(self, state):
-        self.counters["graph_completions"] += 1
-        sample = FloorplanSample(raw_nodes=state[0].cpu().tolist(), metadata=dict(self.metadata))
-        if not torch.isfinite(state).all().item():
-            # Keep serialization finite; record the corrupt state explicitly.
-            sample.raw_nodes = []
-            sample.diagnostics.append("nonfinite_node_state")
-            return sample
-        coordinates, semantics = self.utils.inverse_normalize_and_remove_padding_100_4testing(
-            [state[:, :, :2]], [state[:, :, 2:9]], [state[:, :, 9:10].reshape(-1)], resolution=512)
-        coordinates, semantics = coordinates[0], semantics[0]
-        count = coordinates.shape[1]
-        sample.nodes = np.concatenate((coordinates, semantics), axis=-1)[0].tolist()
-        if count < 3:
-            sample.diagnostics.append("fewer_than_three_junctions")
-            return sample
-        corners = torch.zeros((1, 53, 2), dtype=torch.float64, device=self.device)
-        corners[:, :count] = (torch.tensor(coordinates, dtype=torch.float64, device=self.device) - 256) / 256
-        node_semantics = torch.zeros((1, 53, 7), dtype=torch.float64, device=self.device)
-        node_semantics[:, :count] = torch.tensor(semantics, dtype=torch.float64, device=self.device)
-        edge_mask = torch.zeros((1, 53, 53), dtype=torch.bool, device=self.device)
-        edge_mask[:, :count, :count] = True
-        padding_mask = torch.zeros((1, 53, 1), dtype=torch.uint8, device=self.device)
-        padding_mask[:, :count] = 1
-        # EdgeModel draws random interpolation points even in eval mode. Match
-        # the original final edge draw without letting surrogate calls alter
-        # diffusion noise. All proposals at one step share this same draw.
-        rng_state = self.active_rng.get_state()
-        cuda_devices = [self.device.index if self.device.index is not None else torch.cuda.current_device()] if self.device.type == "cuda" else []
-        with torch.random.fork_rng(devices=cuda_devices):
-            if self.device.type == "cuda":
-                torch.cuda.set_rng_state(rng_state, self.device)
-            else:
-                torch.set_rng_state(rng_state)
-            logits, _, _ = self.edge(corners, edge_mask, padding_mask, node_semantics)
-        sample.metadata["edge_rng_state_sha256"] = hashlib.sha256(rng_state.numpy().tobytes()).hexdigest()
-        self.counters["edge_calls"] += 1
-        adjacency = logits.softmax(dim=2).argmax(dim=2).reshape(53, 53)[:count, :count].cpu().numpy()
+    def complete_graph(self, state, rng=None):
+        return self.complete_graph_batch([state], [self.active_rng if rng is None else rng], batch_size=1)[0]
+
+    @torch.no_grad()
+    def complete_graph_batch(self, states, rngs, batch_size=10):
+        """Batch edge prediction, retaining a separate RNG and padding per graph.
+
+        Interpolation draws are made from cloned trajectory RNG states. Reusing
+        a generator for proposals gives common edge randomness without advancing
+        that generator or the global RNG, independently of microbatch boundaries.
+        """
+        self._check_batch(states, batch_size)
+        if len(states) != len(rngs):
+            raise ValueError("Provide one trajectory RNG per state")
+        samples, prepared = [], []
+        for state, rng in zip(states, rngs):
+            self.counters["graph_completions"] += 1
+            sample = FloorplanSample(metadata=dict(self.metadata))
+            samples.append(sample)
+            if not torch.isfinite(state).all().item():
+                sample.diagnostics.append("nonfinite_node_state")
+                continue
+            sample.raw_nodes = state[0].cpu().tolist()
+            coordinates, semantics = self.utils.inverse_normalize_and_remove_padding_100_4testing(
+                [state[:, :, :2]], [state[:, :, 2:9]], [state[:, :, 9:10].reshape(-1)], resolution=512)
+            coordinates, semantics = coordinates[0], semantics[0]
+            count = coordinates.shape[1]
+            sample.nodes = np.concatenate((coordinates, semantics), axis=-1)[0].tolist()
+            if count < 3:
+                sample.diagnostics.append("fewer_than_three_junctions")
+                continue
+            prepared.append((sample, coordinates, semantics, rng))
+
+        for start in range(0, len(prepared), batch_size):
+            chunk = prepared[start:start + batch_size]
+            size = len(chunk)
+            corners = torch.zeros((size, 53, 2), dtype=torch.float64, device=self.device)
+            node_semantics = torch.zeros((size, 53, 7), dtype=torch.float64, device=self.device)
+            edge_mask = torch.zeros((size, 53, 53), dtype=torch.bool, device=self.device)
+            padding_mask = torch.zeros((size, 53, 1), dtype=torch.uint8, device=self.device)
+            interpolation = []
+            for index, (sample, coordinates, semantics, rng) in enumerate(chunk):
+                count = coordinates.shape[1]
+                corners[index:index + 1, :count] = (
+                    torch.tensor(coordinates, dtype=torch.float64, device=self.device) - 256) / 256
+                node_semantics[index:index + 1, :count] = torch.tensor(semantics, dtype=torch.float64, device=self.device)
+                edge_mask[index, :count, :count] = True
+                padding_mask[index, :count] = 1
+                rng_state = rng.get_state()
+                edge_rng = torch.Generator(device=self.device).set_state(rng_state)
+                interpolation.append(torch.rand((1, 2809, 1), device=self.device, generator=edge_rng))
+                sample.metadata["edge_rng_state_sha256"] = hashlib.sha256(rng_state.numpy().tobytes()).hexdigest()
+            logits, _, _ = self.edge(corners, edge_mask, padding_mask, node_semantics,
+                                     random_lambda=torch.cat(interpolation, dim=0))
+            self.counters["edge_calls"] += 1
+            self.counters["edge_samples"] += size
+            adjacency = logits.softmax(dim=2).argmax(dim=2).reshape(size, 53, 53).cpu().numpy()
+            for index, (sample, coordinates, semantics, _) in enumerate(chunk):
+                count = coordinates.shape[1]
+                self._finish_graph(sample, coordinates, semantics, adjacency[index, :count, :count])
+        return samples
+
+    def _finish_graph(self, sample, coordinates, semantics, adjacency):
         sample.raw_edges = np.argwhere(np.triu(adjacency) == 1).tolist()
         semantic_indices = np.where(semantics == 1, np.arange(7), 99999)
         points = [tuple(row) for row in np.concatenate((coordinates, semantic_indices), axis=-1)[0].tolist()]

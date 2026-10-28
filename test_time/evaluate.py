@@ -80,7 +80,8 @@ def comparison_group(config):
     checkpoints = {name: data.get("sha256") for name, data in adapter.get("checkpoints", {}).items()}
     identity = {"scenario": config.get("scenario"), "constraints": config.get("constraints"),
                 "variant": adapter.get("variant"), "steps": adapter.get("steps"),
-                "checkpoints": checkpoints}
+                "checkpoints": checkpoints, "batch_size": config.get("batch_size", 1),
+                "inference_batch_size": config.get("inference_batch_size", 1)}
     return hashlib.sha256(json.dumps(identity, sort_keys=True).encode()).hexdigest()[:12]
 
 
@@ -150,6 +151,8 @@ def summarize_run(run_dir):
             "k": config.get("k") if config.get("method") == "svdd_pm" else None,
             "guided_steps": config.get("guided_steps") if config.get("method") == "svdd_pm" else None,
             "temperature": config.get("temperature") if config.get("method") == "svdd_pm" else None,
+            "batch_size": config.get("batch_size", 1),
+            "inference_batch_size": config.get("inference_batch_size", 1),
         },
         "comparison_group": comparison_group(config), "scenario": config.get("scenario", {}),
         "status": status, "expected_trials": expected_trials,
@@ -177,9 +180,11 @@ def summarize_run(run_dir):
             "note": "Generated-sample diagnostics only; no RPLAN reference, FID or KID was evaluated.",
         },
         "compute": {**{key: run.get(key) for key in (
-            "total_wall_seconds", "node_calls", "edge_calls", "graph_completions", "candidate_evaluations",
+            "total_wall_seconds", "node_calls", "edge_calls", "node_samples", "edge_samples", "graph_completions", "candidate_evaluations",
             "peak_gpu_allocated_bytes", "peak_gpu_reserved_bytes", "fallback_count")},
-            "wall_seconds_per_trial": wall / count if wall is not None else None},
+            "wall_seconds_per_trial": wall / count if wall is not None else None,
+            "time_per_trial_interpretation": "amortized throughput, not isolated latency" if config.get("batch_size", 1) > 1
+                                             else "wall time per selected trial"},
         "examples": {"best": example(best), "failure": example(worst) if worst else None},
     }
 
@@ -190,6 +195,10 @@ def percent(value):
 
 def number(value):
     return "n/a" if value is None else f"{value:.3g}"
+
+
+def recorded_count(value):
+    return "unknown" if value is None else str(value)
 
 
 def write_report(run_dir):
@@ -216,7 +225,8 @@ def write_report(run_dir):
              f"| All measurable checks pass | {percent(result['all_measurable_pass_fraction'])} |",
              f"| All applicable checks measurably pass | {percent(result['all_applicable_pass_fraction'])} |",
              f"| Wall time per selected trial | {number(result['compute']['wall_seconds_per_trial'])} s |",
-             f"| Node / edge forward calls | {result['compute']['node_calls']} / {result['compute']['edge_calls']} |",
+             f"| Node / edge forward calls | {recorded_count(result['compute']['node_calls'])} / {recorded_count(result['compute']['edge_calls'])} |",
+             f"| Node / edge evaluated states | {recorded_count(result['compute']['node_samples'])} / {recorded_count(result['compute']['edge_samples'])} |",
              f"| Complete graph evaluations | {result['compute']['candidate_evaluations']} |", "",
              "| ID | Pass | Fail | Unknown | N/A | Compliance | Measurable coverage |",
              "|---|---:|---:|---:|---:|---:|---:|"]
@@ -232,6 +242,9 @@ def write_report(run_dir):
                   "Unknown and inapplicable checks contribute no numeric severity; "
                   "unknowns never count as passes. All-pass fractions use every selected trial, and require at least one evaluable/applicable check.", "",
                   "Legacy JSON fields `valid_count` and `validity_rate` remain aliases for **structural** validity; use `overall_valid_rate` for the headline.", "",
+                  f"Timing: {result['compute']['time_per_trial_interpretation']}. Total measured batch time is counted once and divided by the number of selected trials. "
+                  "Forward calls count network invocations; evaluated states count the inputs processed across those invocations. "
+                  "Missing state counts in older runs remain unknown. `batch_size` groups independent trials; `inference_batch_size` caps neural inputs per forward call.", "",
                   f"Mean junctions / edges / rooms: {number(result['graph_statistics']['junctions']['mean'])} / "
                   f"{number(result['graph_statistics']['edges']['mean'])} / {number(result['graph_statistics']['rooms']['mean'])}. "
                   "No RPLAN reference data: distribution statistics are descriptive, with no FID/KID claim.", ""])
@@ -273,6 +286,8 @@ def write_comparison(experiment_dir, summaries):
                      "wall_seconds_per_trial": runtime,
                      "compute_multiplier": runtime / reference if runtime is not None and reference else None,
                      "node_calls": s["compute"]["node_calls"], "edge_calls": s["compute"]["edge_calls"],
+                     "node_samples": s["compute"]["node_samples"], "edge_samples": s["compute"]["edge_samples"],
+                     "time_per_trial_interpretation": s["compute"]["time_per_trial_interpretation"],
                      "candidate_evaluations": s["compute"]["candidate_evaluations"]})
     if not rows:
         raise ValueError("No completed experiment runs found")
@@ -281,15 +296,19 @@ def write_comparison(experiment_dir, summaries):
         writer.writeheader()
         writer.writerows(rows)
     lines = ["# Measured comparison", "", "Runtime multipliers use measured wall time per selected trial, relative to a baseline with the same scenario, "
-             "constraint definitions and checkpoint hashes. Setup/inference timing boundaries are recorded in each run. Small runs are plumbing checks, not statistical evidence.", "",
-             "| Run | Status | Settings | Trials | Overall valid | Structurally valid | Compliance | Measurable | Unknown checks | Severity | Seconds/trial | Compute |",
-             "|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|"]
+             "constraint definitions, checkpoint hashes and batching controls. Older configs without batching fields mean batch_size=1 and inference_batch_size=1. "
+             "For batch_size > 1, seconds/trial is amortized throughput, not isolated latency. "
+             "Setup/inference timing boundaries are recorded in each run. Small runs are plumbing checks, not statistical evidence.", "",
+             "| Run | Status | Settings | Trials | Overall valid | Structurally valid | Compliance | Measurable | Unknown checks | Severity | Seconds/trial | Node/edge calls | Node/edge states | Compute |",
+             "|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|"]
     for row in rows:
-        settings = ", ".join(f"{key}={row[key]}" for key in ("n", "k", "guided_steps", "temperature") if row[key] is not None)
+        settings = ", ".join(f"{key}={row[key]}" for key in ("n", "k", "guided_steps", "temperature", "batch_size", "inference_batch_size") if row[key] is not None)
         lines.append(f"| [{row['run']}]({row['run']}/report.md) | {row['status']} | {settings} | {row['trials']} | "
                      f"{percent(row['overall_valid_rate'])} | {percent(row['structural_valid_rate'])} | {percent(row['compliance'])} | "
                      f"{percent(row['measurable_fraction'])} | {percent(row['unknown_fraction'])} | "
-                     f"{number(row['mean_severity'])} | {number(row['wall_seconds_per_trial'])} | {number(row['compute_multiplier'])}x |")
+                     f"{number(row['mean_severity'])} | {number(row['wall_seconds_per_trial'])} | "
+                     f"{recorded_count(row['node_calls'])}/{recorded_count(row['edge_calls'])} | "
+                     f"{recorded_count(row['node_samples'])}/{recorded_count(row['edge_samples'])} | {number(row['compute_multiplier'])}x |")
     matched = []
     for index, a in enumerate(rows):
         for b in rows[index + 1:]:
@@ -303,7 +322,8 @@ def write_comparison(experiment_dir, summaries):
                   "CSV `validity_rate` is a legacy alias for `structural_valid_rate`, not overall validity.", "",
                   "Approximately matched compute (within 20% wall time per trial): " + ("; ".join(matched) if matched else "none measured yet") + ".", "",
                   "C034 is auxiliary where configured; see per-run reports for check counts and assumptions. "
-                  "Unknown values are not zero violations or passes. No RPLAN-based FID/KID was measured.", ""])
+                  "Unknown values are not zero violations or passes. Missing evaluated-state counts are unknown (empty CSV cells), not inferred from forward calls. "
+                  "No RPLAN-based FID/KID was measured.", ""])
     (experiment_dir / "comparison.md").write_text("\n".join(lines))
     return rows
 
