@@ -1,0 +1,1797 @@
+{
+  "energy": 0.0,
+  "reward": -0.0,
+  "results": [
+    {
+      "id": "C033",
+      "status": "pass",
+      "severity": 0.0,
+      "applicable": true,
+      "measurable": true,
+      "source_id": "Technical_assessment_TTC.pdf:AppendixA:C033",
+      "observed_values": {
+        "room_index": 1,
+        "status": "pass",
+        "reason": "An explicit contained placement is witnessed",
+        "bed_polygon_m": [
+          [
+            11.369921875000001,
+            9.38671875
+          ],
+          [
+            11.369921875000001,
+            11.28671875
+          ],
+          [
+            9.969921875,
+            11.28671875
+          ],
+          [
+            9.969921875,
+            9.38671875
+          ],
+          [
+            11.369921875000001,
+            9.38671875
+          ]
+        ],
+        "bed_dimensions_m": [
+          1.4,
+          1.9
+        ],
+        "search_resolution_m": 0.25,
+        "clearance_polygon_m": [
+          [
+            12.269921875000001,
+            9.38671875
+          ],
+          [
+            12.269921875000001,
+            12.48671875
+          ],
+          [
+            9.069921875,
+            12.48671875
+          ],
+          [
+            9.069921875,
+            9.38671875
+          ],
+          [
+            12.269921875000001,
+            9.38671875
+          ]
+        ],
+        "long_side_clearance_m": 0.9,
+        "free_short_side_clearance_m": 1.2,
+        "orientation_deg": 0,
+        "circle_center_m": [
+          9.6796875,
+          12.85546875
+        ],
+        "circle_radius_m": 0.75,
+        "joint_bed_placement": true,
+        "search": {
+          "orientations_deg": [
+            0,
+            90,
+            180,
+            270
+          ],
+          "grid_m": 0.25,
+          "refine_m": 0.05,
+          "max_positions": 20000,
+          "positions_examined": 25,
+          "audit_version": "cpu_placement_audit_v2",
+          "audit_positions_examined": 0,
+          "audit_max_positions": 20000,
+          "audit_circle_fit_calls": 0,
+          "audit_max_circle_fit_calls": 64,
+          "audit_budget_exhausted": false,
+          "audit_circle_fit_budget_exhausted": false,
+          "audit_containment_tolerance_m": 1e-08
+        }
+      },
+      "threshold_values": {
+        "diameter_m": 1.5,
+        "max_positions": 20000
+      },
+      "assumption_flags": [
+        "geometric_feasibility_proxy",
+        "unobserved_other_furniture_and_door_swings",
+        "axis_aligned_bed_search",
+        "finite_search_misses_are_unknown",
+        "paper_derived_metric_scale"
+      ],
+      "explanation": "One bed placement witnesses both bedroom checks",
+      "counts_toward_compliance": true,
+      "group": "bedroom_accessibility",
+      "role": "check",
+      "tier": "placement_feasibility",
+      "claim_level": "potential_layout",
+      "missing_fields": []
+    },
+    {
+      "id": "C034",
+      "status": "not_applicable",
+      "severity": null,
+      "applicable": false,
+      "measurable": false,
+      "source_id": "Technical_assessment_TTC.pdf:AppendixA:C034",
+      "observed_values": {
+        "occupants": 2,
+        "selected_bed_width_m": 1.4,
+        "bed_length_m": 1.9,
+        "definition": "Bed footprint parameters: 0.90 x 1.90 m for a one-person dwelling, 1.40 x 1.90 m otherwise. Supplies C033/C035; not an independent compliance check."
+      },
+      "threshold_values": {
+        "single_width_m": 0.9,
+        "multiple_width_m": 1.4,
+        "length_m": 1.9,
+        "bedroom_labels": [
+          1
+        ]
+      },
+      "assumption_flags": [
+        "geometric_feasibility_proxy",
+        "unobserved_other_furniture_and_door_swings",
+        "axis_aligned_bed_search",
+        "finite_search_misses_are_unknown",
+        "paper_derived_metric_scale"
+      ],
+      "explanation": "Supporting bed dimensions; not an independently scored check",
+      "counts_toward_compliance": false,
+      "group": "bedroom_accessibility",
+      "role": "supporting_rule",
+      "tier": "supporting_definition",
+      "claim_level": "assumption_based",
+      "missing_fields": []
+    },
+    {
+      "id": "C035",
+      "status": "pass",
+      "severity": 0.0,
+      "applicable": true,
+      "measurable": true,
+      "source_id": "Technical_assessment_TTC.pdf:AppendixA:C035",
+      "observed_values": {
+        "room_index": 1,
+        "status": "pass",
+        "reason": "An explicit contained placement is witnessed",
+        "bed_polygon_m": [
+          [
+            11.369921875000001,
+            9.38671875
+          ],
+          [
+            11.369921875000001,
+            11.28671875
+          ],
+          [
+            9.969921875,
+            11.28671875
+          ],
+          [
+            9.969921875,
+            9.38671875
+          ],
+          [
+            11.369921875000001,
+            9.38671875
+          ]
+        ],
+        "bed_dimensions_m": [
+          1.4,
+          1.9
+        ],
+        "search_resolution_m": 0.25,
+        "clearance_polygon_m": [
+          [
+            12.269921875000001,
+            9.38671875
+          ],
+          [
+            12.269921875000001,
+            12.48671875
+          ],
+          [
+            9.069921875,
+            12.48671875
+          ],
+          [
+            9.069921875,
+            9.38671875
+          ],
+          [
+            12.269921875000001,
+            9.38671875
+          ]
+        ],
+        "long_side_clearance_m": 0.9,
+        "free_short_side_clearance_m": 1.2,
+        "orientation_deg": 0,
+        "circle_center_m": [
+          9.6796875,
+          12.85546875
+        ],
+        "circle_radius_m": 0.75,
+        "joint_bed_placement": true,
+        "search": {
+          "orientations_deg": [
+            0,
+            90,
+            180,
+            270
+          ],
+          "grid_m": 0.25,
+          "refine_m": 0.05,
+          "max_positions": 20000,
+          "positions_examined": 25,
+          "audit_version": "cpu_placement_audit_v2",
+          "audit_positions_examined": 0,
+          "audit_max_positions": 20000,
+          "audit_circle_fit_calls": 0,
+          "audit_max_circle_fit_calls": 64,
+          "audit_budget_exhausted": false,
+          "audit_circle_fit_budget_exhausted": false,
+          "audit_containment_tolerance_m": 1e-08
+        }
+      },
+      "threshold_values": {
+        "clearance_options_m": [
+          [
+            0.9,
+            1.2
+          ],
+          [
+            1.2,
+            0.9
+          ]
+        ]
+      },
+      "assumption_flags": [
+        "geometric_feasibility_proxy",
+        "unobserved_other_furniture_and_door_swings",
+        "axis_aligned_bed_search",
+        "finite_search_misses_are_unknown",
+        "simultaneous_pass_requires_shared_bed_witness",
+        "paper_derived_metric_scale"
+      ],
+      "explanation": "One bed placement witnesses both bedroom checks",
+      "counts_toward_compliance": true,
+      "group": "bedroom_accessibility",
+      "role": "check",
+      "tier": "placement_feasibility",
+      "claim_level": "potential_layout",
+      "missing_fields": []
+    },
+    {
+      "id": "C036",
+      "status": "pass",
+      "severity": 0.0,
+      "applicable": true,
+      "measurable": true,
+      "source_id": "Technical_assessment_TTC.pdf:AppendixA:C036",
+      "observed_values": {
+        "completion_model": "combined_wc_basin_v1",
+        "room_index": 0,
+        "status_by_id": {
+          "C036": "pass",
+          "C037": "pass",
+          "C041": "pass"
+        },
+        "severity_by_id": {
+          "C036": 0.0,
+          "C037": 0.0,
+          "C041": 0.0
+        },
+        "guidance_penalty": 0.0,
+        "witness": {
+          "wc_polygon_m": [
+            [
+              10.7578125,
+              7.3125
+            ],
+            [
+              11.1578125,
+              7.3125
+            ],
+            [
+              11.1578125,
+              8.0125
+            ],
+            [
+              10.7578125,
+              8.0125
+            ],
+            [
+              10.7578125,
+              7.3125
+            ]
+          ],
+          "basin_polygon_m": [
+            [
+              12.82421875,
+              7.3125
+            ],
+            [
+              13.32421875,
+              7.3125
+            ],
+            [
+              13.32421875,
+              7.9125
+            ],
+            [
+              12.82421875,
+              7.9125
+            ],
+            [
+              12.82421875,
+              7.3125
+            ]
+          ],
+          "transfer_polygon_m": [
+            [
+              11.1578125,
+              7.3125
+            ],
+            [
+              11.9578125,
+              7.3125
+            ],
+            [
+              11.9578125,
+              8.6125
+            ],
+            [
+              11.1578125,
+              8.6125
+            ],
+            [
+              11.1578125,
+              7.3125
+            ]
+          ],
+          "door_hinge_m": [
+            10.7578125,
+            9.38671875
+          ],
+          "door_axes": [
+            [
+              1.0,
+              0.0
+            ],
+            [
+              -0.0,
+              -1.0
+            ]
+          ],
+          "door_radius_m": 0.8,
+          "door_swing_polygon_m": [
+            [
+              10.7578125,
+              9.38671875
+            ],
+            [
+              11.5578125,
+              9.38671875
+            ],
+            [
+              11.556848864964138,
+              9.347464610538065
+            ],
+            [
+              11.553960281337758,
+              9.308305037736352
+            ],
+            [
+              11.549153707971826,
+              9.269334370435711
+            ],
+            [
+              11.542440724322585,
+              9.230646492387097
+            ],
+            [
+              11.533837502555635,
+              9.192334606077388
+            ],
+            [
+              11.523364768585767,
+              9.15449100819643
+            ],
+            [
+              11.511047752146418,
+              9.117206867286225
+            ],
+            [
+              11.49691612600903,
+              9.080572004107928
+            ],
+            [
+              11.481003934498755,
+              9.044674675255774
+            ],
+            [
+              11.463349511478684,
+              9.009601360539202
+            ],
+            [
+              11.443995388000218,
+              8.975436554645423
+            ],
+            [
+              11.422988189842036,
+              8.942262563584318
+            ],
+            [
+              11.400378525184516,
+              8.910159306406053
+            ],
+            [
+              11.37622086269019,
+              8.879204122669083
+            ],
+            [
+              11.350573400283967,
+              8.849471586122386
+            ],
+            [
+              11.323497924949239,
+              8.821033325050761
+            ],
+            [
+              11.295059663877614,
+              8.793957849716033
+            ],
+            [
+              11.265327127330917,
+              8.76831038730981
+            ],
+            [
+              11.234371943593947,
+              8.744152724815484
+            ],
+            [
+              11.202268686415682,
+              8.721543060157964
+            ],
+            [
+              11.169094695354577,
+              8.700535861999782
+            ],
+            [
+              11.134929889460798,
+              8.681181738521316
+            ],
+            [
+              11.099856574744226,
+              8.663527315501245
+            ],
+            [
+              11.063959245892072,
+              8.64761512399097
+            ],
+            [
+              11.027324382713775,
+              8.633483497853582
+            ],
+            [
+              10.99004024180357,
+              8.621166481414233
+            ],
+            [
+              10.952196643922612,
+              8.610693747444365
+            ],
+            [
+              10.913884757612903,
+              8.602090525677415
+            ],
+            [
+              10.875196879564289,
+              8.595377542028174
+            ],
+            [
+              10.836226212263648,
+              8.590570968662242
+            ],
+            [
+              10.797066639461935,
+              8.587682385035862
+            ],
+            [
+              10.7578125,
+              8.58671875
+            ],
+            [
+              10.7578125,
+              9.38671875
+            ]
+          ],
+          "circle_center_m": [
+            12.041015625,
+            8.0625
+          ],
+          "circle_radius_m": 0.75,
+          "door_overlap_m": 0.0,
+          "basin_overlap_m": 0.0,
+          "template_index": 0,
+          "basin_front_m": [
+            12.82421875,
+            7.3125
+          ],
+          "basin_inward": [
+            1.0,
+            0.0
+          ],
+          "basin_along": [
+            0.0,
+            1.0
+          ],
+          "basin_under_clearance": true
+        },
+        "reason": "One shared fixture, door, transfer and circle completion was witnessed",
+        "search_budget": 432,
+        "circle_positions": 49,
+        "audit_rejected_ids": [],
+        "bounds": {
+          "room_area_m2": 5.3232879638671875,
+          "bbox_dimensions_m": [
+            2.56640625,
+            2.07421875
+          ],
+          "circle_radius_upper_bound_m": 1.037109375,
+          "minimum_circle_wc_area_m2": 2.0471458676442587,
+          "minimum_transfer_fixtures_door_area_m2": 2.122654824574367,
+          "transfer_envelope_dimensions_m": [
+            1.2000000000000002,
+            1.3
+          ],
+          "transfer_envelope_fits": true
+        },
+        "depth_convention": "door: signed-distance penetration into quarter disk; basin: intrusion inward from its front edge"
+      },
+      "threshold_values": {
+        "diameter_m": 1.5,
+        "bathroom_labels": [
+          4
+        ]
+      },
+      "assumption_flags": [
+        "declared_combined_bathroom_wc_not_generated_fixtures",
+        "scenario_fixture_dimensions_not_pdf_thresholds",
+        "wall_attached_finite_template_bank",
+        "one_shared_completion_for_C036_C037_C041",
+        "hypothetical_boundary_door_not_verified_circulation",
+        "finite_search_miss_is_unknown",
+        "C041_overlap_depth_uses_documented_geometric_convention",
+        "paper_derived_metric_scale"
+      ],
+      "explanation": "The shared fixture, door and turning-space completion witnesses this check",
+      "counts_toward_compliance": true,
+      "group": "bathroom_fixtures_turning",
+      "role": "check",
+      "tier": "placement_feasibility",
+      "claim_level": "potential_layout",
+      "missing_fields": []
+    },
+    {
+      "id": "C037",
+      "status": "pass",
+      "severity": 0.0,
+      "applicable": true,
+      "measurable": true,
+      "source_id": "Technical_assessment_TTC.pdf:AppendixA:C037",
+      "observed_values": {
+        "completion_model": "combined_wc_basin_v1",
+        "room_index": 0,
+        "status_by_id": {
+          "C036": "pass",
+          "C037": "pass",
+          "C041": "pass"
+        },
+        "severity_by_id": {
+          "C036": 0.0,
+          "C037": 0.0,
+          "C041": 0.0
+        },
+        "guidance_penalty": 0.0,
+        "witness": {
+          "wc_polygon_m": [
+            [
+              10.7578125,
+              7.3125
+            ],
+            [
+              11.1578125,
+              7.3125
+            ],
+            [
+              11.1578125,
+              8.0125
+            ],
+            [
+              10.7578125,
+              8.0125
+            ],
+            [
+              10.7578125,
+              7.3125
+            ]
+          ],
+          "basin_polygon_m": [
+            [
+              12.82421875,
+              7.3125
+            ],
+            [
+              13.32421875,
+              7.3125
+            ],
+            [
+              13.32421875,
+              7.9125
+            ],
+            [
+              12.82421875,
+              7.9125
+            ],
+            [
+              12.82421875,
+              7.3125
+            ]
+          ],
+          "transfer_polygon_m": [
+            [
+              11.1578125,
+              7.3125
+            ],
+            [
+              11.9578125,
+              7.3125
+            ],
+            [
+              11.9578125,
+              8.6125
+            ],
+            [
+              11.1578125,
+              8.6125
+            ],
+            [
+              11.1578125,
+              7.3125
+            ]
+          ],
+          "door_hinge_m": [
+            10.7578125,
+            9.38671875
+          ],
+          "door_axes": [
+            [
+              1.0,
+              0.0
+            ],
+            [
+              -0.0,
+              -1.0
+            ]
+          ],
+          "door_radius_m": 0.8,
+          "door_swing_polygon_m": [
+            [
+              10.7578125,
+              9.38671875
+            ],
+            [
+              11.5578125,
+              9.38671875
+            ],
+            [
+              11.556848864964138,
+              9.347464610538065
+            ],
+            [
+              11.553960281337758,
+              9.308305037736352
+            ],
+            [
+              11.549153707971826,
+              9.269334370435711
+            ],
+            [
+              11.542440724322585,
+              9.230646492387097
+            ],
+            [
+              11.533837502555635,
+              9.192334606077388
+            ],
+            [
+              11.523364768585767,
+              9.15449100819643
+            ],
+            [
+              11.511047752146418,
+              9.117206867286225
+            ],
+            [
+              11.49691612600903,
+              9.080572004107928
+            ],
+            [
+              11.481003934498755,
+              9.044674675255774
+            ],
+            [
+              11.463349511478684,
+              9.009601360539202
+            ],
+            [
+              11.443995388000218,
+              8.975436554645423
+            ],
+            [
+              11.422988189842036,
+              8.942262563584318
+            ],
+            [
+              11.400378525184516,
+              8.910159306406053
+            ],
+            [
+              11.37622086269019,
+              8.879204122669083
+            ],
+            [
+              11.350573400283967,
+              8.849471586122386
+            ],
+            [
+              11.323497924949239,
+              8.821033325050761
+            ],
+            [
+              11.295059663877614,
+              8.793957849716033
+            ],
+            [
+              11.265327127330917,
+              8.76831038730981
+            ],
+            [
+              11.234371943593947,
+              8.744152724815484
+            ],
+            [
+              11.202268686415682,
+              8.721543060157964
+            ],
+            [
+              11.169094695354577,
+              8.700535861999782
+            ],
+            [
+              11.134929889460798,
+              8.681181738521316
+            ],
+            [
+              11.099856574744226,
+              8.663527315501245
+            ],
+            [
+              11.063959245892072,
+              8.64761512399097
+            ],
+            [
+              11.027324382713775,
+              8.633483497853582
+            ],
+            [
+              10.99004024180357,
+              8.621166481414233
+            ],
+            [
+              10.952196643922612,
+              8.610693747444365
+            ],
+            [
+              10.913884757612903,
+              8.602090525677415
+            ],
+            [
+              10.875196879564289,
+              8.595377542028174
+            ],
+            [
+              10.836226212263648,
+              8.590570968662242
+            ],
+            [
+              10.797066639461935,
+              8.587682385035862
+            ],
+            [
+              10.7578125,
+              8.58671875
+            ],
+            [
+              10.7578125,
+              9.38671875
+            ]
+          ],
+          "circle_center_m": [
+            12.041015625,
+            8.0625
+          ],
+          "circle_radius_m": 0.75,
+          "door_overlap_m": 0.0,
+          "basin_overlap_m": 0.0,
+          "template_index": 0,
+          "basin_front_m": [
+            12.82421875,
+            7.3125
+          ],
+          "basin_inward": [
+            1.0,
+            0.0
+          ],
+          "basin_along": [
+            0.0,
+            1.0
+          ],
+          "basin_under_clearance": true
+        },
+        "reason": "One shared fixture, door, transfer and circle completion was witnessed",
+        "search_budget": 432,
+        "circle_positions": 49,
+        "audit_rejected_ids": [],
+        "bounds": {
+          "room_area_m2": 5.3232879638671875,
+          "bbox_dimensions_m": [
+            2.56640625,
+            2.07421875
+          ],
+          "circle_radius_upper_bound_m": 1.037109375,
+          "minimum_circle_wc_area_m2": 2.0471458676442587,
+          "minimum_transfer_fixtures_door_area_m2": 2.122654824574367,
+          "transfer_envelope_dimensions_m": [
+            1.2000000000000002,
+            1.3
+          ],
+          "transfer_envelope_fits": true
+        },
+        "depth_convention": "door: signed-distance penetration into quarter disk; basin: intrusion inward from its front edge"
+      },
+      "threshold_values": {
+        "transfer_width_m": 0.8,
+        "transfer_length_m": 1.3
+      },
+      "assumption_flags": [
+        "declared_combined_bathroom_wc_not_generated_fixtures",
+        "scenario_fixture_dimensions_not_pdf_thresholds",
+        "wall_attached_finite_template_bank",
+        "one_shared_completion_for_C036_C037_C041",
+        "hypothetical_boundary_door_not_verified_circulation",
+        "finite_search_miss_is_unknown",
+        "C041_overlap_depth_uses_documented_geometric_convention",
+        "paper_derived_metric_scale"
+      ],
+      "explanation": "The shared fixture, door and turning-space completion witnesses this check",
+      "counts_toward_compliance": true,
+      "group": "bathroom_fixtures_turning",
+      "role": "check",
+      "tier": "placement_feasibility",
+      "claim_level": "potential_layout",
+      "missing_fields": []
+    },
+    {
+      "id": "C041",
+      "status": "pass",
+      "severity": 0.0,
+      "applicable": true,
+      "measurable": true,
+      "source_id": "Technical_assessment_TTC.pdf:AppendixA:C041",
+      "observed_values": {
+        "completion_model": "combined_wc_basin_v1",
+        "room_index": 0,
+        "status_by_id": {
+          "C036": "pass",
+          "C037": "pass",
+          "C041": "pass"
+        },
+        "severity_by_id": {
+          "C036": 0.0,
+          "C037": 0.0,
+          "C041": 0.0
+        },
+        "guidance_penalty": 0.0,
+        "witness": {
+          "wc_polygon_m": [
+            [
+              10.7578125,
+              7.3125
+            ],
+            [
+              11.1578125,
+              7.3125
+            ],
+            [
+              11.1578125,
+              8.0125
+            ],
+            [
+              10.7578125,
+              8.0125
+            ],
+            [
+              10.7578125,
+              7.3125
+            ]
+          ],
+          "basin_polygon_m": [
+            [
+              12.82421875,
+              7.3125
+            ],
+            [
+              13.32421875,
+              7.3125
+            ],
+            [
+              13.32421875,
+              7.9125
+            ],
+            [
+              12.82421875,
+              7.9125
+            ],
+            [
+              12.82421875,
+              7.3125
+            ]
+          ],
+          "transfer_polygon_m": [
+            [
+              11.1578125,
+              7.3125
+            ],
+            [
+              11.9578125,
+              7.3125
+            ],
+            [
+              11.9578125,
+              8.6125
+            ],
+            [
+              11.1578125,
+              8.6125
+            ],
+            [
+              11.1578125,
+              7.3125
+            ]
+          ],
+          "door_hinge_m": [
+            10.7578125,
+            9.38671875
+          ],
+          "door_axes": [
+            [
+              1.0,
+              0.0
+            ],
+            [
+              -0.0,
+              -1.0
+            ]
+          ],
+          "door_radius_m": 0.8,
+          "door_swing_polygon_m": [
+            [
+              10.7578125,
+              9.38671875
+            ],
+            [
+              11.5578125,
+              9.38671875
+            ],
+            [
+              11.556848864964138,
+              9.347464610538065
+            ],
+            [
+              11.553960281337758,
+              9.308305037736352
+            ],
+            [
+              11.549153707971826,
+              9.269334370435711
+            ],
+            [
+              11.542440724322585,
+              9.230646492387097
+            ],
+            [
+              11.533837502555635,
+              9.192334606077388
+            ],
+            [
+              11.523364768585767,
+              9.15449100819643
+            ],
+            [
+              11.511047752146418,
+              9.117206867286225
+            ],
+            [
+              11.49691612600903,
+              9.080572004107928
+            ],
+            [
+              11.481003934498755,
+              9.044674675255774
+            ],
+            [
+              11.463349511478684,
+              9.009601360539202
+            ],
+            [
+              11.443995388000218,
+              8.975436554645423
+            ],
+            [
+              11.422988189842036,
+              8.942262563584318
+            ],
+            [
+              11.400378525184516,
+              8.910159306406053
+            ],
+            [
+              11.37622086269019,
+              8.879204122669083
+            ],
+            [
+              11.350573400283967,
+              8.849471586122386
+            ],
+            [
+              11.323497924949239,
+              8.821033325050761
+            ],
+            [
+              11.295059663877614,
+              8.793957849716033
+            ],
+            [
+              11.265327127330917,
+              8.76831038730981
+            ],
+            [
+              11.234371943593947,
+              8.744152724815484
+            ],
+            [
+              11.202268686415682,
+              8.721543060157964
+            ],
+            [
+              11.169094695354577,
+              8.700535861999782
+            ],
+            [
+              11.134929889460798,
+              8.681181738521316
+            ],
+            [
+              11.099856574744226,
+              8.663527315501245
+            ],
+            [
+              11.063959245892072,
+              8.64761512399097
+            ],
+            [
+              11.027324382713775,
+              8.633483497853582
+            ],
+            [
+              10.99004024180357,
+              8.621166481414233
+            ],
+            [
+              10.952196643922612,
+              8.610693747444365
+            ],
+            [
+              10.913884757612903,
+              8.602090525677415
+            ],
+            [
+              10.875196879564289,
+              8.595377542028174
+            ],
+            [
+              10.836226212263648,
+              8.590570968662242
+            ],
+            [
+              10.797066639461935,
+              8.587682385035862
+            ],
+            [
+              10.7578125,
+              8.58671875
+            ],
+            [
+              10.7578125,
+              9.38671875
+            ]
+          ],
+          "circle_center_m": [
+            12.041015625,
+            8.0625
+          ],
+          "circle_radius_m": 0.75,
+          "door_overlap_m": 0.0,
+          "basin_overlap_m": 0.0,
+          "template_index": 0,
+          "basin_front_m": [
+            12.82421875,
+            7.3125
+          ],
+          "basin_inward": [
+            1.0,
+            0.0
+          ],
+          "basin_along": [
+            0.0,
+            1.0
+          ],
+          "basin_under_clearance": true
+        },
+        "reason": "One shared fixture, door, transfer and circle completion was witnessed",
+        "search_budget": 432,
+        "circle_positions": 49,
+        "audit_rejected_ids": [],
+        "bounds": {
+          "room_area_m2": 5.3232879638671875,
+          "bbox_dimensions_m": [
+            2.56640625,
+            2.07421875
+          ],
+          "circle_radius_upper_bound_m": 1.037109375,
+          "minimum_circle_wc_area_m2": 2.0471458676442587,
+          "minimum_transfer_fixtures_door_area_m2": 2.122654824574367,
+          "transfer_envelope_dimensions_m": [
+            1.2000000000000002,
+            1.3
+          ],
+          "transfer_envelope_fits": true
+        },
+        "depth_convention": "door: signed-distance penetration into quarter disk; basin: intrusion inward from its front edge"
+      },
+      "threshold_values": {
+        "door_overlap_m": 0.25,
+        "basin_overlap_m": 0.15
+      },
+      "assumption_flags": [
+        "declared_combined_bathroom_wc_not_generated_fixtures",
+        "scenario_fixture_dimensions_not_pdf_thresholds",
+        "wall_attached_finite_template_bank",
+        "one_shared_completion_for_C036_C037_C041",
+        "hypothetical_boundary_door_not_verified_circulation",
+        "finite_search_miss_is_unknown",
+        "C041_overlap_depth_uses_documented_geometric_convention",
+        "paper_derived_metric_scale"
+      ],
+      "explanation": "The shared fixture, door and turning-space completion witnesses this check",
+      "counts_toward_compliance": true,
+      "group": "bathroom_fixtures_turning",
+      "role": "check",
+      "tier": "placement_feasibility",
+      "claim_level": "potential_layout",
+      "missing_fields": []
+    },
+    {
+      "id": "C076",
+      "status": "pass",
+      "severity": 0.0,
+      "applicable": true,
+      "measurable": true,
+      "source_id": "Technical_assessment_TTC.pdf:AppendixA:C076",
+      "observed_values": {
+        "area_m2": 14.6832275390625,
+        "height_m": 2.5,
+        "volume_m3": 36.70806884765625,
+        "severity": 0.0,
+        "area_policy": {
+          "enabled": true,
+          "available": true,
+          "reason": null,
+          "missing_fields": [],
+          "mode": "zero_thickness_proxy",
+          "included_room_labels": [
+            0,
+            1,
+            3,
+            4
+          ],
+          "excluded_room_labels": [
+            2,
+            5,
+            6
+          ],
+          "height_exclusion_m": 1.8,
+          "excluded_by_height": false,
+          "assumption_flags": [
+            "zero_thickness_habitable_area_proxy",
+            "uniform_scenario_headroom",
+            "unrepresented_area_exclusions_unverified",
+            "paper_derived_metric_scale"
+          ],
+          "definitions": {
+            "C079": {
+              "definition": "Habitable floor area excludes walls, partitions, stairs, stairwells, shafts, and door or window embrasures. The zero_thickness_proxy mode performs no real wall-footprint subtraction: generated walls have no thickness and these unrepresented exclusions are unverified.",
+              "thresholds": {},
+              "source_id": "Technical_assessment_TTC.pdf:AppendixA:C079"
+            },
+            "C080": {
+              "definition": "Habitable floor area excludes unfinished attics, cellars, basements, storage rooms, garages, terraces, loggias, balconies, exterior drying areas, verandas, common premises, dependencies, and areas below 1.80 m height. GSDiff labels exclude storage (2), balcony (5), outside (6); other unrepresented categories remain unverified. Uniform declared height below 1.80 m excludes the whole area; exactly 1.80 m is included.",
+              "thresholds": {
+                "included_room_labels": [
+                  0,
+                  1,
+                  3,
+                  4
+                ],
+                "excluded_room_labels": [
+                  2,
+                  5,
+                  6
+                ],
+                "min_headroom_m": 1.8
+              },
+              "source_id": "Technical_assessment_TTC.pdf:AppendixA:C080"
+            }
+          }
+        }
+      },
+      "threshold_values": {
+        "area_m2": 9.0,
+        "height_m": 2.2,
+        "volume_m3": 20.0,
+        "main_room_labels": [
+          0,
+          1
+        ]
+      },
+      "assumption_flags": [
+        "habitable_area_uses_C079_C080",
+        "zero_thickness_wall_area_proxy",
+        "uniform_scenario_headroom",
+        "zero_thickness_habitable_area_proxy",
+        "unrepresented_area_exclusions_unverified",
+        "paper_derived_metric_scale",
+        "scenario_uniform_ceiling_height"
+      ],
+      "explanation": "Evaluated (area AND height) OR volume over each main room",
+      "counts_toward_compliance": true,
+      "group": "habitability",
+      "role": "check",
+      "tier": "graph_plus_scenario",
+      "claim_level": "assumption_based",
+      "missing_fields": []
+    },
+    {
+      "id": "C077",
+      "status": "pass",
+      "severity": 0.0,
+      "applicable": true,
+      "measurable": true,
+      "source_id": "Technical_assessment_TTC.pdf:AppendixA:C077",
+      "observed_values": {
+        "estimated_habitable_area_m2": 76.4634017944336,
+        "required_area_m2": 28.0,
+        "occupants": 2,
+        "included_room_labels": [
+          0,
+          1,
+          3,
+          4
+        ],
+        "excluded_room_labels": [
+          2,
+          5,
+          6
+        ],
+        "area_policy": {
+          "enabled": true,
+          "available": true,
+          "reason": null,
+          "missing_fields": [],
+          "mode": "zero_thickness_proxy",
+          "included_room_labels": [
+            0,
+            1,
+            3,
+            4
+          ],
+          "excluded_room_labels": [
+            2,
+            5,
+            6
+          ],
+          "height_exclusion_m": 1.8,
+          "excluded_by_height": false,
+          "assumption_flags": [
+            "zero_thickness_habitable_area_proxy",
+            "uniform_scenario_headroom",
+            "unrepresented_area_exclusions_unverified",
+            "paper_derived_metric_scale"
+          ],
+          "definitions": {
+            "C079": {
+              "definition": "Habitable floor area excludes walls, partitions, stairs, stairwells, shafts, and door or window embrasures. The zero_thickness_proxy mode performs no real wall-footprint subtraction: generated walls have no thickness and these unrepresented exclusions are unverified.",
+              "thresholds": {},
+              "source_id": "Technical_assessment_TTC.pdf:AppendixA:C079"
+            },
+            "C080": {
+              "definition": "Habitable floor area excludes unfinished attics, cellars, basements, storage rooms, garages, terraces, loggias, balconies, exterior drying areas, verandas, common premises, dependencies, and areas below 1.80 m height. GSDiff labels exclude storage (2), balcony (5), outside (6); other unrepresented categories remain unverified. Uniform declared height below 1.80 m excludes the whole area; exactly 1.80 m is included.",
+              "thresholds": {
+                "included_room_labels": [
+                  0,
+                  1,
+                  3,
+                  4
+                ],
+                "excluded_room_labels": [
+                  2,
+                  5,
+                  6
+                ],
+                "min_headroom_m": 1.8
+              },
+              "source_id": "Technical_assessment_TTC.pdf:AppendixA:C080"
+            }
+          }
+        }
+      },
+      "threshold_values": {
+        "first_four_m2": 14.0,
+        "additional_m2": 10.0
+      },
+      "assumption_flags": [
+        "habitable_area_uses_C079_C080",
+        "zero_thickness_wall_area_proxy",
+        "uniform_scenario_headroom",
+        "zero_thickness_habitable_area_proxy",
+        "unrepresented_area_exclusions_unverified",
+        "paper_derived_metric_scale",
+        "scenario_uniform_ceiling_height"
+      ],
+      "explanation": "Estimated polygon-union area; wall thickness and headroom exclusions are unavailable",
+      "counts_toward_compliance": true,
+      "group": "habitability",
+      "role": "check",
+      "tier": "graph_plus_scenario",
+      "claim_level": "assumption_based",
+      "missing_fields": []
+    },
+    {
+      "id": "C078",
+      "status": "pass",
+      "severity": 0.0,
+      "applicable": true,
+      "measurable": true,
+      "source_id": "Technical_assessment_TTC.pdf:AppendixA:C078",
+      "observed_values": {
+        "estimated_habitable_area_m2": 76.4634017944336,
+        "height_m": 2.5,
+        "estimated_habitable_volume_m3": 191.15850448608398,
+        "required_volume_m3": 66.0,
+        "occupants": 2,
+        "area_policy": {
+          "enabled": true,
+          "available": true,
+          "reason": null,
+          "missing_fields": [],
+          "mode": "zero_thickness_proxy",
+          "included_room_labels": [
+            0,
+            1,
+            3,
+            4
+          ],
+          "excluded_room_labels": [
+            2,
+            5,
+            6
+          ],
+          "height_exclusion_m": 1.8,
+          "excluded_by_height": false,
+          "assumption_flags": [
+            "zero_thickness_habitable_area_proxy",
+            "uniform_scenario_headroom",
+            "unrepresented_area_exclusions_unverified",
+            "paper_derived_metric_scale"
+          ],
+          "definitions": {
+            "C079": {
+              "definition": "Habitable floor area excludes walls, partitions, stairs, stairwells, shafts, and door or window embrasures. The zero_thickness_proxy mode performs no real wall-footprint subtraction: generated walls have no thickness and these unrepresented exclusions are unverified.",
+              "thresholds": {},
+              "source_id": "Technical_assessment_TTC.pdf:AppendixA:C079"
+            },
+            "C080": {
+              "definition": "Habitable floor area excludes unfinished attics, cellars, basements, storage rooms, garages, terraces, loggias, balconies, exterior drying areas, verandas, common premises, dependencies, and areas below 1.80 m height. GSDiff labels exclude storage (2), balcony (5), outside (6); other unrepresented categories remain unverified. Uniform declared height below 1.80 m excludes the whole area; exactly 1.80 m is included.",
+              "thresholds": {
+                "included_room_labels": [
+                  0,
+                  1,
+                  3,
+                  4
+                ],
+                "excluded_room_labels": [
+                  2,
+                  5,
+                  6
+                ],
+                "min_headroom_m": 1.8
+              },
+              "source_id": "Technical_assessment_TTC.pdf:AppendixA:C080"
+            }
+          }
+        }
+      },
+      "threshold_values": {
+        "first_four_m3": 33.0,
+        "additional_m3": 23.0
+      },
+      "assumption_flags": [
+        "habitable_area_uses_C079_C080",
+        "zero_thickness_wall_area_proxy",
+        "uniform_scenario_headroom",
+        "zero_thickness_habitable_area_proxy",
+        "unrepresented_area_exclusions_unverified",
+        "paper_derived_metric_scale",
+        "scenario_uniform_ceiling_height"
+      ],
+      "explanation": "Estimated polygon-union area times the scenario's uniform ceiling height",
+      "counts_toward_compliance": true,
+      "group": "habitability",
+      "role": "check",
+      "tier": "graph_plus_scenario",
+      "claim_level": "assumption_based",
+      "missing_fields": []
+    },
+    {
+      "id": "C079",
+      "status": "not_applicable",
+      "severity": null,
+      "applicable": false,
+      "measurable": false,
+      "source_id": "Technical_assessment_TTC.pdf:AppendixA:C079",
+      "observed_values": {
+        "definition": "Habitable floor area excludes walls, partitions, stairs, stairwells, shafts, and door or window embrasures. The zero_thickness_proxy mode performs no real wall-footprint subtraction: generated walls have no thickness and these unrepresented exclusions are unverified.",
+        "area_policy": {
+          "enabled": true,
+          "available": true,
+          "reason": null,
+          "missing_fields": [],
+          "mode": "zero_thickness_proxy",
+          "included_room_labels": [
+            0,
+            1,
+            3,
+            4
+          ],
+          "excluded_room_labels": [
+            2,
+            5,
+            6
+          ],
+          "height_exclusion_m": 1.8,
+          "excluded_by_height": false,
+          "assumption_flags": [
+            "zero_thickness_habitable_area_proxy",
+            "uniform_scenario_headroom",
+            "unrepresented_area_exclusions_unverified",
+            "paper_derived_metric_scale"
+          ],
+          "definitions": {
+            "C079": {
+              "definition": "Habitable floor area excludes walls, partitions, stairs, stairwells, shafts, and door or window embrasures. The zero_thickness_proxy mode performs no real wall-footprint subtraction: generated walls have no thickness and these unrepresented exclusions are unverified.",
+              "thresholds": {},
+              "source_id": "Technical_assessment_TTC.pdf:AppendixA:C079"
+            },
+            "C080": {
+              "definition": "Habitable floor area excludes unfinished attics, cellars, basements, storage rooms, garages, terraces, loggias, balconies, exterior drying areas, verandas, common premises, dependencies, and areas below 1.80 m height. GSDiff labels exclude storage (2), balcony (5), outside (6); other unrepresented categories remain unverified. Uniform declared height below 1.80 m excludes the whole area; exactly 1.80 m is included.",
+              "thresholds": {
+                "included_room_labels": [
+                  0,
+                  1,
+                  3,
+                  4
+                ],
+                "excluded_room_labels": [
+                  2,
+                  5,
+                  6
+                ],
+                "min_headroom_m": 1.8
+              },
+              "source_id": "Technical_assessment_TTC.pdf:AppendixA:C080"
+            }
+          }
+        }
+      },
+      "threshold_values": {},
+      "assumption_flags": [
+        "supporting_area_definition_not_independent_compliance",
+        "paper_derived_metric_scale"
+      ],
+      "explanation": "Supporting area definition; not independent evidence of compliance",
+      "counts_toward_compliance": false,
+      "group": "habitability",
+      "role": "supporting_rule",
+      "tier": "supporting_definition",
+      "claim_level": "assumption_based",
+      "missing_fields": []
+    },
+    {
+      "id": "C080",
+      "status": "not_applicable",
+      "severity": null,
+      "applicable": false,
+      "measurable": false,
+      "source_id": "Technical_assessment_TTC.pdf:AppendixA:C080",
+      "observed_values": {
+        "definition": "Habitable floor area excludes unfinished attics, cellars, basements, storage rooms, garages, terraces, loggias, balconies, exterior drying areas, verandas, common premises, dependencies, and areas below 1.80 m height. GSDiff labels exclude storage (2), balcony (5), outside (6); other unrepresented categories remain unverified. Uniform declared height below 1.80 m excludes the whole area; exactly 1.80 m is included.",
+        "area_policy": {
+          "enabled": true,
+          "available": true,
+          "reason": null,
+          "missing_fields": [],
+          "mode": "zero_thickness_proxy",
+          "included_room_labels": [
+            0,
+            1,
+            3,
+            4
+          ],
+          "excluded_room_labels": [
+            2,
+            5,
+            6
+          ],
+          "height_exclusion_m": 1.8,
+          "excluded_by_height": false,
+          "assumption_flags": [
+            "zero_thickness_habitable_area_proxy",
+            "uniform_scenario_headroom",
+            "unrepresented_area_exclusions_unverified",
+            "paper_derived_metric_scale"
+          ],
+          "definitions": {
+            "C079": {
+              "definition": "Habitable floor area excludes walls, partitions, stairs, stairwells, shafts, and door or window embrasures. The zero_thickness_proxy mode performs no real wall-footprint subtraction: generated walls have no thickness and these unrepresented exclusions are unverified.",
+              "thresholds": {},
+              "source_id": "Technical_assessment_TTC.pdf:AppendixA:C079"
+            },
+            "C080": {
+              "definition": "Habitable floor area excludes unfinished attics, cellars, basements, storage rooms, garages, terraces, loggias, balconies, exterior drying areas, verandas, common premises, dependencies, and areas below 1.80 m height. GSDiff labels exclude storage (2), balcony (5), outside (6); other unrepresented categories remain unverified. Uniform declared height below 1.80 m excludes the whole area; exactly 1.80 m is included.",
+              "thresholds": {
+                "included_room_labels": [
+                  0,
+                  1,
+                  3,
+                  4
+                ],
+                "excluded_room_labels": [
+                  2,
+                  5,
+                  6
+                ],
+                "min_headroom_m": 1.8
+              },
+              "source_id": "Technical_assessment_TTC.pdf:AppendixA:C080"
+            }
+          }
+        }
+      },
+      "threshold_values": {
+        "included_room_labels": [
+          0,
+          1,
+          3,
+          4
+        ],
+        "excluded_room_labels": [
+          2,
+          5,
+          6
+        ],
+        "min_headroom_m": 1.8
+      },
+      "assumption_flags": [
+        "supporting_area_definition_not_independent_compliance",
+        "paper_derived_metric_scale"
+      ],
+      "explanation": "Supporting area definition; not independent evidence of compliance",
+      "counts_toward_compliance": false,
+      "group": "habitability",
+      "role": "supporting_rule",
+      "tier": "supporting_definition",
+      "claim_level": "assumption_based",
+      "missing_fields": []
+    },
+    {
+      "id": "C085",
+      "status": "pass",
+      "severity": 0.0,
+      "applicable": true,
+      "measurable": true,
+      "source_id": "Technical_assessment_TTC.pdf:AppendixA:C085",
+      "observed_values": {
+        "main_room_count": 3,
+        "room_count": 1,
+        "room_indices": [
+          5
+        ],
+        "observed_flow_m3_h": 105.0,
+        "required_flow_m3_h": 105.0
+      },
+      "threshold_values": {
+        "main_room_labels": [
+          0,
+          1
+        ],
+        "kitchen_labels": [
+          3
+        ],
+        "flows_m3_h": [
+          75.0,
+          90.0,
+          105.0,
+          120.0,
+          135.0
+        ]
+      },
+      "assumption_flags": [
+        "declared_ventilation_system_not_generated_or_measured",
+        "main_rooms_are_living_and_bedroom_polygons",
+        "no_airflow_network_or_inlet_verification",
+        "uniform_declared_flow_for_each_kitchen",
+        "paper_derived_metric_scale"
+      ],
+      "explanation": "Compared the declared uniform kitchen extraction flow with the PDF requirement for 3 main rooms; airflow and equipment are scenario inputs, not inferred from walls",
+      "counts_toward_compliance": true,
+      "group": "ventilation",
+      "role": "check",
+      "tier": "graph_plus_scenario",
+      "claim_level": "assumption_based",
+      "missing_fields": []
+    },
+    {
+      "id": "C086",
+      "status": "pass",
+      "severity": 0.0,
+      "applicable": true,
+      "measurable": true,
+      "source_id": "Technical_assessment_TTC.pdf:AppendixA:C086",
+      "observed_values": {
+        "main_room_count": 3,
+        "room_count": 1,
+        "room_indices": [
+          0
+        ],
+        "observed_flow_m3_h": 30.0,
+        "bathroom_ventilation_role": "bathroom",
+        "required_flow_m3_h": 30.0
+      },
+      "threshold_values": {
+        "main_room_labels": [
+          0,
+          1
+        ],
+        "bathroom_labels": [
+          4
+        ],
+        "flows_m3_h": [
+          15.0,
+          15.0,
+          30.0,
+          30.0,
+          30.0
+        ]
+      },
+      "assumption_flags": [
+        "declared_ventilation_system_not_generated_or_measured",
+        "main_rooms_are_living_and_bedroom_polygons",
+        "no_airflow_network_or_inlet_verification",
+        "label_4_rooms_are_full_bathrooms_with_uniform_declared_flow",
+        "other_shower_room_roles_unresolved",
+        "paper_derived_metric_scale"
+      ],
+      "explanation": "Compared the declared uniform bathroom extraction flow with the PDF requirement for 3 main rooms; airflow and equipment are scenario inputs, not inferred from walls",
+      "counts_toward_compliance": true,
+      "group": "ventilation",
+      "role": "check",
+      "tier": "graph_plus_scenario",
+      "claim_level": "assumption_based",
+      "missing_fields": []
+    },
+    {
+      "id": "C090",
+      "status": "pass",
+      "severity": 0.0,
+      "applicable": true,
+      "measurable": true,
+      "source_id": "Technical_assessment_TTC.pdf:AppendixA:C090",
+      "observed_values": {
+        "main_room_count": 3,
+        "kitchen_count": 1,
+        "observed_total_flow_m3_h": 75.0,
+        "observed_kitchen_flow_m3_h": 45.0,
+        "ventilation_mode": "occupant_adjustable",
+        "required_total_flow_m3_h": 75.0,
+        "required_kitchen_flow_m3_h": 45.0
+      },
+      "threshold_values": {
+        "main_room_labels": [
+          0,
+          1
+        ],
+        "kitchen_labels": [
+          3
+        ],
+        "total_flows_m3_h": [
+          35.0,
+          60.0,
+          75.0,
+          90.0,
+          105.0,
+          120.0,
+          135.0
+        ],
+        "kitchen_flows_m3_h": [
+          20.0,
+          30.0,
+          45.0,
+          45.0,
+          45.0,
+          45.0,
+          45.0
+        ]
+      },
+      "assumption_flags": [
+        "declared_ventilation_system_not_generated_or_measured",
+        "main_rooms_are_living_and_bedroom_polygons",
+        "no_airflow_network_or_inlet_verification",
+        "uniform_declared_flow_for_each_kitchen",
+        "reduced_total_is_dwelling_aggregate",
+        "inconsistent_service_flow_mapping_is_unknown",
+        "table_only_covers_1_to_7_main_rooms",
+        "paper_derived_metric_scale"
+      ],
+      "explanation": "Both declared total and per-kitchen reduced extraction must meet the occupant-adjustable table; the larger normalized deficit supplies severity",
+      "counts_toward_compliance": true,
+      "group": "ventilation",
+      "role": "check",
+      "tier": "graph_plus_scenario",
+      "claim_level": "assumption_based",
+      "missing_fields": []
+    }
+  ],
+  "structurally_valid": true,
+  "unknown_count": 0,
+  "applicable_count": 11,
+  "assumption_based_count": 11,
+  "validity_penalty": 0.0,
+  "diagnostics": [],
+  "measurable_count": 11
+}

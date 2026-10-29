@@ -1,0 +1,102 @@
+{
+  "method": "SVDD (last 10%)",
+  "passing_outputs": 56,
+  "selected_examples": 6,
+  "excluded_seed_already_featured": 10004,
+  "selection": "First six overall-valid trials in ascending trial order, excluding the SVDD seed already shown in Figure 3.",
+  "source": {
+    "path": "test_time/outputs/bathroom_001/guided/svdd_pm_last10/candidates.jsonl",
+    "sha256": "56658b181e280a27dc4950df045cbe6f2d9ce455018a128b36af32cb66b724fc"
+  },
+  "renderer": {
+    "path": "test_time/visualize.py",
+    "sha256": "fec02f2a2dbae85941693e3bad5fa7cfe7b39bc3784df2a569f074fbaa54c7cb"
+  },
+  "coordinate_scale_m_per_drawing_pixel": 0.03515625,
+  "plan_limits_m": [
+    0.849609375,
+    17.115234375,
+    0.83203125,
+    17.09765625
+  ],
+  "examples": [
+    {
+      "seed": 10000,
+      "trial": 0,
+      "method": "svdd_pm_last10",
+      "overall_validity": "valid",
+      "passed_checks": 11,
+      "artifacts": {
+        "png": "passing_svdd/svdd_last10_seed10000.png",
+        "svg": "passing_svdd/svdd_last10_seed10000.svg",
+        "graph": "passing_svdd/svdd_last10_seed10000_graph.json",
+        "evaluation": "passing_svdd/svdd_last10_seed10000_evaluation.json"
+      }
+    },
+    {
+      "seed": 10007,
+      "trial": 7,
+      "method": "svdd_pm_last10",
+      "overall_validity": "valid",
+      "passed_checks": 11,
+      "artifacts": {
+        "png": "passing_svdd/svdd_last10_seed10007.png",
+        "svg": "passing_svdd/svdd_last10_seed10007.svg",
+        "graph": "passing_svdd/svdd_last10_seed10007_graph.json",
+        "evaluation": "passing_svdd/svdd_last10_seed10007_evaluation.json"
+      }
+    },
+    {
+      "seed": 10008,
+      "trial": 8,
+      "method": "svdd_pm_last10",
+      "overall_validity": "valid",
+      "passed_checks": 11,
+      "artifacts": {
+        "png": "passing_svdd/svdd_last10_seed10008.png",
+        "svg": "passing_svdd/svdd_last10_seed10008.svg",
+        "graph": "passing_svdd/svdd_last10_seed10008_graph.json",
+        "evaluation": "passing_svdd/svdd_last10_seed10008_evaluation.json"
+      }
+    },
+    {
+      "seed": 10009,
+      "trial": 9,
+      "method": "svdd_pm_last10",
+      "overall_validity": "valid",
+      "passed_checks": 11,
+      "artifacts": {
+        "png": "passing_svdd/svdd_last10_seed10009.png",
+        "svg": "passing_svdd/svdd_last10_seed10009.svg",
+        "graph": "passing_svdd/svdd_last10_seed10009_graph.json",
+        "evaluation": "passing_svdd/svdd_last10_seed10009_evaluation.json"
+      }
+    },
+    {
+      "seed": 10010,
+      "trial": 10,
+      "method": "svdd_pm_last10",
+      "overall_validity": "valid",
+      "passed_checks": 11,
+      "artifacts": {
+        "png": "passing_svdd/svdd_last10_seed10010.png",
+        "svg": "passing_svdd/svdd_last10_seed10010.svg",
+        "graph": "passing_svdd/svdd_last10_seed10010_graph.json",
+        "evaluation": "passing_svdd/svdd_last10_seed10010_evaluation.json"
+      }
+    },
+    {
+      "seed": 10012,
+      "trial": 12,
+      "method": "svdd_pm_last10",
+      "overall_validity": "valid",
+      "passed_checks": 11,
+      "artifacts": {
+        "png": "passing_svdd/svdd_last10_seed10012.png",
+        "svg": "passing_svdd/svdd_last10_seed10012.svg",
+        "graph": "passing_svdd/svdd_last10_seed10012_graph.json",
+        "evaluation": "passing_svdd/svdd_last10_seed10012_evaluation.json"
+      }
+    }
+  ]
+}

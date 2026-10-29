@@ -1,0 +1,1888 @@
+{
+  "nodes": [
+    [
+      339,
+      368,
+      1,
+      0,
+      0,
+      0,
+      0,
+      1,
+      1
+    ],
+    [
+      292,
+      176,
+      1,
+      1,
+      0,
+      0,
+      0,
+      1,
+      0
+    ],
+    [
+      149,
+      153,
+      0,
+      0,
+      0,
+      1,
+      0,
+      1,
+      1
+    ],
+    [
+      149,
+      273,
+      0,
+      1,
+      0,
+      0,
+      1,
+      0,
+      1
+    ],
+    [
+      248,
+      368,
+      1,
+      1,
+      0,
+      0,
+      0,
+      1,
+      0
+    ],
+    [
+      292,
+      123,
+      0,
+      1,
+      0,
+      0,
+      0,
+      1,
+      1
+    ],
+    [
+      214,
+      202,
+      1,
+      0,
+      0,
+      1,
+      1,
+      0,
+      0
+    ],
+    [
+      381,
+      86,
+      0,
+      1,
+      0,
+      0,
+      0,
+      0,
+      1
+    ],
+    [
+      248,
+      176,
+      1,
+      1,
+      0,
+      1,
+      0,
+      0,
+      0
+    ],
+    [
+      149,
+      202,
+      0,
+      0,
+      0,
+      1,
+      1,
+      0,
+      1
+    ],
+    [
+      214,
+      273,
+      1,
+      1,
+      0,
+      0,
+      1,
+      0,
+      0
+    ],
+    [
+      248,
+      425,
+      0,
+      0,
+      0,
+      0,
+      0,
+      1,
+      1
+    ],
+    [
+      339,
+      425,
+      0,
+      0,
+      0,
+      0,
+      0,
+      1,
+      1
+    ],
+    [
+      292,
+      86,
+      0,
+      1,
+      0,
+      0,
+      0,
+      0,
+      1
+    ],
+    [
+      248,
+      202,
+      1,
+      0,
+      0,
+      1,
+      0,
+      0,
+      0
+    ],
+    [
+      129,
+      274,
+      0,
+      1,
+      0,
+      0,
+      0,
+      0,
+      1
+    ],
+    [
+      248,
+      153,
+      0,
+      1,
+      0,
+      1,
+      0,
+      1,
+      0
+    ],
+    [
+      339,
+      369,
+      0,
+      0,
+      0,
+      0,
+      0,
+      1,
+      1
+    ],
+    [
+      382,
+      368,
+      1,
+      0,
+      0,
+      0,
+      0,
+      0,
+      1
+    ],
+    [
+      129,
+      368,
+      0,
+      1,
+      0,
+      0,
+      0,
+      1,
+      1
+    ],
+    [
+      248,
+      274,
+      1,
+      1,
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    [
+      382,
+      176,
+      1,
+      1,
+      0,
+      0,
+      0,
+      0,
+      1
+    ],
+    [
+      149,
+      124,
+      0,
+      0,
+      0,
+      0,
+      0,
+      1,
+      1
+    ],
+    [
+      129,
+      425,
+      0,
+      0,
+      0,
+      0,
+      0,
+      1,
+      1
+    ]
+  ],
+  "edges": [
+    [
+      0,
+      4
+    ],
+    [
+      0,
+      17
+    ],
+    [
+      0,
+      18
+    ],
+    [
+      1,
+      5
+    ],
+    [
+      1,
+      8
+    ],
+    [
+      1,
+      21
+    ],
+    [
+      2,
+      9
+    ],
+    [
+      2,
+      16
+    ],
+    [
+      2,
+      22
+    ],
+    [
+      3,
+      9
+    ],
+    [
+      3,
+      10
+    ],
+    [
+      3,
+      15
+    ],
+    [
+      4,
+      11
+    ],
+    [
+      4,
+      19
+    ],
+    [
+      4,
+      20
+    ],
+    [
+      5,
+      13
+    ],
+    [
+      5,
+      22
+    ],
+    [
+      6,
+      9
+    ],
+    [
+      6,
+      10
+    ],
+    [
+      6,
+      14
+    ],
+    [
+      7,
+      13
+    ],
+    [
+      7,
+      21
+    ],
+    [
+      8,
+      14
+    ],
+    [
+      8,
+      16
+    ],
+    [
+      10,
+      20
+    ],
+    [
+      11,
+      12
+    ],
+    [
+      11,
+      23
+    ],
+    [
+      12,
+      17
+    ],
+    [
+      15,
+      19
+    ],
+    [
+      18,
+      21
+    ],
+    [
+      19,
+      23
+    ]
+  ],
+  "rooms": [
+    {
+      "label": 5,
+      "polygon": [
+        [
+          339.0,
+          368.0
+        ],
+        [
+          248.0,
+          368.0
+        ],
+        [
+          248.0,
+          425.0
+        ],
+        [
+          339.0,
+          425.0
+        ],
+        [
+          339.0,
+          369.0
+        ],
+        [
+          339.0,
+          368.0
+        ]
+      ]
+    },
+    {
+      "label": 0,
+      "polygon": [
+        [
+          339.0,
+          368.0
+        ],
+        [
+          382.0,
+          368.0
+        ],
+        [
+          382.0,
+          176.0
+        ],
+        [
+          292.0,
+          176.0
+        ],
+        [
+          248.0,
+          176.0
+        ],
+        [
+          248.0,
+          202.0
+        ],
+        [
+          214.0,
+          202.0
+        ],
+        [
+          214.0,
+          273.0
+        ],
+        [
+          248.0,
+          274.0
+        ],
+        [
+          248.0,
+          368.0
+        ],
+        [
+          339.0,
+          368.0
+        ]
+      ]
+    },
+    {
+      "label": 5,
+      "polygon": [
+        [
+          292.0,
+          176.0
+        ],
+        [
+          292.0,
+          123.0
+        ],
+        [
+          149.0,
+          124.0
+        ],
+        [
+          149.0,
+          153.0
+        ],
+        [
+          248.0,
+          153.0
+        ],
+        [
+          248.0,
+          176.0
+        ],
+        [
+          292.0,
+          176.0
+        ]
+      ]
+    },
+    {
+      "label": 1,
+      "polygon": [
+        [
+          292.0,
+          176.0
+        ],
+        [
+          382.0,
+          176.0
+        ],
+        [
+          381.0,
+          86.0
+        ],
+        [
+          292.0,
+          86.0
+        ],
+        [
+          292.0,
+          123.0
+        ],
+        [
+          292.0,
+          176.0
+        ]
+      ]
+    },
+    {
+      "label": 3,
+      "polygon": [
+        [
+          149.0,
+          153.0
+        ],
+        [
+          149.0,
+          202.0
+        ],
+        [
+          214.0,
+          202.0
+        ],
+        [
+          248.0,
+          202.0
+        ],
+        [
+          248.0,
+          176.0
+        ],
+        [
+          248.0,
+          153.0
+        ],
+        [
+          149.0,
+          153.0
+        ]
+      ]
+    },
+    {
+      "label": 4,
+      "polygon": [
+        [
+          149.0,
+          273.0
+        ],
+        [
+          214.0,
+          273.0
+        ],
+        [
+          214.0,
+          202.0
+        ],
+        [
+          149.0,
+          202.0
+        ],
+        [
+          149.0,
+          273.0
+        ]
+      ]
+    },
+    {
+      "label": 1,
+      "polygon": [
+        [
+          149.0,
+          273.0
+        ],
+        [
+          129.0,
+          274.0
+        ],
+        [
+          129.0,
+          368.0
+        ],
+        [
+          248.0,
+          368.0
+        ],
+        [
+          248.0,
+          274.0
+        ],
+        [
+          214.0,
+          273.0
+        ],
+        [
+          149.0,
+          273.0
+        ]
+      ]
+    },
+    {
+      "label": 5,
+      "polygon": [
+        [
+          248.0,
+          368.0
+        ],
+        [
+          129.0,
+          368.0
+        ],
+        [
+          129.0,
+          425.0
+        ],
+        [
+          248.0,
+          425.0
+        ],
+        [
+          248.0,
+          368.0
+        ]
+      ]
+    }
+  ],
+  "raw_nodes": [
+    [
+      3.1949692033278096e-05,
+      -6.822663234040032e-06,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1.0
+    ],
+    [
+      0.3246361204281245,
+      0.44077297101778734,
+      1.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1.0,
+      1.0,
+      0.0
+    ],
+    [
+      5.3147090101146146e-05,
+      -1.531550472322243e-05,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1.0
+    ],
+    [
+      -2.0526779769721544e-05,
+      1.2604499681025116e-05,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1.0
+    ],
+    [
+      0.14170158085249637,
+      -0.31212178316844563,
+      1.0,
+      1.0,
+      0.0,
+      0.0,
+      0.0,
+      1.0,
+      0.0,
+      0.0
+    ],
+    [
+      -0.41511041388523134,
+      -0.40020461413038033,
+      0.0,
+      0.0,
+      0.0,
+      1.0,
+      0.0,
+      1.0,
+      1.0,
+      0.0
+    ],
+    [
+      -0.4142641840381388,
+      0.06979757022194086,
+      0.0,
+      1.0,
+      0.0,
+      0.0,
+      1.0,
+      0.0,
+      1.0,
+      0.0
+    ],
+    [
+      -0.029251213719555226,
+      0.4399363004658997,
+      1.0,
+      1.0,
+      0.0,
+      0.0,
+      0.0,
+      1.0,
+      0.0,
+      0.0
+    ],
+    [
+      0.1416533080455484,
+      -0.5156343270751113,
+      0.0,
+      1.0,
+      0.0,
+      0.0,
+      0.0,
+      1.0,
+      1.0,
+      0.0
+    ],
+    [
+      4.268354488494647e-05,
+      -7.010436729716336e-05,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1.0
+    ],
+    [
+      -0.1633522988656271,
+      -0.21008903190423328,
+      1.0,
+      0.0,
+      0.0,
+      1.0,
+      1.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    [
+      0.49162543709800033,
+      -0.6610248059542708,
+      0.0,
+      1.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1.0,
+      0.0
+    ],
+    [
+      -6.607982406916721e-06,
+      -5.849925919515584e-06,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1.0
+    ],
+    [
+      3.867547501110397e-05,
+      -6.399279681896554e-05,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1.0
+    ],
+    [
+      2.669266882484076e-05,
+      -1.980510034347194e-05,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1.0
+    ],
+    [
+      1.404268853144445e-05,
+      -1.2621884652452842e-06,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1.0
+    ],
+    [
+      -0.0001103664481087556,
+      3.387260518428745e-05,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1.0
+    ],
+    [
+      -0.028566077319988448,
+      -0.31116991162915336,
+      1.0,
+      1.0,
+      0.0,
+      1.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    [
+      -0.4141025667518409,
+      -0.2101119628668129,
+      0.0,
+      0.0,
+      0.0,
+      1.0,
+      1.0,
+      0.0,
+      1.0,
+      0.0
+    ],
+    [
+      -0.16370748092442305,
+      0.06993734282123731,
+      1.0,
+      1.0,
+      0.0,
+      0.0,
+      1.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    [
+      6.566440776854826e-05,
+      -2.7617721827229245e-06,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1.0
+    ],
+    [
+      2.6196704837519273e-05,
+      -4.3495443823771845e-05,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1.0
+    ],
+    [
+      -0.029496259237235752,
+      0.662365799574506,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1.0,
+      1.0,
+      0.0
+    ],
+    [
+      0.32562794123088273,
+      0.6621196350962398,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1.0,
+      1.0,
+      0.0
+    ],
+    [
+      3.0308339226197637e-05,
+      -4.619966782782758e-05,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1.0
+    ],
+    [
+      0.1418785985356375,
+      -0.6612643150377708,
+      0.0,
+      1.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1.0,
+      0.0
+    ],
+    [
+      2.0245433473585917e-05,
+      8.23656245645208e-06,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1.0
+    ],
+    [
+      1.9952872691148026e-05,
+      2.159115672839291e-05,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1.0
+    ],
+    [
+      3.980495607380205e-05,
+      -4.278995219908835e-05,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1.0
+    ],
+    [
+      -0.028878516051834436,
+      -0.21039962729318865,
+      1.0,
+      0.0,
+      0.0,
+      1.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    [
+      -0.4931951538895146,
+      0.07039721049420711,
+      0.0,
+      1.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1.0,
+      0.0
+    ],
+    [
+      5.6415972282226716e-05,
+      -2.591109505628922e-05,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1.0
+    ],
+    [
+      5.044962348594727e-05,
+      -3.2406183789582594e-05,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1.0
+    ],
+    [
+      -0.028589949164529824,
+      -0.3999966662472902,
+      0.0,
+      1.0,
+      0.0,
+      1.0,
+      0.0,
+      1.0,
+      0.0,
+      0.0
+    ],
+    [
+      0.3259440204306299,
+      0.4414222166377253,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1.0,
+      1.0,
+      0.0
+    ],
+    [
+      0.4926318342373907,
+      0.4404832221628383,
+      1.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1.0,
+      0.0
+    ],
+    [
+      -2.8614275327124104e-06,
+      1.630746073301068e-05,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1.0
+    ],
+    [
+      -0.4931635550687106,
+      0.4409405111467983,
+      0.0,
+      1.0,
+      0.0,
+      0.0,
+      0.0,
+      1.0,
+      1.0,
+      0.0
+    ],
+    [
+      4.7096746634741823e-05,
+      -1.1134580713463636e-05,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1.0
+    ],
+    [
+      9.347289289732578e-05,
+      3.3595893276498106e-06,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1.0
+    ],
+    [
+      -0.02904982445870511,
+      0.07034326553160675,
+      1.0,
+      1.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    [
+      5.6907139927810796e-05,
+      3.963473740138451e-05,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1.0
+    ],
+    [
+      3.496698627451344e-05,
+      -4.797877408238137e-05,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1.0
+    ],
+    [
+      7.994604655560476e-05,
+      -2.4570266813062628e-05,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1.0
+    ],
+    [
+      4.624599995119941e-06,
+      -2.2970430868656216e-05,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1.0
+    ],
+    [
+      6.737632289548993e-06,
+      -2.312131879465281e-05,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1.0
+    ],
+    [
+      0.4923022331449243,
+      -0.31132304762584934,
+      1.0,
+      1.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1.0,
+      0.0
+    ],
+    [
+      4.75842308610997e-05,
+      -3.840506209681601e-05,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1.0
+    ],
+    [
+      -0.4155220281238756,
+      -0.5146396028666178,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1.0,
+      1.0,
+      0.0
+    ],
+    [
+      2.060827550239377e-05,
+      -4.700763762556596e-05,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1.0
+    ],
+    [
+      4.572778374073612e-05,
+      -3.35009629596132e-05,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1.0
+    ],
+    [
+      5.530973105608586e-05,
+      2.4439369942152664e-06,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1.0
+    ],
+    [
+      -0.4935719897610971,
+      0.662750740611558,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1.0,
+      1.0,
+      0.0
+    ]
+  ],
+  "raw_edges": [
+    [
+      0,
+      4
+    ],
+    [
+      0,
+      17
+    ],
+    [
+      0,
+      18
+    ],
+    [
+      1,
+      5
+    ],
+    [
+      1,
+      8
+    ],
+    [
+      1,
+      21
+    ],
+    [
+      2,
+      9
+    ],
+    [
+      2,
+      16
+    ],
+    [
+      2,
+      22
+    ],
+    [
+      3,
+      9
+    ],
+    [
+      3,
+      10
+    ],
+    [
+      3,
+      15
+    ],
+    [
+      4,
+      11
+    ],
+    [
+      4,
+      19
+    ],
+    [
+      4,
+      20
+    ],
+    [
+      5,
+      13
+    ],
+    [
+      5,
+      22
+    ],
+    [
+      6,
+      9
+    ],
+    [
+      6,
+      10
+    ],
+    [
+      6,
+      14
+    ],
+    [
+      7,
+      13
+    ],
+    [
+      7,
+      21
+    ],
+    [
+      8,
+      14
+    ],
+    [
+      8,
+      16
+    ],
+    [
+      10,
+      20
+    ],
+    [
+      11,
+      12
+    ],
+    [
+      11,
+      23
+    ],
+    [
+      12,
+      17
+    ],
+    [
+      15,
+      19
+    ],
+    [
+      18,
+      21
+    ],
+    [
+      19,
+      23
+    ]
+  ],
+  "diagnostics": [],
+  "metadata": {
+    "variant": "unconstrained_rplan",
+    "steps": 1000,
+    "checkpoints": {
+      "node": {
+        "path": "/workspace/GSDiff/outputs/structure-1/model1000000.pt",
+        "sha256": "99a6567f2c19bd849a026d1931cc56fa5742229a4ec50769bcff8b1e3314e96b"
+      },
+      "edge": {
+        "path": "/workspace/GSDiff/outputs/structure-2/model_stage2_best_061000.pt",
+        "sha256": "6e9fc4fc8aef2f39c55371cfab6066658b2eed39ada9bb808be6705039da75d1"
+      }
+    },
+    "node_shape": [
+      1,
+      53,
+      10
+    ],
+    "state_dtype": "float64",
+    "drawing_resolution": 512,
+    "coordinate_unit": "drawing_pixel",
+    "merge_points": false,
+    "align_points": false,
+    "edge_rng_policy": "Clone current diffusion RNG for edge interpolation; common random numbers within a guided step.",
+    "environment": {
+      "python": "3.10.13",
+      "torch": "2.1.0",
+      "numpy": "1.26.0",
+      "cuda": "11.8",
+      "device": "cuda:0",
+      "gpu": "NVIDIA H100 80GB HBM3"
+    },
+    "edge_rng_state_sha256": "5e7ec9697d509d693877619658911d922e0fda63e6e8cbe2d95a04933083bc6b",
+    "seed": 10000,
+    "method": "svdd_pm",
+    "method_parameters": {
+      "k": 10,
+      "guided_steps": 100,
+      "temperature": 0.0
+    },
+    "guidance_backend": "tensor_gpu",
+    "guidance_device": "cuda:0",
+    "guidance_backend_settings": {
+      "backend": "torch_finite_grid_v1",
+      "coordinate_unit": "drawing_pixel",
+      "circle_witness_directions": 32,
+      "max_bed_positions_per_room": 20000,
+      "geometry": "Simple hole-free verified non-overlapping faces; full rectangle containment",
+      "search_limitations": "Finite grids and retained directional circle witnesses can miss feasible placements; misses are unknown",
+      "cpu_oracle_equivalence": false,
+      "circle_failure_severity": "Normalized deficit of the proven bounding-box/area inradius upper bound",
+      "bathroom_completion": "combined_wc_basin_v1",
+      "bathroom_guidance": "One joint placement penalty replaces the three bathroom severity terms",
+      "bathroom_joint_weight": 1.0,
+      "bathroom_final_audit": "Same template bank on CPU with independent witness verification",
+      "habitable_area_policy": {
+        "enabled": true,
+        "available": true,
+        "reason": null,
+        "missing_fields": [],
+        "mode": "zero_thickness_proxy",
+        "included_room_labels": [
+          0,
+          1,
+          3,
+          4
+        ],
+        "excluded_room_labels": [
+          2,
+          5,
+          6
+        ],
+        "height_exclusion_m": 1.8,
+        "excluded_by_height": false,
+        "assumption_flags": [
+          "zero_thickness_habitable_area_proxy",
+          "uniform_scenario_headroom",
+          "unrepresented_area_exclusions_unverified",
+          "paper_derived_metric_scale"
+        ],
+        "definitions": {
+          "C079": {
+            "definition": "Habitable floor area excludes walls, partitions, stairs, stairwells, shafts, and door or window embrasures. The zero_thickness_proxy mode performs no real wall-footprint subtraction: generated walls have no thickness and these unrepresented exclusions are unverified.",
+            "thresholds": {},
+            "source_id": "Technical_assessment_TTC.pdf:AppendixA:C079"
+          },
+          "C080": {
+            "definition": "Habitable floor area excludes unfinished attics, cellars, basements, storage rooms, garages, terraces, loggias, balconies, exterior drying areas, verandas, common premises, dependencies, and areas below 1.80 m height. GSDiff labels exclude storage (2), balcony (5), outside (6); other unrepresented categories remain unverified. Uniform declared height below 1.80 m excludes the whole area; exactly 1.80 m is included.",
+            "thresholds": {
+              "included_room_labels": [
+                0,
+                1,
+                3,
+                4
+              ],
+              "excluded_room_labels": [
+                2,
+                5,
+                6
+              ],
+              "min_headroom_m": 1.8
+            },
+            "source_id": "Technical_assessment_TTC.pdf:AppendixA:C080"
+          }
+        }
+      },
+      "coarse_grid_m": 0.25,
+      "refine_grid_m": 0.05,
+      "bathroom_scenario": {
+        "basin_depth_m": 0.5,
+        "basin_under_clearance": true,
+        "basin_width_m": 0.6,
+        "bathroom_circle_positions": 49,
+        "bathroom_door_width_m": 0.8,
+        "bathroom_layout": "combined_wc_basin_v1",
+        "bathroom_search_budget": 432,
+        "wc_depth_m": 0.7,
+        "wc_width_m": 0.4
+      }
+    },
+    "guidance_evaluation": {
+      "energy": 0.0,
+      "reward": -0.0,
+      "results": [
+        {
+          "id": "C033",
+          "status": "pass",
+          "applicable": true,
+          "measurable": true,
+          "counts_toward_compliance": true,
+          "source_id": "Technical_assessment_TTC.pdf:AppendixA:C033",
+          "group": "bedroom_accessibility",
+          "role": "check",
+          "claim_level": "potential_layout",
+          "assumption_flags": [
+            "geometric_feasibility_proxy",
+            "unobserved_other_furniture_and_door_swings",
+            "axis_aligned_bed_search",
+            "finite_search_misses_are_unknown",
+            "tensor_gpu_finite_grid"
+          ],
+          "severity": 0.0
+        },
+        {
+          "id": "C034",
+          "status": "not_applicable",
+          "applicable": false,
+          "measurable": false,
+          "counts_toward_compliance": false,
+          "source_id": "Technical_assessment_TTC.pdf:AppendixA:C034",
+          "group": "bedroom_accessibility",
+          "role": "supporting_rule",
+          "claim_level": "assumption_based",
+          "assumption_flags": [
+            "geometric_feasibility_proxy",
+            "unobserved_other_furniture_and_door_swings",
+            "axis_aligned_bed_search",
+            "finite_search_misses_are_unknown",
+            "tensor_gpu_finite_grid"
+          ],
+          "severity": null
+        },
+        {
+          "id": "C035",
+          "status": "pass",
+          "applicable": true,
+          "measurable": true,
+          "counts_toward_compliance": true,
+          "source_id": "Technical_assessment_TTC.pdf:AppendixA:C035",
+          "group": "bedroom_accessibility",
+          "role": "check",
+          "claim_level": "potential_layout",
+          "assumption_flags": [
+            "geometric_feasibility_proxy",
+            "unobserved_other_furniture_and_door_swings",
+            "axis_aligned_bed_search",
+            "finite_search_misses_are_unknown",
+            "simultaneous_pass_requires_shared_bed_witness",
+            "tensor_gpu_finite_grid"
+          ],
+          "severity": 0.0
+        },
+        {
+          "id": "C036",
+          "status": "pass",
+          "applicable": true,
+          "measurable": true,
+          "counts_toward_compliance": true,
+          "source_id": "Technical_assessment_TTC.pdf:AppendixA:C036",
+          "group": "bathroom_fixtures_turning",
+          "role": "check",
+          "claim_level": "potential_layout",
+          "assumption_flags": [
+            "declared_combined_bathroom_wc_not_generated_fixtures",
+            "scenario_fixture_dimensions_not_pdf_thresholds",
+            "wall_attached_finite_template_bank",
+            "one_shared_completion_for_C036_C037_C041",
+            "hypothetical_boundary_door_not_verified_circulation",
+            "finite_search_miss_is_unknown",
+            "C041_overlap_depth_uses_documented_geometric_convention",
+            "tensor_gpu_finite_grid"
+          ],
+          "severity": 0.0
+        },
+        {
+          "id": "C037",
+          "status": "pass",
+          "applicable": true,
+          "measurable": true,
+          "counts_toward_compliance": true,
+          "source_id": "Technical_assessment_TTC.pdf:AppendixA:C037",
+          "group": "bathroom_fixtures_turning",
+          "role": "check",
+          "claim_level": "potential_layout",
+          "assumption_flags": [
+            "declared_combined_bathroom_wc_not_generated_fixtures",
+            "scenario_fixture_dimensions_not_pdf_thresholds",
+            "wall_attached_finite_template_bank",
+            "one_shared_completion_for_C036_C037_C041",
+            "hypothetical_boundary_door_not_verified_circulation",
+            "finite_search_miss_is_unknown",
+            "C041_overlap_depth_uses_documented_geometric_convention",
+            "tensor_gpu_finite_grid"
+          ],
+          "severity": 0.0
+        },
+        {
+          "id": "C041",
+          "status": "pass",
+          "applicable": true,
+          "measurable": true,
+          "counts_toward_compliance": true,
+          "source_id": "Technical_assessment_TTC.pdf:AppendixA:C041",
+          "group": "bathroom_fixtures_turning",
+          "role": "check",
+          "claim_level": "potential_layout",
+          "assumption_flags": [
+            "declared_combined_bathroom_wc_not_generated_fixtures",
+            "scenario_fixture_dimensions_not_pdf_thresholds",
+            "wall_attached_finite_template_bank",
+            "one_shared_completion_for_C036_C037_C041",
+            "hypothetical_boundary_door_not_verified_circulation",
+            "finite_search_miss_is_unknown",
+            "C041_overlap_depth_uses_documented_geometric_convention",
+            "tensor_gpu_finite_grid"
+          ],
+          "severity": 0.0
+        },
+        {
+          "id": "C076",
+          "status": "pass",
+          "applicable": true,
+          "measurable": true,
+          "counts_toward_compliance": true,
+          "source_id": "Technical_assessment_TTC.pdf:AppendixA:C076",
+          "group": "habitability",
+          "role": "check",
+          "claim_level": "assumption_based",
+          "assumption_flags": [
+            "habitable_area_uses_C079_C080",
+            "zero_thickness_wall_area_proxy",
+            "uniform_scenario_headroom",
+            "tensor_gpu_finite_grid"
+          ],
+          "severity": 0.0
+        },
+        {
+          "id": "C077",
+          "status": "pass",
+          "applicable": true,
+          "measurable": true,
+          "counts_toward_compliance": true,
+          "source_id": "Technical_assessment_TTC.pdf:AppendixA:C077",
+          "group": "habitability",
+          "role": "check",
+          "claim_level": "assumption_based",
+          "assumption_flags": [
+            "habitable_area_uses_C079_C080",
+            "zero_thickness_wall_area_proxy",
+            "uniform_scenario_headroom",
+            "tensor_gpu_finite_grid"
+          ],
+          "severity": 0.0
+        },
+        {
+          "id": "C078",
+          "status": "pass",
+          "applicable": true,
+          "measurable": true,
+          "counts_toward_compliance": true,
+          "source_id": "Technical_assessment_TTC.pdf:AppendixA:C078",
+          "group": "habitability",
+          "role": "check",
+          "claim_level": "assumption_based",
+          "assumption_flags": [
+            "habitable_area_uses_C079_C080",
+            "zero_thickness_wall_area_proxy",
+            "uniform_scenario_headroom",
+            "tensor_gpu_finite_grid"
+          ],
+          "severity": 0.0
+        },
+        {
+          "id": "C079",
+          "status": "not_applicable",
+          "applicable": false,
+          "measurable": false,
+          "counts_toward_compliance": false,
+          "source_id": "Technical_assessment_TTC.pdf:AppendixA:C079",
+          "group": "habitability",
+          "role": "supporting_rule",
+          "claim_level": "assumption_based",
+          "assumption_flags": [
+            "supporting_area_definition_not_independent_compliance",
+            "tensor_gpu_finite_grid"
+          ],
+          "severity": null
+        },
+        {
+          "id": "C080",
+          "status": "not_applicable",
+          "applicable": false,
+          "measurable": false,
+          "counts_toward_compliance": false,
+          "source_id": "Technical_assessment_TTC.pdf:AppendixA:C080",
+          "group": "habitability",
+          "role": "supporting_rule",
+          "claim_level": "assumption_based",
+          "assumption_flags": [
+            "supporting_area_definition_not_independent_compliance",
+            "tensor_gpu_finite_grid"
+          ],
+          "severity": null
+        },
+        {
+          "id": "C085",
+          "status": "pass",
+          "applicable": true,
+          "measurable": true,
+          "counts_toward_compliance": true,
+          "source_id": "Technical_assessment_TTC.pdf:AppendixA:C085",
+          "group": "ventilation",
+          "role": "check",
+          "claim_level": "assumption_based",
+          "assumption_flags": [
+            "declared_ventilation_system_not_generated_or_measured",
+            "main_rooms_are_living_and_bedroom_polygons",
+            "no_airflow_network_or_inlet_verification",
+            "uniform_declared_flow_for_each_kitchen",
+            "tensor_gpu_finite_grid"
+          ],
+          "severity": 0.0
+        },
+        {
+          "id": "C086",
+          "status": "pass",
+          "applicable": true,
+          "measurable": true,
+          "counts_toward_compliance": true,
+          "source_id": "Technical_assessment_TTC.pdf:AppendixA:C086",
+          "group": "ventilation",
+          "role": "check",
+          "claim_level": "assumption_based",
+          "assumption_flags": [
+            "declared_ventilation_system_not_generated_or_measured",
+            "main_rooms_are_living_and_bedroom_polygons",
+            "no_airflow_network_or_inlet_verification",
+            "label_4_rooms_are_full_bathrooms_with_uniform_declared_flow",
+            "other_shower_room_roles_unresolved",
+            "tensor_gpu_finite_grid"
+          ],
+          "severity": 0.0
+        },
+        {
+          "id": "C090",
+          "status": "pass",
+          "applicable": true,
+          "measurable": true,
+          "counts_toward_compliance": true,
+          "source_id": "Technical_assessment_TTC.pdf:AppendixA:C090",
+          "group": "ventilation",
+          "role": "check",
+          "claim_level": "assumption_based",
+          "assumption_flags": [
+            "declared_ventilation_system_not_generated_or_measured",
+            "main_rooms_are_living_and_bedroom_polygons",
+            "no_airflow_network_or_inlet_verification",
+            "uniform_declared_flow_for_each_kitchen",
+            "reduced_total_is_dwelling_aggregate",
+            "inconsistent_service_flow_mapping_is_unknown",
+            "table_only_covers_1_to_7_main_rooms",
+            "tensor_gpu_finite_grid"
+          ],
+          "severity": 0.0
+        }
+      ],
+      "structurally_valid": true,
+      "unknown_count": 0,
+      "measurable_count": 11,
+      "diagnostic_bits": 0,
+      "assumption_note": "Finite-grid tensor guidance under the supplied scenario; final reported checks use the CPU reference. A joint placement surrogate replaces C036/C037/C041 severity terms during guidance.",
+      "applicable_count": 11,
+      "assumption_based_count": 11,
+      "validity_penalty": 0.0,
+      "bathroom_guidance_penalty": 0.0
+    },
+    "final_evaluation_backend": "cpu_bathroom_audit_v1",
+    "selection_rng_policy": "Independent per-seed PyTorch uniforms; differs from the CPU NumPy categorical stream.",
+    "surrogate_trace_format": "tensor_gpu_compact_v1",
+    "config_file": "config.json",
+    "trial": 0,
+    "trial_seed": 10000,
+    "candidate_id": "trial-000-seed-10000",
+    "active_scored_ids": [
+      "C033",
+      "C035",
+      "C036",
+      "C037",
+      "C041",
+      "C076",
+      "C077",
+      "C078",
+      "C085",
+      "C086",
+      "C090"
+    ],
+    "not_assessed_ids": [],
+    "overall_validity": "valid"
+  },
+  "scenario": {
+    "building_use": "residential",
+    "accessible_dwelling": true,
+    "intended_occupants": 2,
+    "ceiling_height_m": 2.5,
+    "coordinate_scale_m_per_model_unit": 0.03515625,
+    "scale_provenance": "paper_derived",
+    "assumptions": [
+      "Paper/code-derived calibration: RPLAN uses an 18 m square rasterized to 256 pixels (Wu et al., 2019, section 4; https://wutomwu.github.io/publications/2019-DeepLayout/paper.pdf). GSDiff normalizes native coordinates as (x-128)/128 and decodes onto a 512-pixel drawing canvas, giving 18/512 = 0.03515625 metres per drawing pixel. This is not a field measurement or independent verification of the checkpoint's raw training data.",
+      "Uniform ceiling height of 2.5 metres is a scenario input, not generated geometry.",
+      "Bedroom checks place one standard bed; other furniture and door swings are unobserved.",
+      "Habitable area is estimated from room polygon unions with zero-thickness walls and no headroom map.",
+      "C079/C080 support the area estimator only; no independent compliance success is awarded.",
+      "Uniform declared headroom below 1.80 m excludes all habitable area; exactly 1.80 m is included. Unrepresented area exclusions remain unverified.",
+      "User-selected declared ventilation system sized to the PDF tables for three main rooms: each kitchen has 105 m3/h normal extraction and 45 m3/h reduced extraction; each label-4 bathroom has 30 m3/h normal extraction; the dwelling has 75 m3/h aggregate reduced extraction. These are scenario capacities, not inferred or measured output from GSDiff.",
+      "Living-room and bedroom polygons count as main rooms. All label-4 rooms are treated as full bathrooms, with the same declared normal flow; other shower-room roles cannot be resolved by these labels.",
+      "The installation permits occupant-adjustable reduced ventilation. Normal and reduced operating rates are distinct; C090 checks both total and kitchen reduced-flow requirements.",
+      "Missing service-room mappings or an aggregate reduced flow below the sum of declared kitchen reduced flows remain unknown. Vent positions, air inlets, ducts and physical airflow are not verified.",
+      "System capacities remain fixed across all methods and candidates; they are not adjusted to make an individual layout pass.",
+      "User-approved combined bathroom/WC scenario: a 0.40 x 0.70 m toilet, a 0.60 x 0.50 m basin with unobstructed space underneath, and a 0.80 m inward-swinging door. These fixture dimensions are modelling assumptions, not Appendix A requirements.",
+      "C036/C037/C041 share one searched room, fixture arrangement, lateral transfer space and turning-circle witness. Fixture and door objects are hypothetical completions of label-4 room polygons; no route from the rest of the dwelling is verified.",
+      "The identical finite wall-attached template and circle budget applies to all methods. Search exhaustion is unknown unless a necessary geometric bound proves failure. Door/basin overlap depths use the documented geometry convention; no shower, plumbing or fixture-height compliance is claimed."
+    ],
+    "geometry_grid_m": 0.25,
+    "geometry_refine_m": 0.05,
+    "habitable_area_mode": "zero_thickness_proxy",
+    "ventilation_mode": "occupant_adjustable",
+    "kitchen_extraction_m3_h": 105.0,
+    "bathroom_extraction_m3_h": 30.0,
+    "reduced_total_extraction_m3_h": 75.0,
+    "reduced_kitchen_extraction_m3_h": 45.0,
+    "bathroom_ventilation_role": "bathroom",
+    "bathroom_layout": "combined_wc_basin_v1",
+    "wc_width_m": 0.4,
+    "wc_depth_m": 0.7,
+    "basin_width_m": 0.6,
+    "basin_depth_m": 0.5,
+    "basin_under_clearance": true,
+    "bathroom_door_width_m": 0.8,
+    "bathroom_search_budget": 432,
+    "bathroom_circle_positions": 49
+  }
+}

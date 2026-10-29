@@ -619,11 +619,26 @@
     "ventilation_bottleneck.svg",
     "qualitative_examples.png",
     "qualitative_examples.pdf",
-    "qualitative_examples.svg"
+    "qualitative_examples.svg",
+    "passing_svdd/svdd_last10_seed10000.png",
+    "passing_svdd/svdd_last10_seed10000.svg",
+    "passing_svdd/svdd_last10_seed10007.png",
+    "passing_svdd/svdd_last10_seed10007.svg",
+    "passing_svdd/svdd_last10_seed10008.png",
+    "passing_svdd/svdd_last10_seed10008.svg",
+    "passing_svdd/svdd_last10_seed10009.png",
+    "passing_svdd/svdd_last10_seed10009.svg",
+    "passing_svdd/svdd_last10_seed10010.png",
+    "passing_svdd/svdd_last10_seed10010.svg",
+    "passing_svdd/svdd_last10_seed10012.png",
+    "passing_svdd/svdd_last10_seed10012.svg",
+    "svdd_passing_examples.png",
+    "svdd_passing_examples.pdf",
+    "svdd_passing_examples.svg"
   ],
   "generator": {
     "path": "test_time/report_assets.py",
-    "sha256": "2ec2c0bfce1e1b0641dc01093b85d775bd93936be9ec5614c116539a6814fe18"
+    "sha256": "4cf6ad47f9ec57cb5ba3880765d69f110bb08630167627cd746791de6a17b8d2"
   },
   "regenerate": "python3 -m test_time.report_assets --experiment-dir test_time/outputs/bathroom_001 --output-dir docs/assets/bathroom_001"
 }

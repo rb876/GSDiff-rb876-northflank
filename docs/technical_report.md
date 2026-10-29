@@ -156,7 +156,7 @@ Finite proposals, clean-estimate rewards, coverage filtering and the greedy defa
 
 ## Constraints Define the Reward
 
-The default profile evaluates **eleven constraints from Appendix A** of the [assessment](../Technical_assessment_TTC.pdf), grouped below. **Every method uses all four groups**; `bathroom_001` names the experiment, not a bathroom-only evaluation. Three supporting rules define measurements without adding separate reward terms or compliance points.
+The default profile evaluates **eleven constraints from Appendix A** of the supplied technical assessment, grouped below. **Every method uses all four groups**; `bathroom_001` names the experiment, not a bathroom-only evaluation. Three supporting rules define measurements without adding separate reward terms or compliance points.
 
 ### Bedroom — Bed Placement and Clearance
 
@@ -277,17 +277,17 @@ The joint term replaces the three bathroom severities during selection, avoiding
 
 | Method | Overall valid, % [95% CI] | Check success, % | Severity ↓ | Structure valid, % | Room-count $W_1$ ↓ | NFE/output | Seconds/output |
 |---|---:|---:|---:|---:|---:|---:|---:|
-| Baseline | 34 [25.5–43.7] | 80.8 | 0.0280 | 86 | 0.000 | 1,000 | — |
+| Baseline | 34 [25.5–43.7] | 80.8 | 0.0280 | 86 | 0.000 | 1,000 | 3.54 |
 | Best-of-2 | 47 [37.5–56.7] | 87.9 | 0.0166 | 99 | 0.108 | 2,000 | — |
 | SVDD, last 10% | **56 [46.2–65.3]** | **90.8** | 0.0176 | 99 | 0.098 | **2,000** | 106.30 |
-| Best-of-11 | 94 [87.5–97.2] | 98.9 | 0.00159 | 100 | 0.416 | 11,000 | — |
+| Best-of-11 | 94 [87.5–97.2] | 98.9 | 0.00159 | 100 | 0.416 | 11,000 | 20.15 |
 | SVDD, full | Pending | — | — | — | — | 10,990 | — |
 
 **Main finding:** late SVDD improves observed validity by **9 percentage points over Best-of-2 at equal NFE**. On paired seeds, 19 designs succeed only with SVDD and 10 only with Best-of-2; 37 succeed with both. A paired bootstrap gives a 95% interval of **−1 to +19 points**, so this batch suggests a benefit without establishing superiority. Best-of-11 reaches 94% using **5.5×** the denoiser budget; its matched full-SVDD comparison is pending.
 
 **Compute:** for $T=1{,}000$, SVDD costs $T+KG$ and Best-of-N costs $NT$ sample-wise denoiser evaluations. Here $K=10$, $G=100$, so both late SVDD and Best-of-2 cost 2,000 NFE/output. Controls use generation/inference batches **4/10**, versus **10/32** for SVDD. Its 106.30 s/output is amortized sampling/checking time (2.95 hours total), excluding setup and rendering/export. Edge-model and reward costs are not matched. The earlier **approximately 30-hour** full-run estimate is an unmeasured planning extrapolation from late guidance.
 
-**Candidate reuse:** baseline and Best-of-11 reuse saved graphs rescored under the current scenario. Best-of-2 selects from fixed candidate indices 0 and 1 of each Best-of-11 trial using saved GPU scores, followed by CPU validation. Its NFE is the equivalent retained-trajectory cost; reselection performs no new model inference. The controls are nested, and their standalone generation times under this profile are unmeasured (—).
+**Candidate reuse:** baseline and Best-of-11 reuse saved graphs rescored under the current scenario. Best-of-2 selects from fixed candidate indices 0 and 1 of each Best-of-11 trial using saved GPU scores, followed by CPU validation. Its NFE is the equivalent retained-trajectory cost; reselection performs no new model inference. The controls are nested. Baseline and Best-of-11 timings cover generation with six checks and exclude the current rescoring, so wall times are not directly comparable with SVDD. Standalone Best-of-2 runtime remains unmeasured (—).
 
 ### Which Constraints Improve?
 
@@ -315,9 +315,22 @@ For late SVDD, **32 designs fail only ventilation**, and another **five** have v
 
 At seed 10004, baseline has **four main rooms** and fails C085/C090: the required kitchen flow is **120 m³/h**, exceeding the supplied 105, and reduced total flow requires **90 m³/h**, exceeding 75. SVDD generates **three main rooms** and passes all eleven checks. The failed SVDD example at seed 10001 retains four main rooms and the same airflow deficits despite passing all bathroom checks.
 
+![Six additional passing late-SVDD floorplans, with labelled room types and areas.](assets/bathroom_001/svdd_passing_examples.png)
+
+**Figure 4.** Six further examples from the **56 passing late-SVDD outputs**: the first six passing trials in seed order, excluding seed 10004 already shown above. Each has valid structure, **11/11 checks passing** and no unresolved checks. All panels use a common metric scale. [Vector PDF](assets/bathroom_001/svdd_passing_examples.pdf) · [Selection and source data](assets/bathroom_001/svdd_passing_examples_sources.json).
+
+The detailed SVGs use the labelled-floorplan and constraint-card layout: each check states its requirement and why it passes, alongside the saved bathroom arrangement. Open seeds [10000](assets/bathroom_001/passing_svdd/svdd_last10_seed10000.svg), [10007](assets/bathroom_001/passing_svdd/svdd_last10_seed10007.svg), [10008](assets/bathroom_001/passing_svdd/svdd_last10_seed10008.svg), [10009](assets/bathroom_001/passing_svdd/svdd_last10_seed10009.svg), [10010](assets/bathroom_001/passing_svdd/svdd_last10_seed10010.svg) or [10012](assets/bathroom_001/passing_svdd/svdd_last10_seed10012.svg). These use the current **0.03515625 m/drawing pixel** scenario and eleven checks.
+
+<details>
+<summary>Detailed passing example — late SVDD, seed 10000</summary>
+
+![Late SVDD seed 10000: labelled floorplan, shared bathroom arrangement, and the requirement and passing reason for each of the eleven checks.](assets/bathroom_001/passing_svdd/svdd_last10_seed10000.png)
+
+</details>
+
 ### Diversity, Reproduction and Assessment Coverage
 
-All **86/99/99/100** usable, structurally valid graphs (baseline/Best-of-2/late SVDD/Best-of-11) are unique. Mean pairwise semantic-layout distance stays within **0.804–0.810**. These diagnostics show no exact-duplicate collapse, while Best-of-11 has the largest room-count shift from baseline. Fixed-canvas diversity measures do not establish fidelity to real floorplans; no RPLAN reference dataset was available for FID/KID. See the [complete analysis](../test_time/outputs/bathroom_001/analysis/REPORT.md).
+All **86/99/99/100** usable, structurally valid graphs (baseline/Best-of-2/late SVDD/Best-of-11) are unique. Mean pairwise semantic-layout distance stays within **0.804–0.810**. These diagnostics show no exact-duplicate collapse, while Best-of-11 has the largest room-count shift from baseline. Fixed-canvas diversity measures do not establish fidelity to real floorplans; no RPLAN reference dataset was available for FID/KID. The [saved metrics and provenance](assets/bathroom_001/result_audit.json) include the diversity results and source hashes.
 
 This evaluation supplies the assessment's frozen-model baseline, explicit constraint subset and assumptions, scalar reward, matched-NFE comparison, per-check outcomes, failure analysis and annotated vector outputs. The full-versus-late ablation and extension results remain pending. One scenario and one batch of 100 paired trials limit generalization. [Numerical audit](assets/bathroom_001/result_audit.json) · [Figure generator](../test_time/report_assets.py) · [Reproduction instructions](../test_time/README.md) · [Constraint definitions](../test_time/configs/constraints_bathroom_v1.json).
 

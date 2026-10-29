@@ -29,7 +29,7 @@ from .analyze import load_records
 from .constraint_text import room_labels
 from .evaluate import counted_results
 from .types import overall_validity, write_json
-from .visualize import COLORS
+from .visualize import COLORS, save_sample
 
 
 METHODS = ["baseline", "best_of_n_2", "svdd_pm_last10", "best_of_n_11"]
@@ -121,6 +121,8 @@ def _save(fig, output, name):
     for extension in ("png", "pdf", "svg"):
         path = output / f"{name}.{extension}"
         fig.savefig(path, dpi=300, bbox_inches="tight", pad_inches=0.07, facecolor="white")
+        if extension == "svg":
+            path.write_text("\n".join(line.rstrip() for line in path.read_text().splitlines()) + "\n")
         files.append(path.name)
     plt.close(fig)
     return files
@@ -303,6 +305,55 @@ def _example_figure(examples, output):
     return _save(fig, output, "qualitative_examples"), {"plan_limits_m": limits, "bathroom_inset_span_m": bathroom_span}
 
 
+def _passing_examples(record, excluded_seed, output):
+    """Six further successes, with the existing detailed SVG/PNG checker layout."""
+    passing = [row for row in sorted(record["rows"], key=lambda row: row["trial"])
+               if overall_validity(row["evaluation"]) == "valid"]
+    selected = [row for row in passing if row["seed"] != excluded_seed][:6]
+    points = np.concatenate([np.array(room["polygon"])[:, :2]
+                             * row["sample"]["scenario"]["coordinate_scale_m_per_model_unit"]
+                             for row in selected for room in row["sample"]["rooms"]])
+    midpoint = (points.max(axis=0) + points.min(axis=0)) / 2
+    span = max(points.max(axis=0) - points.min(axis=0)) + 1.5
+    limits = [midpoint[0] - span / 2, midpoint[0] + span / 2,
+              midpoint[1] - span / 2, midpoint[1] + span / 2]
+    fig, axes = plt.subplots(2, 3, figsize=(11.8, 9.1))
+    fig.subplots_adjust(left=0.015, right=0.985, top=0.91, bottom=0.07, hspace=0.20, wspace=0.08)
+    fig.suptitle("SVDD (last 10%) · additional passing designs", fontsize=15, y=0.98)
+    manifest, artifacts = [], []
+    for ax, row in zip(axes.flat, selected):
+        _floorplan(ax, row, limits)
+        ax.set_title(f"Seed {row['seed']} · VALID\n11/11 checks pass · no unresolved checks",
+                     fontsize=10, pad=7, color="#386943")
+        prefix = output / "passing_svdd" / f"svdd_last10_seed{row['seed']}"
+        rendered = save_sample(row["sample"], row["evaluation"], prefix)
+        files = {key: Path(path).relative_to(output).as_posix() for key, path in rendered.items()}
+        files.update(graph=f"passing_svdd/{prefix.name}_graph.json",
+                     evaluation=f"passing_svdd/{prefix.name}_evaluation.json")
+        write_json(output / files["graph"], row["sample"])
+        write_json(output / files["evaluation"], row["evaluation"])
+        manifest.append({"seed": row["seed"], "trial": row["trial"], "method": _method(record),
+                         "overall_validity": "valid", "passed_checks": sum(map(_passed, counted_results(row))),
+                         "artifacts": files})
+        artifacts.extend(files[key] for key in ("png", "svg"))
+    for ax in axes.flat[len(selected):]:
+        ax.axis("off")
+    fig.text(0.5, 0.025, "First six passing trials excluding seed " + str(excluded_seed)
+             + "; common metric scale. These examples are selected from the passing subset.",
+             ha="center", fontsize=9)
+    artifacts += _save(fig, output, "svdd_passing_examples")
+    write_json(output / "svdd_passing_examples_sources.json", {
+        "method": "SVDD (last 10%)", "passing_outputs": len(passing),
+        "selected_examples": len(selected), "excluded_seed_already_featured": excluded_seed,
+        "selection": "First six overall-valid trials in ascending trial order, excluding the SVDD seed already shown in Figure 3.",
+        "source": _fingerprint(record["run_dir"] / "candidates.jsonl"),
+        "renderer": _fingerprint(Path(__file__).with_name("visualize.py")),
+        "coordinate_scale_m_per_drawing_pixel": record["config"]["scenario"]["coordinate_scale_m_per_model_unit"],
+        "plan_limits_m": limits, "examples": manifest,
+    })
+    return artifacts
+
+
 def build_assets(experiment_dir, output_dir):
     """Export the four-method, 100-output bathroom comparison and provenance."""
     records, skipped = load_records(experiment_dir)
@@ -355,6 +406,7 @@ def build_assets(experiment_dir, output_dir):
         artifacts += _bottleneck_figure(partitions, output)
         files, geometry = _example_figure(examples, output)
         artifacts += files
+        artifacts += _passing_examples(records[2], examples[1][1]["seed"], output)
     copied = []
     for record, row in examples:
         method = _method(record)
