@@ -1,7 +1,8 @@
 # GSDiff: test-time constraint guidance
 
 The [concise technical report](../docs/technical_report.md) presents the model, constraints,
-reward and SVDD comparison, with results pending.
+reward and completed SVDD comparison. The [audited sweep analysis](outputs/sweep_002_cpu_audit_v2/analysis/REPORT.md)
+contains detailed results for all 400 originally selected designs.
 [Technical notes](../docs/technical_notes.md) retain implementation details and assessment alignment.
 
 ## Goal
@@ -22,10 +23,11 @@ These Markdown files are ready to paste into HackMD.
 | 000 — baseline | Can we reproduce released unconstrained inference? | [Report](experiments/000_baseline/REPORT.md) |
 | 001 — constraints | Implementation verified; three-trial pilot inspected | [Report](experiments/001_constraints/REPORT.md) |
 | 002 — GPU backend | Tensor geometry and guidance; offline implementation audit | [Report](experiments/002_gpu_backend/REPORT.md) |
-| 003 — guidance window | Pending: full SVDD guidance versus the final 200 stochastic steps | [Report](experiments/003_guidance_window/REPORT.md) |
+| 003 — guidance window | Full SVDD versus the final 200 stochastic steps; results in the audited sweep | [Report](experiments/003_guidance_window/REPORT.md) |
 | 004 — feasible constraints | Six GPU-compatible checks with three supporting measurement rules | [Report](experiments/004_feasible_constraints/REPORT.md) |
 | 005 — denoiser budget | Match Best-of-N to full SVDD by evaluated denoiser states | [Report](experiments/005_denoiser_budget/REPORT.md) |
 | 006 — sweep analysis | Offline method comparisons, constraint bottlenecks, diversity and sample gallery | [Report](experiments/006_sweep_analysis/REPORT.md) |
+| 007 — CPU checker audit | Refine bedroom evaluation while preserving all original selections | [Report](experiments/007_cpu_checker_audit/REPORT.md) |
 
 ## Measurement policy
 
@@ -65,9 +67,9 @@ stream and selection. The default `--reward_backend gpu` also performs room extr
 searches and selection using tensors; `--reward_backend cpu` opts into reference CPU guidance. All six checks
 are retained, with finite-search limitations recorded. Final exported designs always receive the CPU
 audit. Reports count batch time once and separate forward calls from processed states.
-H100 throughput and memory for the new backend have not yet been benchmarked.
+Recorded H100 runtime is available in the audited analysis.
 The launcher also defaults to `REWARD_BACKEND=gpu`; set it to `cpu` for the reference comparison.
-The planned evaluation uses one seed batch starting at 10000, with 100 selected designs for each of four variants:
+The completed evaluation used one seed batch starting at 10000, with 100 selected designs for each of four variants:
 baseline, Best-of-11, SVDD-PM guided only at `t=200,...,1` (approximately the final 20%), then full SVDD-PM.
 This gives **100 selected designs per variant, 400 total**, using paired design seeds.
 All trajectories denoise for 1,000 steps; both SVDD variants use K=10 and temperature 0 and leave
@@ -81,7 +83,7 @@ separate. The launcher rejects old `BEST_N` overrides so the chosen budget canno
 
 The historical CPU-guided pilot has three trials per method (seeds 1000–1002): all three methods have **0/3 overall-valid**
 designs. All nine selected designs fail C035. Structural validity is 2/3 for baseline and 3/3 for both guided methods.
-This small pilot does not establish an improvement; larger evaluation design remains pending.
+This small pilot does not establish an improvement; completed sweep results are reported in the technical report and audited analysis linked above.
 The original 48-test suite passed locally and on Northflank; the batching update passed 92 local tests.
 The prior constraint update passed **186 tests** locally, with three CUDA checks skipped because CUDA is unavailable.
 The denoiser-budget update passed **205 tests**, with the same three CUDA checks skipped locally.

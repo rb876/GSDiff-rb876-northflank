@@ -166,10 +166,26 @@ def _number(value):
 
 
 def write_analysis_report(output, records, skipped, figures, gallery):
+    from .analysis_plots import FIGURE_CAPTIONS
+
     lines = ["# Sweep analysis", "",
              "This report analyses completed saved runs without generating or rechecking designs. "
              "Only the selected output from each trial contributes to method comparisons. "
-             "Best-of-N's rejected candidates are excluded. Final constraint outcomes come from the saved CPU reference audit.", "",
+             "Best-of-N's rejected candidates are excluded. Final constraint outcomes come from the saved CPU reference audit.", ""]
+    if any(record["summary"].get("evaluation_audit") for record in records):
+        lines += ["## Evaluation audit", "",
+                  "The re-audited runs reuse the **originally selected outputs**, with no reselection or new generation. "
+                  "Their saved population contains only these outputs, not the original full candidate pool. "
+                  "Generation timings and counters are preserved and **exclude the new offline CPU audit**; "
+                  "audit time is recorded separately in [`audit.json`](../audit.json). "
+                  "Guidance/reward metadata describes the original generation, not the revised final checker.", "",
+                  "| Method | Final evaluation checker |", "|---|---|"]
+        for record in records:
+            audit = record["summary"].get("evaluation_audit") or {}
+            lines.append(f"| {record['label']} | {audit.get('checker_version', 'original CPU reference')} |")
+        lines += ["", "See the [audit report](../AUDIT.md) for checker changes, provenance and outcome changes. "
+                  "Original and revised checker versions belong to separate comparison groups.", ""]
+    lines += [
              "## Assessment requirements", "",
              "Technical_assessment_TTC.pdf, pages 2–3 (§§2.2, 2.6–2.8), asks for a shared checkpoint/scenario/representation, "
              "compute multiplier, subset size, applicability coverage, compliance, severity, structural validity, "
@@ -191,7 +207,7 @@ def write_analysis_report(output, records, skipped, figures, gallery):
              "Constraint success is passes / applicable checks, including unknowns in the denominator. "
              "Measurable-only compliance is shown separately in CSV. Applicability coverage is applicable checks / "
              "(selected outputs × configured scored constraints). Supporting rules contribute to neither denominator.", "",
-             "| Method | Outputs | Checks | Overall valid (95% CI) | Structural valid | Applicability | Constraint success | Unknown checks | Mean measured severity | Seconds/output | Runtime × baseline | Denoiser evaluations/output | Denoiser × baseline |",
+             "| Method | Outputs | Checks | Overall valid (95% CI) | Structural valid | Applicability | Constraint success | Unknown checks | Mean measured severity | Seconds/output | Runtime × baseline | Denoiser NFE/output | NFE × baseline |",
              "|---|---:|---:|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|"]
     for record in records:
         m = record["metrics"]
@@ -211,7 +227,10 @@ def write_analysis_report(output, records, skipped, figures, gallery):
               "## Figures", ""]
     for name, paths in figures.items():
         png, pdf = (Path(paths[k]).relative_to(output).as_posix() for k in ("png", "pdf"))
-        lines += [f"![{name.replace('_', ' ')}]({png})", "", f"[Download PDF]({pdf})", ""]
+        lines += [f"![{name.replace('_', ' ')}]({png})", ""]
+        if caption := FIGURE_CAPTIONS.get(name):
+            lines += [caption, ""]
+        lines += [f"[Download PDF]({pdf})", ""]
     lines += ["## Constraint difficulty", "",
               "A sole failure is a structurally valid design where that constraint fails and all other applicable scored checks pass. "
               "This identifies a bottleneck without assuming that removing or weakening it is appropriate.", "",

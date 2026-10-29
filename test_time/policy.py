@@ -75,15 +75,16 @@ def graph_validity(sample):
 
 
 class ConstraintEvaluator:
-    def __init__(self, specs=None, validity_weight=100.0):
+    def __init__(self, specs=None, validity_weight=100.0, *, bedroom_search_fn=None):
         self.specs = load_specs() if specs is None else list(specs)
         if not math.isfinite(validity_weight) or validity_weight < 0:
             raise ValueError("validity_weight must be finite and nonnegative")
         self.validity_weight = validity_weight
+        self.bedroom_search_fn = bedroom_search_fn
 
     def evaluate(self, sample, scenario):
         valid, penalty, diagnostics = graph_validity(sample)
-        context = CheckContext(sample, scenario, self.specs)
+        context = CheckContext(sample, scenario, self.specs, bedroom_search_fn=self.bedroom_search_fn)
         enabled = [spec for spec in self.specs if spec.enabled]
         results = [check(sample, scenario, spec, context) for spec in enabled]
         regulatory_energy = sum(spec.weight * result.severity for spec, result in zip(enabled, results)

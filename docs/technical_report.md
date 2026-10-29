@@ -145,20 +145,34 @@ Bedroom feasibility uses binary penalties. Dimensional deficits use normalized s
 
 ## Evaluation and compute
 
-One parent prediction per reverse step plus $K$ extra predictions at each of $L$ guided steps gives **$T+KL$ denoiser states per output**. The selected state's prediction is recomputed on the next iteration. Best-of-N costs $NT$.
+**Protocol:** 100 selected outputs per method, paired seeds `10000–10099`, one fixed scenario, H100 80 GB, generation/inference batches 4/10. The CPU audit rechecks the original outputs; it changes neither generation rewards nor candidate selection.
 
-The planned sweep compares **100 selected designs per method**, paired seeds `10000–10099`, on an H100 80 GB:
+**Table 1.** All methods score the same **six checks, with 100% applicability**. Validity includes all outputs; brackets give 95% Wilson intervals. Check success is passes/all applicable checks, including unknowns in the denominator. Severity averages measured penalties, excluding unknowns and the structural penalty. Room-count $W_1$ measures distribution shift from baseline (lower is closer).
 
-| Method | Denoiser states/output | Overall valid | Seconds/output |
-|---|---:|---:|---:|
-| Baseline | 1,000 | — | — |
-| Best-of-11 | 11,000 | — | — |
-| SVDD, last 20% | 3,000 | — | — |
-| SVDD, full | 10,990 | — | — |
+| Method | Overall valid, % [95% CI] | Check success, % | Severity ↓ | Structure valid, % | Room-count $W_1$ ↓ | NFE/output | Seconds/output |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| Baseline | 2 [0.6–7.0] | 63.8 | 0.185 | 86 | 0.000 | 1,000 | 3.54 |
+| Best-of-11 | 9 [4.8–16.2] | 83.3 | 0.137 | 100 | 0.217 | 11,000 | 20.15 |
+| SVDD, last 20% | 14 [8.5–22.1] | 83.7 | 0.142 | 98 | 0.150 | 3,000 | 84.68 |
+| SVDD, full | 15 [9.3–23.3] | 85.0 | 0.135 | 99 | 0.138 | 10,990 | 230.05 |
 
-*Measured results will populate the empty cells.* Best-of-11 matches full SVDD within **0.091%** in denoiser work; edge/reward costs and runtime remain unmatched. The late/full ablation changes both guidance timing and budget.
+**Compute:** sample-wise denoiser evaluations (NFE) cost $T+KL$ for SVDD and $NT$ for Best-of-N. Multipliers are **1× / 11× / 3× / 10.99×**, respectively. Best-of-11 matches full SVDD within 0.091% in NFE. NFE excludes edge/reward costs: full SVDD takes **11.4× longer** than Best-of-11. Timings exclude loading, rendering and the offline audit.
 
-Report overall validity with 95% intervals, per-constraint outcomes, coverage, severity and structural validity. Measure diversity through graph uniqueness and semantic-layout distances, and distribution shifts relative to baseline. Annotated examples should explain successful, failed and unresolved designs. See [metric definitions](analysis.md).
+**Interpretation:** full SVDD has the highest observed validity, but 15 versus 14 successes does not establish an advantage over late guidance. This ablation changes both guidance timing and budget. C035 fails in **80/100** full-SVDD outputs and is the sole scored failure in 76; C036 passes in 99. Clearance envelopes need at least **9.92 m²**, explaining many small-bedroom failures.
+
+**Diversity:** among usable, structurally valid outputs (86/100/98/99), all graphs are unique and mean pairwise semantic-layout distance stays near **0.804–0.807**. This shows no obvious collapse under these diagnostics, not equivalence to RPLAN. Unknown-check rates are 9.3%/0%/2.3%/0.8%; an unresolved placement search is not proof of impossibility. [Metrics and complete analysis](../test_time/outputs/sweep_002_cpu_audit_v2/analysis/REPORT.md).
+
+### One successful SVDD design
+
+![Full SVDD seed 10009: labelled rooms and explanations for all six passing constraints.](assets/svdd_full_seed10009.png)
+
+**Figure 1.** First valid full-SVDD output in trial order: seed **10009**, valid structure, **six passes, zero unknowns**. Bedroom 3 accommodates the bed, clearances and turning circle together. Habitable area is **49.30 m²** and volume **123.24 m³**. The [paired baseline](../test_time/outputs/sweep_002_cpu_audit_v2/analysis/samples/01_baseline/trial-0009-sample-0009.svg) fails C035 (largest bedroom 8.41 m² <9.92 m²) and C036 (circle diameter upper bound 1.20 m <1.50 m). This is an illustrative pair. [SVG](assets/svdd_full_seed10009.svg) · [Vector graph](assets/svdd_full_seed10009_graph.json) · [Check evidence](assets/svdd_full_seed10009_evaluation.json).
+
+### Assessment coverage
+
+The experiments address the assessment's baseline comparison, compute accounting, guidance-window ablation and annotated vector outputs. [Reproduction instructions](../test_time/README.md), [sweep launcher](../test_time/launch_eval.sh) and [machine-readable constraints](../test_time/configs/constraints_v2.json) accompany this report. New logic lives in `test_time/`; the upstream change to [`house_nn2.py`](../gsdiff/house_nn2.py) supplies reproducible edge randomness. The registry's explicit per-rule severity formulas/output-field mapping still need completing; formulas are currently documented separately.
+
+This evaluation covers one fixed scenario and one seed batch; broader replication remains necessary.
 
 ## Practical limits
 

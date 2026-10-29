@@ -290,13 +290,16 @@ def test_png_and_svg_include_actual_checks_and_assumptions(tmp_path):
     row = candidate(0, [result("C076", "fail", assumed=True), result("C033", "unknown")])
     paths = save_sample(row["sample"], row["evaluation"], tmp_path / "sample")
     with Image.open(paths["png"]) as image:
-        assert image.size[0] == 1120 and image.getextrema() != ((255, 255),) * 3
+        assert image.size[0] == 1440 and image.getextrema() != ((255, 255),) * 3
     svg = Path(paths["svg"]).read_text()
-    assert "C076: fail" in svg and "C033: unknown" in svg
-    assert "area_min_m2" in svg and "area_m2" in svg and "assumed" in svg
+    assert "C076 Minimum main-room size" in svg and ">FAIL<" in svg
+    assert "C033 Bedroom turning space" in svg and ">UNRESOLVED<" in svg
+    assert "Requirement:" in svg and "Why:" in svg and "assumed" in svg
+    assert "Observed:" not in svg and "area_min_m2" not in svg
+    assert "Living" in svg
 
 
-@pytest.mark.parametrize("check_status,overall_label", [("fail", "INVALID"), ("unknown", "UNKNOWN")])
+@pytest.mark.parametrize("check_status,overall_label", [("fail", "INVALID"), ("unknown", "UNRESOLVED")])
 def test_svg_distinguishes_overall_from_structural_validity(tmp_path, check_status, overall_label):
     row = candidate(0, [result("C076", check_status)], valid=True)
     paths = save_sample(row["sample"], row["evaluation"], tmp_path / check_status)

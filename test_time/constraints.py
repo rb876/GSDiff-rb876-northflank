@@ -25,12 +25,13 @@ APPLICABILITY = {
 class CheckContext:
     """Shared decoded geometry and one bedroom search per complete graph."""
 
-    def __init__(self, sample, scenario, specs):
+    def __init__(self, sample, scenario, specs, bedroom_search_fn=None):
         self.sample, self.scenario = sample, scenario
         self.specs = {spec.id: spec for spec in specs}
         self.area_policy = area_policy(self.specs.values(), scenario)
         self.rooms, self.geometry_error = [], None
         self._bedrooms = None
+        self.bedroom_search_fn = bedroom_search if bedroom_search_fn is None else bedroom_search_fn
         scale = scenario.coordinate_scale_m_per_model_unit
         if scale is not None:
             try:
@@ -51,9 +52,10 @@ class CheckContext:
             self._bedrooms = []
             for index, (label, polygon) in enumerate(self.rooms):
                 if label in bed["bedroom_labels"]:
-                    search = bedroom_search(polygon, width, bed["length_m"], turning["diameter_m"] / 2,
-                                            circulation["clearance_options_m"], self.scenario.geometry_grid_m,
-                                            self.scenario.geometry_refine_m, turning["max_positions"])
+                    search = self.bedroom_search_fn(
+                        polygon, width, bed["length_m"], turning["diameter_m"] / 2,
+                        circulation["clearance_options_m"], self.scenario.geometry_grid_m,
+                        self.scenario.geometry_refine_m, turning["max_positions"])
                     self._bedrooms.append({"room_index": index, **search})
         return self._bedrooms
 

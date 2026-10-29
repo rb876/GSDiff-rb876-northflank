@@ -2,7 +2,7 @@
 
 [Concise report](technical_report.md)
 
-Implementation details and assumptions supporting the presentation report. Evaluation tables await measured sweep results.
+Implementation details and assumptions supporting the presentation report. The [concise report](technical_report.md) contains the completed CPU-audited sweep results.
 
 ## 1. Model and experimental setting
 
@@ -176,11 +176,11 @@ Full SVDD guides `t=999,…,1`; late SVDD guides `t=200,…,1`. Both perform the
 
 **Objective and diversity.** Equal weights are an explicit scalarization choice. At the assumed height, C077's 28 m² already implies C078's 66 m³, so these checks partly duplicate the same objective. Greedy selection may concentrate layouts; diversity and baseline-relative distribution diagnostics are therefore necessary alongside validity.
 
-**Reproducibility and compute.** Per-design random streams and shared edge randomness support reproducible batching. Denoiser-state counts, model calls, edge evaluations and runtime are recorded separately. GPU memory use alone does not determine throughput; the measured runtime remains to be reported.
+**Reproducibility and compute.** Per-design random streams and shared edge randomness support reproducible batching. Denoiser-state counts, model calls, edge evaluations and runtime are recorded separately. GPU memory use alone does not determine throughput; measured runtime is reported in the [completed analysis](../test_time/outputs/sweep_002_cpu_audit_v2/analysis/REPORT.md).
 
-## 6. Evaluation protocol and results to populate
+## 6. Evaluation protocol and completed results
 
-The planned sweep uses **100 selected designs per method**, with paired trial seeds `10000–10099`, one fixed scenario, batch size 4 and maximum inference batch size 10 on an H100 80 GB. Best-of-11 generates 1,100 candidates but contributes 100 selected outputs to the comparison.
+The completed sweep used **100 selected designs per method**, with paired trial seeds `10000–10099`, one fixed scenario, batch size 4 and maximum inference batch size 10 on an H100 80 GB. Best-of-11 generated 1,100 candidates but contributes 100 selected outputs to the comparison.
 
 For $T=1000$ reverse steps, $K=10$ proposals and $L$ guided steps, SVDD evaluates $T+KL$ denoiser states per output:
 
@@ -191,27 +191,15 @@ For $T=1000$ reverse steps, $K=10$ proposals and $L$ guided steps, SVDD evaluate
 | SVDD, last 20% | 200 | 3,000 | 3× |
 | SVDD, full | 999 | 10,990 | 10.99× |
 
-Best-of-11 approximately matches **full SVDD denoiser work**, within 0.091%. This does not match edge prediction, reward work or runtime. The late/full comparison is a guidance-window ablation with different budgets. Recorded counters must confirm the planned counts.
+Best-of-11 approximately matches **full SVDD denoiser work**, within 0.091%. This does not match edge prediction, reward work or runtime. The late/full comparison is a guidance-window ablation with different budgets. Recorded counters confirm these denoiser counts.
 
-The primary metric is overall-valid rate over **all selected outputs**, with 95% Wilson intervals. Report per-constraint pass/fail/unknown/N/A counts, a histogram of checks passed per design, measurement coverage and mean measured severity. Constraint success uses all applicable checks in its denominator; measurable-only compliance is reported separately. Unknowns never count as passes.
+The primary metric is overall-valid rate over **all selected outputs**, with 95% Wilson intervals. The analysis reports per-constraint pass/fail/unknown/N/A counts, a histogram of checks passed per design, measurement coverage and mean measured severity. Constraint success uses all applicable checks in its denominator; measurable-only compliance is reported separately. Unknowns never count as passes.
 
-| Method | Scored subset | Applicability coverage | Overall valid + 95% CI | Constraint success / measurable compliance | Mean measured severity | Structural valid |
-|---|---:|---|---|---|---|---|
-| Baseline | 6 | Pending | Pending | Pending | Pending | Pending |
-| Best-of-11 | 6 | Pending | Pending | Pending | Pending | Pending |
-| SVDD, last 20% | 6 | Pending | Pending | Pending | Pending | Pending |
-| SVDD, full | 6 | Pending | Pending | Pending | Pending | Pending |
-
-| Method | Unique / near-duplicate fraction | Mean pairwise layout distance | Distribution shift from baseline | Seconds/output |
-|---|---|---|---|---|
-| Baseline | Pending | Pending | Reference | Pending |
-| Best-of-11 | Pending | Pending | Pending | Pending |
-| SVDD, last 20% | Pending | Pending | Pending | Pending |
-| SVDD, full | Pending | Pending | Pending | Pending |
+The [main technical report](technical_report.md) contains the comparison and conclusions. The [full audited analysis](../test_time/outputs/sweep_002_cpu_audit_v2/analysis/REPORT.md) supplies detailed metrics, failure explanations and annotated examples. Its `cpu_bedroom_audit_v2` checker re-evaluated the original 400 selected designs without changing generation, GPU rewards or candidate selection; copied generation timings exclude the separate offline audit.
 
 Diversity uses canonical graph uniqueness and semantic-mask distances. Distribution diagnostics compare room-type frequencies and geometric/count distributions with baseline. They use structurally valid layouts with usable geometry and report eligible counts. Without RPLAN reference data, they do not establish dataset fidelity. Runtime is amortized generation time, excluding model loading and image export. Exact definitions are in [`analysis.md`](analysis.md).
 
-**Results discussion — pending:** identify the hardest constraint and sole-failure counts; compare full SVDD with Best-of-11; assess late-guidance validity/runtime tradeoffs and any loss of diversity. Add representative success, failure and unknown examples with images, constraint IDs, measurements and assumptions. All selected designs remain available in the gallery. One hundred designs per method supports an initial comparison; intervals and additional seeds are needed before strong performance claims.
+All selected designs remain available in the [audited gallery](../test_time/outputs/sweep_002_cpu_audit_v2/analysis/index.html). One hundred designs per method supports an initial comparison; intervals and additional seeds are needed before strong performance claims.
 
 ## 7. Assessment alignment and deliverables
 
@@ -219,10 +207,10 @@ The [assessment, pp. 2–3 (§§2.2, 2.6–2.8)](../Technical_assessment_TTC.pdf
 
 The required comparison covers subset size, applicability, compliance, severity, structural validity and distribution preservation. Its grading emphasizes reasoning (50%), correctly implemented subset/breadth (25%) and constraint respect (25%). It specifies no fixed sample count or mandatory FID/KID metric; RPLAN reference data is optional.
 
-After copying the completed sweep, populate the tables and figures from:
+Regenerate the analysis from the completed audit:
 
 ```bash
-python -m test_time.analyze --experiment_dir test_time/outputs/sweep_001
+python -m test_time.analyze --experiment_dir test_time/outputs/sweep_002_cpu_audit_v2
 ```
 
-The resulting `analysis/` contains the generated report, CSV tables, PNG/PDF figures and `index.html` gallery, with an annotated PNG/SVG and graph/evaluation JSON for every selected design. Preserve run configurations and hashes with these artifacts. **The remaining submission work is to insert the measured results, annotated examples and evidence-based conclusions.**
+The resulting `analysis/` contains the generated report, CSV tables, PNG/PDF figures and `index.html` gallery, with an annotated PNG/SVG and graph/evaluation JSON for every selected design. Preserve run configurations and hashes with these artifacts. Generated outputs are Git-ignored and must be shared separately from the tracked reports.

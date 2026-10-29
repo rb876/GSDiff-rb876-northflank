@@ -191,6 +191,8 @@ def comparison_group(config):
                 "inference_batch_size": config.get("inference_batch_size", 1),
                 "reward_backend": config.get("reward_backend", "cpu"),
                 "tensor_settings": config.get("guidance", {}).get("tensor_settings")}
+    if audit := config.get("evaluation_audit"):
+        identity["evaluation_checker_version"] = audit["checker_version"]
     return hashlib.sha256(json.dumps(identity, sort_keys=True).encode()).hexdigest()[:12]
 
 
@@ -268,6 +270,7 @@ def summarize_run(run_dir):
             "reward_backend": config.get("reward_backend", "cpu"),
         },
         "guidance": config.get("guidance", {"backend": "cpu", "final_evaluator": "cpu_reference"}),
+        "evaluation_audit": config.get("evaluation_audit"),
         "comparison_group": comparison_group(config), "scenario": config.get("scenario", {}),
         "status": status, "expected_trials": expected_trials,
         "selected_trials": count, "saved_final_candidates": len(rows),
@@ -334,9 +337,18 @@ def write_report(run_dir):
     disabled_note = (f" {counts['disabled']} IDs disabled; these are excluded from compliance denominators "
                      "and are not counted as unknown or passed." if counts["disabled"] else "")
     parameters = ", ".join(f"{key}={value}" for key, value in result["parameters"].items() if value is not None)
+    audit = result["evaluation_audit"]
+    saved_population = (f"{result['saved_final_candidates']} originally selected outputs saved for this audit; "
+                        "the original full candidate pool is excluded" if audit else
+                        f"{result['saved_final_candidates']} complete final candidates saved")
+    audit_note = ([f"Offline CPU audit: **{audit['checker_version']}**. Original selections and generation are unchanged; "
+                   "no candidates were reselected. All saved-candidate statistics refer only to the originally selected outputs. "
+                   "Generation timings and counters are copied from the original run and exclude this offline audit; "
+                   "the sweep's `audit.json` records audit time separately. Guidance metadata describes the original generation.", ""]
+                  if audit else [])
     lines = [f"# {result['method']} experiment", "",
              f"Status: **{result['status']}**. {result['selected_trials']}/{result['expected_trials']} selected trials; "
-             f"{result['saved_final_candidates']} complete final candidates saved. {parameters}.", "",
+             f"{saved_population}. {parameters}.", "", *audit_note,
              f"Scale: **{scenario.get('scale_provenance', 'missing')}**, {scenario.get('coordinate_scale_m_per_model_unit')} m/drawing pixel. "
              "Results under declared geometry/scenario assumptions are not verified real-world compliance.", "",
              f"Guidance backend: **{result['parameters']['reward_backend']}**. Reported final validity and compliance use the **CPU reference checker**. "

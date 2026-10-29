@@ -2,12 +2,13 @@
 
 from copy import deepcopy
 from dataclasses import asdict
+from html import unescape
 import json
 from pathlib import Path
 
 from PIL import Image
 
-from test_time.analysis_gallery import build_gallery
+from test_time.analysis_gallery import _details, build_gallery
 from test_time.types import ConstraintResult, FloorplanSample, PolicyEvaluation, Room
 
 
@@ -50,7 +51,7 @@ def test_selected_images_graphs_and_evaluations_are_portable_and_sources_unchang
             assert not Path(item[kind]).is_absolute()
             assert (output / item[kind]).is_file()
         with Image.open(output / item["png"]) as image:
-            assert image.size[0] == 1120
+            assert image.size[0] == 1440
         original_row = next(candidate for candidate in rows if candidate["trial"] == item["trial"])
         assert json.loads((output / item["graph"]).read_text()) == original_row["sample"]
         assert json.loads((output / item["evaluation"]).read_text()) == original_row["evaluation"]
@@ -64,7 +65,33 @@ def test_selected_images_graphs_and_evaluations_are_portable_and_sources_unchang
     html = Path(result["html"]).read_text()
     assert 'href="samples/' in html and 'src="samples/' in html
     assert 'value="C035"' in html and 'value="C034"' not in html
-    assert 'Recorded witness &lt;not HTML&gt; &amp; &quot;quoted&quot;.' in html
+    assert 'Recorded witness &lt;not HTML&gt; &amp;' in html
+    assert '<summary>Recorded measurements</summary><pre>' in html
+    assert '<option value="unknown">Unresolved</option>' in html
+    assert 'data-status="unknown"' in html
+    assert 'class="status unknown">UNRESOLVED' in html
+
+
+def test_constraint_details_escape_readable_text_and_preserve_nested_raw_check(monkeypatch):
+    candidate = row(0, "unknown")
+    check = candidate["evaluation"]["results"][0]
+    original = deepcopy(candidate)
+
+    def describe(saved_check, sample):
+        assert saved_check == check and sample == candidate["sample"]
+        return {"name": 'Bedroom <circulation>', "requirement": 'Width ≥ 0.9 m & "clear"',
+                "reason": 'Bedroom 1 <script>alert("bad")</script>: placement remains unresolved.'}
+
+    monkeypatch.setattr("test_time.analysis_gallery.constraint_description", describe)
+    html = _details([check], [], candidate["sample"])
+    assert 'C035 · Bedroom &lt;circulation&gt;' in html
+    assert '<strong>Requirement:</strong> Width ≥ 0.9 m &amp; &quot;clear&quot;' in html
+    assert 'Bedroom 1 &lt;script&gt;alert(&quot;bad&quot;)&lt;/script&gt;' in html
+    assert '<script>' not in html and '>UNRESOLVED<' in html
+    assert html.index('Requirement:') < html.index('Recorded measurements')
+    raw = html.split('<summary>Recorded measurements</summary><pre>', 1)[1].split('</pre>', 1)[0]
+    assert json.loads(unescape(raw)) == check
+    assert candidate == original
 
 
 def test_invalid_graph_and_unicode_labels_render_with_safe_unique_paths(tmp_path):
