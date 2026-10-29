@@ -173,9 +173,9 @@ def write_analysis_report(output, records, skipped, figures, gallery):
              "Only the selected output from each trial contributes to method comparisons. "
              "Best-of-N's rejected candidates are excluded. Final constraint outcomes come from the saved CPU reference audit.", ""]
     if any(record["summary"].get("scale_recalibration") for record in records):
-        lines += ["## Scale recalibration", "",
+        lines += ["## Scenario and constraint re-evaluation", "",
                   "Baseline reuses saved unconditioned designs. Best-of-N reselects from its complete saved candidate bank "
-                  "using tensor rewards at the new scale; selected designs receive the refined CPU checker. "
+                  "using tensor rewards under the requested scenario and constraint registry; selected designs receive the refined CPU checker. "
                   "Rejected candidates retain tensor scores and do not enter the selected-output comparisons. "
                   "Reused denoiser NFE is historical generation work, not additional inference. "
                   "Generation runtime is unavailable for recalibrated controls; their separate offline rescoring and audit "
@@ -199,8 +199,10 @@ def write_analysis_report(output, records, skipped, figures, gallery):
              "compute multiplier, subset size, applicability coverage, compliance, severity, structural validity, "
              "distribution-preservation diagnostics, vector outputs and annotated successful/failed examples. "
              "It also requests an ablation and honest assumptions/limitations. It specifies no sample count or mandatory FID/KID metric.", "",
-             "The current profile has six evaluated constraints and three supporting measurement rules. "
-             "The tables below use each run's saved registry, including historical profiles, rather than assuming today's configuration.", "",
+             "The tables use each run's saved registry. The expanded design profile has six assessment-derived checks, "
+             "four custom design requirements (D001–D004) and three supporting measurement rules. "
+             "Design requirements contribute to overall constraint success but are not additional Appendix A regulatory claims. "
+             "Historical profiles keep their original checks and denominators.", "",
              "## Saved run settings", "",
              "| Method | N | K | Guided steps | Temperature | Reward backend |",
              "|---|---:|---:|---:|---:|---|"]
@@ -232,7 +234,19 @@ def write_analysis_report(output, records, skipped, figures, gallery):
                   "`tables/methods.csv` records each group."]
     lines += ["", "Intervals are 95% Wilson intervals for each method's overall-valid indicator; "
               "they describe sampling uncertainty under the fixed scenario. They do not establish legal compliance or test a difference between methods.", "",
-              "## Figures", ""]
+              "## Constraint groups", "",
+              "Design-brief checks are custom requirements. Each group's overall validity also requires a structurally valid graph; "
+              "supporting definitions do not add successes.", "",
+              "| Method | Group | Scored IDs | Overall valid | Check pass/applicable | Unknown checks |",
+              "|---|---|---|---:|---:|---:|"]
+    for record in records:
+        for group, metrics in record["summary"]["per_group"].items():
+            if metrics["status"] == "not_assessed":
+                continue
+            lines.append(f"| {record['label']} | {group} | {', '.join(metrics['active_scored_ids'])} | "
+                         f"{_percent(metrics['overall_valid_rate'])} | {_percent(metrics['check_pass_rate'])} | "
+                         f"{metrics['unknown']} |")
+    lines += ["", "## Figures", ""]
     for name, paths in figures.items():
         png, pdf = (Path(paths[k]).relative_to(output).as_posix() for k in ("png", "pdf"))
         lines += [f"![{name.replace('_', ' ')}]({png})", ""]
@@ -333,6 +347,8 @@ def analyze(experiment_dir, output_dir=None):
     paired = paired_validity(records)
     write_csv(output / "tables/methods.csv", [record["metrics"] for record in records])
     write_csv(output / "tables/constraints.csv", [row for record in records for row in record["constraint_rows"]])
+    write_csv(output / "tables/groups.csv", [{"method": record["label"], "group": group, **metrics}
+                                            for record in records for group, metrics in record["summary"]["per_group"].items()])
     write_csv(output / "tables/paired_validity.csv", paired,
               ["method_a", "method_b", "paired_outputs", "both_valid", "only_a_valid", "only_b_valid", "neither_valid", "b_minus_a_validity_points"])
     write_csv(output / "tables/diversity.csv", [{"method": record["label"], **record["diversity"]} for record in records])

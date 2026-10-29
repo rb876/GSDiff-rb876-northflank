@@ -66,7 +66,7 @@ PAPER_STYLE = {
 }
 FIGURE_CAPTIONS = {
     "overall_validity": "Every selected output remains in the denominator. Overall validity requires valid structure and all applicable scored constraints to pass; error bars are 95% Wilson intervals. The second panel retains invalid, unknown and N/A outcomes.",
-    "constraint_outcomes": "Each bar uses all selected outputs. Unknown and N/A are separate from passes; supporting definitions are excluded. An asterisk marks the highest confirmed failure count within each method. Labels show segments of at least 8%.",
+    "constraint_outcomes": "Each bar uses all selected outputs. Unknown and N/A are separate from passes; supporting definitions are excluded. C IDs are assessment checks; D IDs are custom design requirements, separated by a dotted line when both are present. An asterisk marks the highest confirmed failure count within each method. Labels show segments of at least 8%.",
     "passed_constraints": "Grouped bars are integer-bin histograms, normalized separately by each method's selected-output count. Unknown, failed and inapplicable checks do not add a pass; supporting definitions are excluded. Passing checks alone does not establish structural validity. Nonzero bars are labelled; zero bins remain empty.",
     "constraint_severity": "All panels share bins and axis limits. Only finite severities of applicable, measured scored checks are included, including zero-severity passes. Panel annotations give unknown check counts. Unknown values are omitted, never converted to zero; structural penalties are excluded.",
     "layout_distributions": "Each method is normalized by its structurally valid selected designs with finite, positive room areas; eligible counts are recorded in the report tables. Bins and axis limits are shared within each row. Outside label 6 is excluded. Area is in drawing pixels squared. These baseline-relative diagnostics are not RPLAN fidelity metrics.",
@@ -216,7 +216,9 @@ def _plot_analysis(records, output_dir):
 
     columns = min(2, len(records))
     rows = math.ceil(len(records) / columns)
-    fig, axes = plt.subplots(rows, columns, figsize=(4.25 * columns, 2.7 * rows + 0.35), squeeze=False, layout="constrained")
+    max_constraints = max((len(record["constraint_rows"]) for record in records), default=0)
+    panel_height = max(2.7, 0.32 * max_constraints + 0.8)
+    fig, axes = plt.subplots(rows, columns, figsize=(4.6 * columns, panel_height * rows + 0.35), squeeze=False, layout="constrained")
     for panel, (ax, record) in enumerate(zip(axes.flat, records)):
         constraints, count = record["constraint_rows"], len(record["rows"])
         ax.set_title(f"({chr(97 + panel)}) {_label(record)}")
@@ -225,7 +227,8 @@ def _plot_analysis(records, output_dir):
             continue
         y = np.arange(len(constraints))
         highest = max(item.get("fail", 0) for item in constraints)
-        ids = [item["id"] + (" *" if highest and item.get("fail", 0) == highest else "") for item in constraints]
+        ids = [item["id"] + (" · design" if item["id"].startswith("D") else "")
+               + (" *" if highest and item.get("fail", 0) == highest else "") for item in constraints]
         left = np.zeros(len(constraints))
         for status, style in STATUS_STYLES.items():
             values = np.array([item.get(status, 0) / count for item in constraints])
@@ -235,6 +238,9 @@ def _plot_analysis(records, output_dir):
                     ax.text(left[index] + value / 2, index, _percentage(value), ha="center", va="center", fontsize=8)
             left += values
         ax.set(yticks=y, yticklabels=ids, xlim=(0, 1), xlabel="Selected designs (%)")
+        for index in range(1, len(constraints)):
+            if constraints[index]["id"].startswith("D") != constraints[index - 1]["id"].startswith("D"):
+                ax.axhline(index - 0.5, color="#999999", linewidth=0.65, linestyle=":")
         ax.invert_yaxis()
         ax.xaxis.set_major_formatter(PercentFormatter(1, decimals=0))
         ax.grid(axis="x")
@@ -249,7 +255,7 @@ def _plot_analysis(records, output_dir):
     bins = np.arange(max_checks + 2) - 0.5
     centres = np.arange(max_checks + 1)
     width = 0.82 / len(records)
-    fig, ax = plt.subplots(figsize=(8.0, 3.5), layout="constrained")
+    fig, ax = plt.subplots(figsize=(max(8.0, 0.9 * (max_checks + 1)), 3.5), layout="constrained")
     maximum = 0.0
     for index, (values, style) in enumerate(zip(successes, styles)):
         frequencies = _frequencies(values, bins)

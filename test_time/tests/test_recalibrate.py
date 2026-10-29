@@ -12,7 +12,7 @@ from test_time.constraints import load_specs
 from test_time.gpu_constraints import TensorConstraintEvaluator
 from test_time.gpu_graph import extract_rooms
 from test_time.policy import ConstraintEvaluator
-from test_time.recalibrate import (CHECKER_VERSION, _prepare_sources, graph_tensors,
+from test_time.recalibrate import (CHECKER_VERSION, CONSTRAINT_PROTOCOL, _prepare_sources, file_hash, graph_tensors,
                                   recalibrate, score_candidates, select_candidates)
 from test_time.sampling import _candidate_seed
 from test_time.types import FloorplanSample, Room, Scenario, overall_validity, read_json, write_json
@@ -189,3 +189,75 @@ def test_guided_sources_are_explicitly_skipped_and_decoder_checked(tmp_path):
     save_rows(path, rows)
     with pytest.raises(ValueError, match="512-pixel tensor decoder"):
         recalibrate(source, tmp_path / "out", scenario_path)
+
+
+def test_explicit_added_constraint_reselects_pool_and_audits_both_controls(tmp_path):
+    source, scenario_path, _ = fixture_pool(tmp_path)
+    config_dir = Path(__file__).resolve().parents[1] / "configs"
+    # Both living rooms meet the original main-room requirement. Only the larger
+    # one meets D003 at the corrected scale; changing the registry must reverse
+    # the original tie-break winner without changing any generated graph.
+    original_spec = next(spec for spec in load_specs(config_dir / "constraints_v1.json") if spec.id == "C076")
+    added_spec = next(spec for spec in load_specs(config_dir / "constraints_design_v1.json") if spec.id == "D003")
+    for directory in (source / "baseline", source / "best_of_n"):
+        config = read_json(directory / "config.json")
+        config["constraints"] = [asdict(original_spec)]
+        config["guidance"]["tensor_settings"] = TensorConstraintEvaluator([original_spec], max_positions=128).metadata
+        rows = read_rows(directory / "candidates.jsonl")
+        for index, row in enumerate(rows):
+            side = (120, 160)[index]
+            points = [[0, 0], [side, 0], [side, side], [0, side]]
+            semantics = [1, 0, 0, 0, 0, 0, 0]
+            sample = row["sample"]
+            sample["nodes"] = [[*point, *semantics] for point in points]
+            sample["rooms"] = [{"label": 0, "polygon": points + [points[0]]}]
+            for vertex, (x, y) in enumerate(points):
+                sample["raw_nodes"][vertex] = [(x - 256) / 256, (y - 256) / 256, *semantics, 0]
+            evaluation = ConstraintEvaluator([original_spec]).evaluate(
+                FloorplanSample.from_dict(sample), Scenario(**config["scenario"]))
+            row.update(evaluation=asdict(evaluation), overall_validity=overall_validity(asdict(evaluation)),
+                       selected=index == 0)
+        write_json(directory / "config.json", config)
+        save_rows(directory / "candidates.jsonl", rows)
+    registry = tmp_path / "expanded.json"
+    write_json(registry, {"version": 1, "constraints": [asdict(original_spec), asdict(added_spec)]})
+    before = {path.relative_to(source): path.read_bytes() for path in source.rglob("*") if path.is_file()}
+
+    old_output, new_output = tmp_path / "same_checks", tmp_path / "expanded_checks"
+    recalibrate(source, old_output, scenario_path, inference_batch_size=2)
+    manifest = recalibrate(source, new_output, scenario_path, inference_batch_size=2, constraints_path=registry)
+    old_rows = read_rows(old_output / "best_of_n/candidates.jsonl")
+    new_rows = read_rows(new_output / "best_of_n/candidates.jsonl")
+    assert [row["selected"] for row in old_rows] == [True, False]
+    assert [row["selected"] for row in new_rows] == [False, True]
+    assert manifest["protocol"] == CONSTRAINT_PROTOCOL and manifest["changed_winners"] == 1
+    assert manifest["constraints_override"]["sha256"] == file_hash(registry)
+    updated = read_json(new_output / "best_of_n/config.json")
+    assert updated["constraints"] == [asdict(original_spec), asdict(added_spec)]
+    assert updated["scale_recalibration"]["original_constraints"] == [asdict(original_spec)]
+    assert updated["scale_recalibration"]["constraints_changed"]
+    assert new_rows[1]["evaluation_backend"] == CHECKER_VERSION
+    assert {check["id"]: check["status"] for check in new_rows[1]["evaluation"]["results"]} == {
+        "C076": "pass", "D003": "pass"}
+    baseline = read_rows(new_output / "baseline/candidates.jsonl")[0]
+    assert baseline["overall_validity"] == "invalid"
+    assert baseline["evaluation"]["results"][-1]["id"] == "D003"
+    assert baseline["evaluation"]["results"][-1]["status"] == "fail"
+    assert before == {path.relative_to(source): path.read_bytes() for path in source.rglob("*") if path.is_file()}
+
+
+def test_constraints_cli_argument_is_explicit_and_optional(monkeypatch, capsys):
+    import test_time.recalibrate as module
+
+    calls = []
+    def capture(*args, **kwargs):
+        calls.append((args, kwargs))
+        return {"changed_winners": 0}
+    monkeypatch.setattr(module, "recalibrate", capture)
+    arguments = ["--experiment_dir", "source", "--output_dir", "output", "--scenario", "scenario.json"]
+    module.main(arguments)
+    module.main(arguments + ["--constraints", "design.json", "--device", "cuda:0"])
+    assert calls[0][1] == {"constraints_path": None}
+    assert calls[1][1] == {"constraints_path": "design.json"}
+    assert calls[1][0][3] == "cuda:0"
+    assert "No model inference performed" in capsys.readouterr().out

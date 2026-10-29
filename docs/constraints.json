@@ -1,12 +1,12 @@
 {
-  "description": "Six implemented GPU checks and three supporting measurement rules. Documentation snapshot; runtime configuration remains in the source files.",
+  "description": "Ten implemented GPU checks: six assessment-derived constraints and four custom design requirements, plus three supporting measurement rules. Documentation snapshot; runtime configuration remains in the source files.",
   "source_files": {
-    "constraints": "test_time/configs/constraints_v2.json",
-    "scenario": "test_time/configs/scenario_v2.json",
-    "experiment": "test_time/configs/experiment_v2.json"
+    "constraints": "test_time/configs/constraints_design_v1.json",
+    "scenario": "test_time/configs/scenario_rplan18.json",
+    "experiment": "test_time/configs/experiment_design_v1.json"
   },
-  "version": 2,
-  "profile": "feasible_v2",
+  "version": 3,
+  "profile": "compact_three_bedroom_design_v1",
   "coordinate_unit": "drawing_pixel",
   "groups": {
     "bedroom_accessibility": [
@@ -23,6 +23,12 @@
       "C078",
       "C079",
       "C080"
+    ],
+    "design_brief": [
+      "D001",
+      "D002",
+      "D003",
+      "D004"
     ]
   },
   "constraints": [
@@ -326,6 +332,134 @@
       "source_id": "Technical_assessment_TTC.pdf:AppendixA:C080",
       "counts_toward_compliance": false,
       "enabled": true
+    },
+    {
+      "id": "D001",
+      "checker": "minimum_bedroom_count",
+      "definition": "The dwelling contains at least three labelled bedrooms.",
+      "group": "design_brief",
+      "role": "check",
+      "tier": "graph_plus_scenario",
+      "claim_level": "custom_design_requirement",
+      "depends_on": [],
+      "applicability": "residential",
+      "thresholds": {
+        "minimum_count": 3,
+        "bedroom_labels": [
+          1
+        ]
+      },
+      "required_observations": [
+        "room_polygons"
+      ],
+      "weight": 1.0,
+      "severity_type": "normalized_deficit",
+      "assumptions": [
+        "user_defined_design_requirement_not_regulatory",
+        "generated_room_semantics"
+      ],
+      "source_id": "user_design_brief:compact_three_bedroom_v1:D001",
+      "counts_toward_compliance": true,
+      "enabled": true
+    },
+    {
+      "id": "D002",
+      "checker": "minimum_each_bedroom_area",
+      "definition": "Every bedroom polygon has area at least 10 m2. A missing bedroom fails; the worst normalized deficit supplies the penalty.",
+      "group": "design_brief",
+      "role": "check",
+      "tier": "graph_plus_scenario",
+      "claim_level": "custom_design_requirement",
+      "depends_on": [],
+      "applicability": "residential",
+      "thresholds": {
+        "area_m2": 10.0,
+        "bedroom_labels": [
+          1
+        ]
+      },
+      "required_observations": [
+        "scale",
+        "room_polygons"
+      ],
+      "weight": 1.0,
+      "severity_type": "normalized_deficit",
+      "assumptions": [
+        "user_defined_design_requirement_not_regulatory",
+        "generated_room_semantics",
+        "zero_thickness_geometric_room_area",
+        "no_furniture_or_clearance_deduction"
+      ],
+      "source_id": "user_design_brief:compact_three_bedroom_v1:D002",
+      "counts_toward_compliance": true,
+      "enabled": true
+    },
+    {
+      "id": "D003",
+      "checker": "minimum_living_area",
+      "definition": "At least one living-room polygon has area at least 18 m2. Separate living rooms are not summed.",
+      "group": "design_brief",
+      "role": "check",
+      "tier": "graph_plus_scenario",
+      "claim_level": "custom_design_requirement",
+      "depends_on": [],
+      "applicability": "residential",
+      "thresholds": {
+        "area_m2": 18.0,
+        "living_room_labels": [
+          0
+        ]
+      },
+      "required_observations": [
+        "scale",
+        "room_polygons"
+      ],
+      "weight": 1.0,
+      "severity_type": "normalized_deficit",
+      "assumptions": [
+        "user_defined_design_requirement_not_regulatory",
+        "generated_room_semantics",
+        "zero_thickness_geometric_room_area",
+        "no_furniture_or_clearance_deduction"
+      ],
+      "source_id": "user_design_brief:compact_three_bedroom_v1:D003",
+      "counts_toward_compliance": true,
+      "enabled": true
+    },
+    {
+      "id": "D004",
+      "checker": "maximum_surface",
+      "definition": "Estimated habitable area under the shared C079/C080 policy does not exceed 100 m2.",
+      "group": "design_brief",
+      "role": "check",
+      "tier": "graph_plus_scenario",
+      "claim_level": "custom_design_requirement",
+      "depends_on": [
+        "C079",
+        "C080"
+      ],
+      "applicability": "residential",
+      "thresholds": {
+        "maximum_area_m2": 100.0
+      },
+      "required_observations": [
+        "scale",
+        "room_polygons",
+        "ceiling_height",
+        "habitable_area_mode"
+      ],
+      "weight": 1.0,
+      "severity_type": "normalized_excess",
+      "assumptions": [
+        "user_defined_design_requirement_not_regulatory",
+        "generated_room_semantics",
+        "habitable_area_uses_C079_C080",
+        "zero_thickness_wall_area_proxy",
+        "uniform_scenario_headroom"
+      ],
+      "source_id": "user_design_brief:compact_three_bedroom_v1:D004",
+      "counts_toward_compliance": true,
+      "enabled": true
     }
   ],
   "scenario": {
@@ -333,10 +467,10 @@
     "accessible_dwelling": true,
     "intended_occupants": 2,
     "ceiling_height_m": 2.5,
-    "coordinate_scale_m_per_model_unit": 0.025,
-    "scale_provenance": "assumed",
+    "coordinate_scale_m_per_model_unit": 0.03515625,
+    "scale_provenance": "paper_derived",
     "assumptions": [
-      "User-approved experimental scale: 0.025 metres per drawing pixel; the 512-pixel canvas spans 12.8 metres. This is not a recovered RPLAN physical scale.",
+      "Paper/code-derived calibration: RPLAN uses an 18 m square rasterized to 256 pixels (Wu et al., 2019, section 4; https://wutomwu.github.io/publications/2019-DeepLayout/paper.pdf). GSDiff normalizes native coordinates as (x-128)/128 and decodes onto a 512-pixel drawing canvas, giving 18/512 = 0.03515625 metres per drawing pixel. This is not a field measurement or independent verification of the checkpoint's raw training data.",
       "Uniform ceiling height of 2.5 metres is a scenario input, not generated geometry.",
       "Bedroom checks place one standard bed; other furniture and door swings are unobserved.",
       "Bathroom checks use empty-room geometry; fixtures and door swings are unobserved.",
@@ -354,7 +488,11 @@
     "C036",
     "C076",
     "C077",
-    "C078"
+    "C078",
+    "D001",
+    "D002",
+    "D003",
+    "D004"
   ],
   "active_supporting_ids": [
     "C034",
@@ -363,13 +501,13 @@
   ],
   "disabled_constraints": [],
   "constraint_counts": {
-    "registered": 9,
-    "scored": 6,
+    "registered": 13,
+    "scored": 10,
     "supporting": 3,
-    "active": 9,
-    "active_scored": 6,
+    "active": 13,
+    "active_scored": 10,
     "active_supporting": 3,
     "disabled": 0
   },
-  "overall_validity": "Requires structural validity and every applicable scored constraint to measurably pass. Unknown checks do not pass. Supporting measurement rules are not independent checks. Validity covers the six evaluated constraints under the declared scenario assumptions."
+  "overall_validity": "Requires structural validity and every applicable one of the ten scored constraints to measurably pass. Unknown checks do not pass. D001–D004 are custom design requirements, not Appendix A regulatory claims. Supporting measurement rules add no independent pass."
 }

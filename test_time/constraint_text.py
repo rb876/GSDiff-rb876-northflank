@@ -9,7 +9,9 @@ from .evaluate import ROOM_NAMES
 
 NAMES = {"C033": "Bedroom turning space", "C035": "Clearance around the bed",
          "C036": "Bathroom turning space", "C076": "Minimum main-room size",
-         "C077": "Habitable floor area", "C078": "Habitable volume"}
+         "C077": "Habitable floor area", "C078": "Habitable volume",
+         "D001": "Bedroom count", "D002": "Every bedroom's area",
+         "D003": "Living-room area", "D004": "Total area budget"}
 
 
 def _dict(value):
@@ -55,6 +57,15 @@ def _room(observed, labels):
 
 def _requirement(identifier, limits, observed):
     diameter = limits.get("diameter_m")
+    if identifier == "D001":
+        count = limits.get("minimum_count", observed.get("required_count"))
+        return f"Design brief: at least {_number(count)} bedrooms."
+    if identifier == "D002":
+        return f"Design brief: every bedroom must have area ≥ {_number(limits.get('area_m2', observed.get('required_area_m2')))} m²."
+    if identifier == "D003":
+        return f"Design brief: at least one living room must have area ≥ {_number(limits.get('area_m2', observed.get('required_area_m2')))} m²."
+    if identifier == "D004":
+        return f"Design brief: estimated habitable area ≤ {_number(limits.get('maximum_area_m2', observed.get('maximum_area_m2')))} m²."
     if identifier == "C033":
         circle = f"a {_number(diameter)} m diameter turning circle" if _numeric(diameter) else "the required turning circle"
         return f"At least one bedroom must fit a bed and {circle}, without overlap."
@@ -159,6 +170,44 @@ def constraint_description(check, sample):
         description["reason"] = "This requirement does not apply to the saved scenario."
     elif status == "unknown":
         description["reason"] = _unknown(check)
+    elif identifier == "D001":
+        count, required = observed.get("bedroom_count"), observed.get("required_count", limits.get("minimum_count"))
+        if _numeric(count) and _numeric(required):
+            comparison = "below" if status == "fail" else "meets"
+            description["reason"] = f"Found {_number(count)} bedrooms; {comparison} the minimum of {_number(required)}."
+        else:
+            description["reason"] = fallback
+    elif identifier == "D002":
+        area, required = observed.get("minimum_bedroom_area_m2"), observed.get("required_area_m2", limits.get("area_m2"))
+        if observed.get("bedroom_count") == 0:
+            description["reason"] = "No bedroom is present, so the required bedroom-area check fails."
+        elif _numeric(area) and _numeric(required):
+            measured, threshold = _pair(area, required)
+            room = _room({"room_index": observed.get("worst_room_index")}, labels)
+            comparison = "below" if status == "fail" else "meets"
+            conclusion = "Larger bedrooms cannot compensate for this shortfall." if status == "fail" else "Every bedroom meets the minimum."
+            description["reason"] = f"Smallest bedroom, {room}: {measured} m²; {comparison} {threshold} m². {conclusion}"
+        else:
+            description["reason"] = fallback
+    elif identifier == "D003":
+        area, required = observed.get("largest_living_room_area_m2"), observed.get("required_area_m2", limits.get("area_m2"))
+        if observed.get("living_rooms") == []:
+            description["reason"] = "No living room is present, so the required living-room area is not provided."
+        elif _numeric(area) and _numeric(required):
+            measured, threshold = _pair(area, required)
+            room = labels.get(observed.get("room_index"), "Largest living room")
+            comparison = "below" if status == "fail" else "meets"
+            description["reason"] = f"{room}: {measured} m²; {comparison} the {threshold} m² minimum. Separate living rooms are not added together."
+        else:
+            description["reason"] = fallback
+    elif identifier == "D004":
+        area, maximum = observed.get("estimated_habitable_area_m2"), observed.get("maximum_area_m2", limits.get("maximum_area_m2"))
+        if _numeric(area) and _numeric(maximum):
+            measured, threshold = _pair(area, maximum)
+            comparison = "exceeds" if status == "fail" else "is within"
+            description["reason"] = f"Estimated habitable area: {measured} m²; {comparison} the {threshold} m² budget."
+        else:
+            description["reason"] = fallback
     elif identifier in {"C033", "C035"}:
         if status == "fail":
             description["reason"] = _bed_failure(observed, labels, "turning" if identifier == "C033" else "circulation", limits) or fallback

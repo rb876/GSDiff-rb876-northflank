@@ -140,7 +140,7 @@ def summarize_root(root):
 
 def _parser():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--config", type=Path, default=Path(__file__).parent / "configs/extensions_rplan18.json")
+    parser.add_argument("--config", type=Path, default=Path(__file__).parent / "configs/extensions_design_v1.json")
     parser.add_argument("--method", choices=METHODS)
     parser.add_argument("--workers", type=int, default=1,
                         help="Independent processes sharing the device; split the trial seeds (default: 1)")

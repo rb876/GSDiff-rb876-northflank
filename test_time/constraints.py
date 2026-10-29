@@ -33,13 +33,15 @@ class CheckContext:
         self._bedrooms = None
         self.bedroom_search_fn = bedroom_search if bedroom_search_fn is None else bedroom_search_fn
         scale = scenario.coordinate_scale_m_per_model_unit
-        if scale is not None:
-            try:
-                self.rooms = [(room.label, affinity.scale(polygon_from_points(room.polygon),
-                                                        xfact=scale, yfact=scale, origin=(0, 0)))
-                              for room in sample.rooms]
-            except ValueError as error:
-                self.geometry_error = str(error)
+        # Count-only checks can still use valid polygons when metric scale is absent.
+        # Dimensional checks reject missing scale before reading these coordinates.
+        factor = scale if scale is not None else 1.0
+        try:
+            self.rooms = [(room.label, affinity.scale(polygon_from_points(room.polygon),
+                                                    xfact=factor, yfact=factor, origin=(0, 0)))
+                          for room in sample.rooms]
+        except ValueError as error:
+            self.geometry_error = str(error)
         if sample.diagnostics:
             self.geometry_error = "; ".join(sample.diagnostics)
 
@@ -186,6 +188,58 @@ def minimum_volume(context, spec):
     }, "Estimated polygon-union area times the scenario's uniform ceiling height"
 
 
+def minimum_bedroom_count(context, spec):
+    indices = [index for index, (label, _) in enumerate(context.rooms)
+               if label in spec.thresholds["bedroom_labels"]]
+    minimum = spec.thresholds["minimum_count"]
+    severity = deficit(len(indices), minimum)
+    return ("pass" if severity <= EPS else "fail"), severity, {
+        "bedroom_count": len(indices), "required_count": minimum, "bedroom_room_indices": indices,
+    }, "Counted extracted bedroom-labelled polygons against the custom design brief"
+
+
+def minimum_each_bedroom_area(context, spec):
+    rooms = [{"room_index": index, "area_m2": polygon.area}
+             for index, (label, polygon) in enumerate(context.rooms)
+             if label in spec.thresholds["bedroom_labels"]]
+    minimum = spec.thresholds["area_m2"]
+    worst = min(rooms, key=lambda room: room["area_m2"]) if rooms else None
+    severity = deficit(worst["area_m2"], minimum) if worst else 1.0
+    passed = severity <= EPS
+    return ("pass" if passed else "fail"), (0.0 if passed else severity), {
+        "bedrooms": rooms, "minimum_bedroom_area_m2": worst["area_m2"] if worst else None,
+        "required_area_m2": minimum, "bedroom_count": len(rooms),
+        "worst_room_index": worst["room_index"] if worst else None,
+    }, ("Every bedroom must meet the custom minimum; the smallest bedroom sets the penalty"
+        if rooms else "No bedroom was extracted; the required bedroom-area check fails")
+
+
+def minimum_living_area(context, spec):
+    rooms = [{"room_index": index, "area_m2": polygon.area}
+             for index, (label, polygon) in enumerate(context.rooms)
+             if label in spec.thresholds["living_room_labels"]]
+    best = max(rooms, key=lambda room: room["area_m2"]) if rooms else None
+    minimum = spec.thresholds["area_m2"]
+    area = best["area_m2"] if best else 0.0
+    severity = deficit(area, minimum)
+    passed = severity <= EPS
+    return ("pass" if passed else "fail"), (0.0 if passed else severity), {
+        "living_rooms": rooms, "largest_living_room_area_m2": area,
+        "required_area_m2": minimum, "room_index": best["room_index"] if best else None,
+    }, ("At least one living room must meet the custom minimum; separate living rooms are not added"
+        if rooms else "No living room was extracted; the required living-room-area check fails")
+
+
+def maximum_surface(context, spec):
+    area = context.area()
+    maximum = spec.thresholds["maximum_area_m2"]
+    severity = max(0.0, (area - maximum) / maximum)
+    passed = severity <= EPS
+    return ("pass" if passed else "fail"), (0.0 if passed else severity), {
+        "estimated_habitable_area_m2": area, "maximum_area_m2": maximum,
+    }, "Estimated habitable polygon-union area must remain within the custom area budget"
+
+
 def bed_definition(context, spec):
     limits, occupants = spec.thresholds, context.scenario.intended_occupants
     width = limits["single_width_m"] if occupants == 1 else limits["multiple_width_m"] if occupants is not None else None
@@ -202,6 +256,9 @@ CHECKERS = {
     "bedroom_circulation": bedroom_circulation, "bathroom_turning": bathroom_turning,
     "minimum_main_room": minimum_main_room, "minimum_surface": minimum_surface,
     "minimum_volume": minimum_volume,
+    "minimum_bedroom_count": minimum_bedroom_count,
+    "minimum_each_bedroom_area": minimum_each_bedroom_area,
+    "minimum_living_area": minimum_living_area, "maximum_surface": maximum_surface,
     "bed_definition": bed_definition, "area_definition": area_definition,
 }
 
@@ -213,6 +270,10 @@ REQUIRED_THRESHOLDS = {
     "minimum_main_room": {"area_m2", "height_m", "volume_m3", "main_room_labels"},
     "minimum_surface": {"first_four_m2", "additional_m2", "included_room_labels", "excluded_room_labels"},
     "minimum_volume": {"first_four_m3", "additional_m3", "included_room_labels", "excluded_room_labels"},
+    "minimum_bedroom_count": {"minimum_count", "bedroom_labels"},
+    "minimum_each_bedroom_area": {"area_m2", "bedroom_labels"},
+    "minimum_living_area": {"area_m2", "living_room_labels"},
+    "maximum_surface": {"maximum_area_m2"},
     "bed_definition": {"single_width_m", "multiple_width_m", "length_m", "bedroom_labels"},
     "area_definition": set(),
 }
@@ -222,6 +283,7 @@ V2_GROUPS = {
     "bathroom_fixtures_turning": {"C036"},
     "habitability": {"C076", "C077", "C078", "C079", "C080"},
 }
+DESIGN_GROUPS = {**V2_GROUPS, "design_brief": {"D001", "D002", "D003", "D004"}}
 
 
 def load_specs(path=None):
@@ -249,7 +311,7 @@ def load_specs(path=None):
             raise ValueError(f"{spec.id}: supporting rules require weight 0 and counts_toward_compliance=false")
         if spec.tier not in {"graph_plus_scenario", "placement_feasibility", "explicit_door_circulation", "supporting_definition"}:
             raise ValueError(f"{spec.id}: unknown observability tier")
-        if spec.claim_level not in {"direct_geometry", "assumption_based", "potential_layout", "unobservable"}:
+        if spec.claim_level not in {"direct_geometry", "assumption_based", "potential_layout", "unobservable", "custom_design_requirement"}:
             raise ValueError(f"{spec.id}: unknown claim_level")
         if not isinstance(spec.depends_on, list) or any(not isinstance(value, str) for value in spec.depends_on):
             raise ValueError(f"{spec.id}: depends_on must be a list of IDs")
@@ -279,12 +341,14 @@ def load_specs(path=None):
                 raise ValueError(f"{spec.id}: threshold {name} must be a positive finite number")
         if "max_positions" in spec.thresholds and type(spec.thresholds["max_positions"]) is not int:
             raise ValueError(f"{spec.id}: max_positions must be an integer")
+        if "minimum_count" in spec.thresholds and type(spec.thresholds["minimum_count"]) is not int:
+            raise ValueError(f"{spec.id}: minimum_count must be an integer")
         known_observations = {"scale", "ceiling_height", "occupants", "room_polygons", "habitable_area_mode"}
         if not isinstance(spec.required_observations, list) or not set(spec.required_observations) <= known_observations:
             raise ValueError(f"{spec.id}: unknown required observation")
         if not isinstance(spec.assumptions, list) or any(not isinstance(value, str) for value in spec.assumptions):
             raise ValueError(f"{spec.id}: assumptions must be a list of strings")
-        if spec.severity_type not in {"normalized_deficit", "binary_feasibility", "definition"}:
+        if spec.severity_type not in {"normalized_deficit", "normalized_excess", "binary_feasibility", "definition"}:
             raise ValueError(f"{spec.id}: unknown severity_type '{spec.severity_type}'")
         if type(spec.enabled) is not bool or type(spec.counts_toward_compliance) is not bool:
             raise ValueError(f"{spec.id}: enabled/counts_toward_compliance must be boolean")
@@ -301,15 +365,17 @@ def load_specs(path=None):
         included, excluded = limits["included_room_labels"], limits["excluded_room_labels"]
         if set(included) & set(excluded) or set(included) | set(excluded) != set(range(7)) or len(included) + len(excluded) != 7:
             raise ValueError("C080: included/excluded labels must partition GSDiff labels 0..6")
-    if data.get("version") == 2:
-        expected = set().union(*V2_GROUPS.values())
+    if data.get("version") in {2, 3}:
+        groups = V2_GROUPS if data["version"] == 2 else DESIGN_GROUPS
+        expected = set().union(*groups.values())
         if seen != expected:
-            raise ValueError("constraints_v2 must register exactly the nine implemented IDs")
+            count = "nine" if data["version"] == 2 else "thirteen"
+            raise ValueError(f"Constraint registry v{data['version']} must register exactly the {count} implemented IDs")
         for spec in specs:
-            if spec.id not in V2_GROUPS.get(spec.group, set()):
-                raise ValueError(f"{spec.id}: incorrect v2 group '{spec.group}'")
+            if spec.id not in groups.get(spec.group, set()):
+                raise ValueError(f"{spec.id}: incorrect v{data['version']} group '{spec.group}'")
             if (spec.role == "supporting_rule") != (spec.id in {"C034", "C079", "C080"}):
-                raise ValueError(f"{spec.id}: incorrect v2 supporting/check role")
+                raise ValueError(f"{spec.id}: incorrect v{data['version']} supporting/check role")
     if any(spec.checker in {"bedroom_turning", "bed_footprint", "bedroom_circulation"} for spec in specs):
         absent = {"C033", "C034", "C035"} - seen
         if absent:
@@ -342,7 +408,10 @@ def check(sample, scenario, spec, context=None):
     if context.geometry_error:
         return _result(spec, scenario, "unknown", explanation="Unreliable extracted geometry: " + context.geometry_error)
     policy = context.area_policy
-    uses_area = spec.checker in {"minimum_main_room", "minimum_surface", "minimum_volume"} and policy["enabled"]
+    uses_area = spec.checker in {"minimum_main_room", "minimum_surface", "minimum_volume", "maximum_surface"} and policy["enabled"]
+    if spec.checker == "maximum_surface" and not policy["enabled"]:
+        return _result(spec, scenario, "unknown", explanation="Missing supporting habitable-area definitions",
+                       missing_fields=["supporting_area_definitions"])
     if uses_area and not policy["available"]:
         return _result(spec, scenario, "unknown", explanation=policy["reason"],
                        missing_fields=policy["missing_fields"], observed={"area_policy": policy})

@@ -311,11 +311,14 @@ class TensorConstraintEvaluator:
             if not applicable:
                 status[:, column] = NOT_APPLICABLE
                 continue
-            available = {"scale": scale, "occupants": scenario.intended_occupants, "ceiling_height": scenario.ceiling_height_m}
+            available = {"scale": scale, "occupants": scenario.intended_occupants, "ceiling_height": scenario.ceiling_height_m,
+                         "habitable_area_mode": None if scenario.habitable_area_mode == "unknown" else scenario.habitable_area_mode}
             if any(name in available and available[name] is None for name in spec.required_observations):
                 continue
-            if (spec.checker in {"minimum_main_room", "minimum_surface", "minimum_volume"}
+            if (spec.checker in {"minimum_main_room", "minimum_surface", "minimum_volume", "maximum_surface"}
                     and area_rules["enabled"] and not area_rules["available"]):
+                continue
+            if spec.checker == "maximum_surface" and not area_rules["enabled"]:
                 continue
             limits = spec.thresholds
             measured = torch.zeros(batch, device=device, dtype=dtype)
@@ -367,6 +370,25 @@ class TensorConstraintEvaluator:
                     minimum = limits["first_four_m3"] * min(occupants, 4) + limits["additional_m3"] * max(occupants - 4, 0)
                     observed = observed * scenario.ceiling_height_m
                 measured = ((minimum - observed) / minimum).clamp_min(0)
+                current = torch.where(measured <= EPS, PASS, FAIL)
+            elif spec.checker == "minimum_bedroom_count":
+                target = room_mask & _labels_in(labels, limits["bedroom_labels"])
+                measured = ((limits["minimum_count"] - target.sum(-1)).to(dtype) / limits["minimum_count"]).clamp_min(0)
+                current = torch.where(measured <= EPS, PASS, FAIL)
+            elif spec.checker == "minimum_each_bedroom_area":
+                target = room_mask & _labels_in(labels, limits["bedroom_labels"])
+                deficits = ((limits["area_m2"] - areas) / limits["area_m2"]).clamp_min(0)
+                measured = deficits.masked_fill(~target, 0).amax(-1)
+                measured = torch.where(target.any(-1), measured, 1.0)
+                current = torch.where(measured <= EPS, PASS, FAIL)
+            elif spec.checker == "minimum_living_area":
+                target = room_mask & _labels_in(labels, limits["living_room_labels"])
+                largest = areas.masked_fill(~target, 0).amax(-1)
+                measured = ((limits["area_m2"] - largest) / limits["area_m2"]).clamp_min(0)
+                current = torch.where(measured <= EPS, PASS, FAIL)
+            elif spec.checker == "maximum_surface":
+                observed = torch.where(room_mask, habitable_areas, 0).sum(-1)
+                measured = ((observed - limits["maximum_area_m2"]) / limits["maximum_area_m2"]).clamp_min(0)
                 current = torch.where(measured <= EPS, PASS, FAIL)
             else:
                 raise ValueError(f"Unsupported GPU checker: {spec.checker}")

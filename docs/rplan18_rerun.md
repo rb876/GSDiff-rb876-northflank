@@ -23,7 +23,7 @@ source /workspace/venvs/gsdiff/bin/activate
 python -m pytest -q test_time/tests
 ```
 
-The corrected config files are already included; no manual JSON editing is needed. Use this virtual environment for every command below.
+The corrected six-check config files are already included; no manual JSON editing is needed. This runbook explicitly selects the original six-check profile. For the expanded ten-check design profile, use [the new commands](design_profile.md). Use this virtual environment for every command below.
 
 ## 2. Reuse baseline and reselect Best-of-11
 
@@ -50,7 +50,7 @@ First inspect the corrected control success rates. If they already approach 100%
 Two outputs per SVDD variant, with fewer candidates for this smoke test:
 
 ```bash
-EVAL_OUTPUT=test_time/outputs/rplan18_svdd_smoke_001 \
+EVAL_CONFIG=test_time/configs/experiment_rplan18.json EVAL_OUTPUT=test_time/outputs/rplan18_svdd_smoke_001 \
 VARIANTS='svdd_pm_last20 svdd_pm_full' TRIALS_PER_RUN=2 SVDD_K=2 \
 bash test_time/launch_eval.sh --run
 ```
@@ -58,7 +58,7 @@ bash test_time/launch_eval.sh --run
 Two attempts per extension (repair-aware first, then hard feasibility):
 
 ```bash
-WORKERS=2 EVAL_OUTPUT=test_time/outputs/rplan18_extensions_smoke_001 \
+EXTENSION_CONFIG=test_time/configs/extensions_rplan18.json WORKERS=2 EVAL_OUTPUT=test_time/outputs/rplan18_extensions_smoke_001 \
 bash test_time/launch_extensions.sh --smoke --run
 ```
 
@@ -70,7 +70,7 @@ Rerun both SVDD variants because their guidance used the old scale. This gives 1
 
 ```bash
 nohup env GSDIFF_PYTHON=/workspace/venvs/gsdiff/bin/python \
-  VARIANTS='svdd_pm_last20 svdd_pm_full' \
+  EVAL_CONFIG=test_time/configs/experiment_rplan18.json VARIANTS='svdd_pm_last20 svdd_pm_full' \
   EVAL_OUTPUT=test_time/outputs/rplan18_001/guided \
   EVAL_SEEDS=10000 TRIALS_PER_RUN=100 \
   bash test_time/launch_eval.sh --run > rplan18_svdd_001.log 2>&1 < /dev/null &
@@ -80,7 +80,7 @@ tail -f rplan18_svdd_001.log
 When it finishes, rerun the extensions (100 attempts each, two workers; repair-aware first):
 
 ```bash
-nohup env PYTHON=/workspace/venvs/gsdiff/bin/python WORKERS=2 \
+nohup env EXTENSION_CONFIG=test_time/configs/extensions_rplan18.json PYTHON=/workspace/venvs/gsdiff/bin/python WORKERS=2 \
   EVAL_OUTPUT=test_time/outputs/rplan18_extensions_001 \
   EVAL_SEED=10000 TRIALS_PER_RUN=100 \
   bash test_time/launch_extensions.sh --run > rplan18_extensions_001.log 2>&1 < /dev/null &

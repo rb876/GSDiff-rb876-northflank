@@ -27,8 +27,8 @@ guided_steps="${GUIDED_STEPS:-999}"
 late_guided_steps="${LATE_GUIDED_STEPS:-200}"
 temperature="${TEMPERATURE:-0}"
 python_bin="${GSDIFF_PYTHON:-python}"
-config="${EVAL_CONFIG:-test_time/configs/experiment_rplan18.json}"
-output_root="${EVAL_OUTPUT:-test_time/outputs/rplan18_sweep_001}"
+config="${EVAL_CONFIG:-test_time/configs/experiment_design_v1.json}"
+output_root="${EVAL_OUTPUT:-test_time/outputs/design_sweep_001}"
 read -r -a variants <<< "${VARIANTS-baseline best_of_n svdd_pm_last20 svdd_pm_full}"
 if (( ${#variants[@]} == 0 )); then
   echo "VARIANTS must contain at least one sweep variant." >&2

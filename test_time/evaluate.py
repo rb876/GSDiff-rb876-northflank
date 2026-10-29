@@ -365,7 +365,7 @@ def write_report(run_dir):
                    "the sweep's `audit.json` records audit time separately. Guidance metadata describes the original generation.", ""]
                   if audit and not recalibration else [])
     if recalibration:
-        audit_note = ["Offline scale recalibration: selected-output metrics use the recorded CPU checker. "
+        audit_note = ["Offline scenario/constraint re-evaluation: selected-output metrics use the recorded CPU checker. "
                       "No new diffusion was run; denoiser counters describe historical generation, "
                       "and generation runtime was not remeasured.", ""]
         if result["all_candidates"].get("status") == "not_reported":

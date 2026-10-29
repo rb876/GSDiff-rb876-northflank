@@ -1,0 +1,18 @@
+{
+  "name": "compact_three_bedroom_design_v1",
+  "variant": "unconstrained_rplan",
+  "scenario": "scenario_rplan18.json",
+  "constraints": "constraints_design_v1.json",
+  "trials": 1,
+  "batch_size": 4,
+  "inference_batch_size": 10,
+  "reward_backend": "gpu",
+  "final_checker": "cpu_bedroom_audit_v2",
+  "seed": 42,
+  "n": 4,
+  "k": 10,
+  "guided_steps": 999,
+  "temperature": 0.0,
+  "validity_weight": 100.0,
+  "output_root": "test_time/outputs/design_samples"
+}

@@ -1,8 +1,8 @@
 # GSDiff: test-time constraint guidance
 
 The [concise technical report](../docs/technical_report.md) presents the model, constraints,
-reward and completed SVDD comparison. The [audited sweep analysis](outputs/sweep_002_cpu_audit_v2/analysis/REPORT.md)
-contains detailed results for all 400 originally selected designs.
+reward and current expanded design profile. The [historical audited sweep analysis](outputs/sweep_002_cpu_audit_v2/analysis/REPORT.md)
+contains detailed results for 400 earlier designs at the old assumed scale; it is not the current expanded-profile evaluation.
 [Technical notes](../docs/technical_notes.md) retain implementation details and assessment alignment.
 
 ## Goal
@@ -31,11 +31,13 @@ These Markdown files are ready to paste into HackMD.
 
 ## Measurement policy
 
-Six scored constraints: C033, C035, C036, C076, C077, C078. The v2 registry contains those six
-checks and three supporting measurement rules: C034, C079 and C080. All nine entries are implemented.
+Ten scored constraints: C033, C035, C036, C076, C077, C078 and custom design requirements D001–D004.
+The design registry also contains three supporting rules: C034, C079 and C080. All thirteen entries are implemented.
+D001–D004 require ≥3 bedrooms, every bedroom ≥10 m², a living room ≥18 m² and habitable area ≤100 m².
+They are design requirements, not additional Appendix A regulations; [rescore and plot commands](../docs/design_profile.md).
 C079 declares the zero-thickness area proxy; C080 centralizes semantic and below-1.80 m exclusions.
 These supporting rules define measurements and add no separate reward or pass/fail result. The v1 configuration remains available.
-The user-approved scale is **assumed** 0.025 m/drawing pixel, with two occupants and 2.5 m ceilings.
+The current scale is **paper/code-derived** 18/512 = 0.03515625 m/drawing pixel, with two occupants and 2.5 m ceilings.
 These are conditional geometric/scenario checks, not verified real-world compliance.
 The headline overall-valid rate requires structural validity **and all applicable scored checks to pass**.
 Unknown measurements never count as passes; unresolved samples without a known failure remain unknown.
@@ -64,8 +66,8 @@ calls or reward evaluation costs.
 Generation now batches up to four independent trials, with at most ten states per neural-network call.
 SVDD proposals and Best-of-N candidates use these batched calls; each design retains its own random
 stream and selection. The default `--reward_backend gpu` also performs room extraction, constraint
-searches and selection using tensors; `--reward_backend cpu` opts into reference CPU guidance. All six checks
-are retained, with finite-search limitations recorded. Final exported designs always receive the CPU
+searches and selection using tensors; `--reward_backend cpu` opts into reference CPU guidance. All ten checks
+are included, with finite-search limitations recorded. Final exported designs always receive the CPU
 audit. Reports count batch time once and separate forward calls from processed states.
 Recorded H100 runtime is available in the audited analysis.
 The launcher also defaults to `REWARD_BACKEND=gpu`; set it to `cpu` for the reference comparison.
@@ -80,6 +82,8 @@ selected trial and a 1% tolerance for approximate denoiser matches; runtime comp
 separate. The launcher rejects old `BEST_N` overrides so the chosen budget cannot silently change.
 
 ## Current status
+
+The expanded ten-check profile is implemented; generation results are pending. The milestones below are historical.
 
 The historical CPU-guided pilot has three trials per method (seeds 1000–1002): all three methods have **0/3 overall-valid**
 designs. All nine selected designs fail C035. Structural validity is 2/3 for baseline and 3/3 for both guided methods.

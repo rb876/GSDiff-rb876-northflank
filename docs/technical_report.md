@@ -120,7 +120,7 @@ Finite proposals, clean-estimate rewards, coverage filtering and the greedy defa
 
 ## Geometry defines the reward
 
-We score six accessibility/habitability checks from Appendix A of the [assessment](../Technical_assessment_TTC.pdf):
+The reference profile scores six accessibility/habitability checks from Appendix A of the [assessment](../Technical_assessment_TTC.pdf):
 
 | ID | Geometric requirement |
 |---|---|
@@ -130,6 +130,17 @@ We score six accessibility/habitability checks from Appendix A of the [assessmen
 | **C076** | One living room/bedroom satisfies **(area ≥9 m² AND height ≥2.20 m) OR volume ≥20 m³**. |
 | **C077** | Habitable area ≥**28 m²** for two occupants. |
 | **C078** | Habitable volume ≥**66 m³** for two occupants. |
+
+The expanded profile adds four **custom design requirements**, defining a compact dwelling with at least three bedrooms:
+
+| ID | Design requirement |
+|---|---|
+| **D001** | At least **3 bedrooms**. |
+| **D002** | **Every bedroom ≥10 m²**; the worst bedroom deficit supplies the penalty. |
+| **D003** | At least one **living room ≥18 m²**, without summing separate rooms. |
+| **D004** | Estimated **habitable area ≤100 m²**, using the same C079/C080 area policy. |
+
+These four thresholds are a user-defined design brief, not additional Appendix A regulations. They are evaluated with tensor room counts/areas on GPU during guidance, with independent CPU final checks. The expanded profile has **10 scored checks and three supporting definitions**. Bedroom/living-room areas are geometric polygons without furniture deductions; D004 uses the habitable-area estimate. Required rooms that are absent fail their design checks. Scale and occupancy remain unchanged.
 
 **Scenario:** paper/code-derived scale **0.03515625 m/drawing pixel** (`paper_derived` provenance). Assumptions remain two occupants, uniform 2.5 m ceilings, a hypothetical axis-aligned 1.40 × 1.90 m bed and zero-thickness walls. Doors, swings, fixtures and navigable routes are unobserved; requirements needing them are excluded. Supporting rules C034/C079/C080 define measurements without adding compliance points.
 
@@ -150,13 +161,13 @@ E(G)=100\,\mathbf 1\{G\text{ structurally invalid}\}
 \qquad r(G)=-E(G).
 $$
 
-Bedroom feasibility uses binary penalties. Dimensional deficits use normalized shortfalls $\max(0,(b-q)/b)$, combined according to each rule. **Unknowns add no numeric severity and never count as passes.** Overall validity requires valid structure and every applicable scored check to pass; zero energy alone is insufficient. The [constraint specification](constraints.md) gives exact formulas and assumptions.
+Bedroom feasibility uses binary penalties. Dimensional deficits use normalized shortfalls $\max(0,(b-q)/b)$, combined according to each rule. D001 uses the normalized bedroom-count deficit, D002 the worst bedroom-area deficit, and D003 the largest living-room area's deficit. D004 uses $\max(0,(A_{\mathrm{hab}}-100)/100)$. All ten scored checks have weight one. **Unknowns add no numeric severity and never count as passes.** Overall validity requires valid structure and every applicable scored check to pass; zero energy alone is insufficient. The [constraint specification](constraints.md) gives exact formulas and assumptions.
 
 ## Evaluation and compute
 
-**Corrected-scale results are pending.** This report will present only evaluations using the 18 m RPLAN canvas. Changing final checks alone does not change earlier guidance decisions; revised guided runs must use the corrected scale during generation.
+**Expanded-profile results are pending.** The six-check reference and expanded ten-check profile are separate comparisons at the same 18 m RPLAN scale. Saved baseline designs can be re-evaluated and the complete Best-of-11 banks reselected under the expanded reward. Changing final checks alone does not change earlier guidance decisions; guided runs must use the expanded reward during generation. The existing candidate bank is a difficulty pilot; freeze thresholds before the final comparison on fresh seeds.
 
-**Protocol:** 100 outputs per method with paired seeds `10000–10099`, shared frozen checkpoints, six scored checks and the scenario above. Compare baseline, Best-of-11, SVDD over the last 20% and full-trajectory SVDD. Final selected outputs use the CPU placement audit; preserve failed and unresolved cases in the denominators.
+**Pilot protocol:** 100 outputs per method with paired seeds `10000–10099`, shared frozen checkpoints, ten scored checks and the scenario above. Compare baseline, Best-of-11, SVDD over the last 20% and full-trajectory SVDD. Final selected outputs use the CPU placement audit; preserve failed and unresolved cases in the denominators. Report the design-brief group separately from assessment-derived checks as well as overall success.
 
 Report overall validity with 95% Wilson intervals, per-constraint pass/fail/unknown rates, structural validity, measured severity and layout diversity. Record NFE and elapsed sampling/checking time separately. Sample-wise denoiser cost is $T+KG$ for SVDD and $NT$ for Best-of-N, where $G$ is the number of guided transitions; this does not match edge-model or checker cost.
 
@@ -172,7 +183,7 @@ Finite searches may remain unknown, binary penalties provide weak incremental fe
 
 ## Extensions: late hard-feasibility and repair-aware SVDD
 
-These two extensions keep the frozen checkpoints, six scored constraints and scenario above. **Results at the corrected 18 m calibration are pending for both extensions.**
+These two extensions keep the frozen checkpoints, ten scored constraints and scenario above when run with the new design profile. The original six-check configurations remain available. **Expanded-profile results are pending for both extensions.**
 
 ### Binary-rollout conditioning (`hard_h_mc`)
 
@@ -232,4 +243,4 @@ An empty eligible repair bank falls back to its unchanged graph. The chosen **or
 
 Final repair changes the output distribution and may still leave failed constraints. This combined intervention does not isolate guidance from final-repair effects; no ablation result, compute match or exact feasibility-conditioned distribution is claimed.
 
-The [launcher](../test_time/launch_extensions.sh) previews repair-aware SVDD first, then `hard_h_mc`; `--run` executes that order. Defaults are 100 attempts per method starting at seed 10000, with inference microbatches of **32**, saved under `test_time/outputs/rplan18_extensions_001/`. `--smoke` retains two attempts with two hard-h rollouts and two terminal completions. Saved per-run configurations define the actual budgets, including earlier runs with $L=16$. See [reproduction instructions](../test_time/README.md).
+The [launcher](../test_time/launch_extensions.sh) previews repair-aware SVDD first, then `hard_h_mc`; `--run` executes that order. Defaults are 100 attempts per method starting at seed 10000, with inference microbatches of **32**, saved under `test_time/outputs/design_extensions_001/`. `--smoke` retains two attempts with two hard-h rollouts and two terminal completions. Saved per-run configurations define the actual budgets, including earlier runs with $L=16$. See [reproduction instructions](../test_time/README.md).

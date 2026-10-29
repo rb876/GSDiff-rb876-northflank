@@ -1,4 +1,4 @@
-"""Reuse unguided trajectories at a new scale; reselect the complete Best-of-N pool.
+"""Reuse unguided trajectories under a new scale or explicit constraint registry.
 
 No checkpoints are loaded. Selected outputs use the refined CPU checker; rejected
 Best-of-N candidates retain tensor scores for reproducible selection, not CPU claims.
@@ -19,6 +19,7 @@ import torch
 from tqdm.auto import tqdm
 
 from .audit_geometry import refined_bedroom_search
+from .constraints import load_specs
 from .gpu_constraints import TensorConstraintEvaluator
 from .gpu_graph import extract_rooms
 from .gpu_sampling import SCORE_FIELDS, _evaluation_record, tensor_selection
@@ -29,6 +30,7 @@ from .types import ConstraintSpec, FloorplanSample, Scenario, overall_validity, 
 
 CHECKER_VERSION = "cpu_bedroom_audit_v2"
 PROTOCOL = "scale_recalibration_v1"
+CONSTRAINT_PROTOCOL = "constraint_recalibration_v1"
 SOURCE_FILES = ("config.json", "run.json", "candidates.jsonl")
 SCALE_FIELDS = {"coordinate_scale_m_per_model_unit", "scale_provenance", "assumptions"}
 
@@ -188,7 +190,8 @@ def select_candidates(values, rows, trials, n):
     return tensor_selection(values, trials, n, tie_seeds=seeds)
 
 
-def recalibrate(experiment_dir, output_dir, scenario_path, device="cpu", inference_batch_size=32):
+def recalibrate(experiment_dir, output_dir, scenario_path, device="cpu", inference_batch_size=32,
+                constraints_path=None):
     root, output = Path(experiment_dir).resolve(), Path(output_dir).resolve()
     if output == root or root in output.parents or output in root.parents:
         raise ValueError("Use a separate sibling output directory, outside the original sweep")
@@ -201,21 +204,32 @@ def recalibrate(experiment_dir, output_dir, scenario_path, device="cpu", inferen
         raise ValueError("A supplied metric scale is required")
     torch.device(device)  # Fail invalid device syntax before creating output.
     records, skipped = _prepare_sources(root, asdict(scenario))
+    constraints = ([asdict(spec) for spec in load_specs(constraints_path)]
+                   if constraints_path is not None else None)
+    override = ({"file": str(Path(constraints_path).resolve()), "sha256": file_hash(constraints_path),
+                 "ids": [spec["id"] for spec in constraints]}
+                if constraints is not None else None)
+    protocol = CONSTRAINT_PROTOCOL if constraints is not None else PROTOCOL
     # Validate scorer compatibility for every run before writing any output.
     for record in records:
+        record["effective_config"] = deepcopy(record["config"])
+        if constraints is not None:
+            record["effective_config"]["constraints"] = constraints
         if record["method"] == "best_of_n":
             _tensor_evaluator(record["config"])
+            _tensor_evaluator(record["effective_config"])
     started = time.perf_counter()
     code_files = ("recalibrate.py", "gpu_constraints.py", "gpu_graph.py", "gpu_sampling.py",
                   "audit_geometry.py", "constraints.py", "policy.py", "geometry.py", "types.py", "area.py")
-    manifest = {"protocol": PROTOCOL, "status": "running", "created_at": datetime.now(timezone.utc).isoformat(),
+    manifest = {"protocol": protocol, "status": "running", "created_at": datetime.now(timezone.utc).isoformat(),
                 "source_experiment": str(root), "scenario": asdict(scenario),
                 "scenario_file": str(Path(scenario_path).resolve()), "scenario_sha256": file_hash(scenario_path),
+                "constraints_override": override,
                 "code_sha256": {name: file_hash(Path(__file__).parent / name) for name in code_files},
                 "device": str(device), "inference_batch_size": inference_batch_size,
                 "model_inference_performed": False, "skipped_runs": skipped, "methods": [],
                 "steps": ["Validate complete original pools and source identities",
-                          "Replay all Best-of-N raw graphs with tensor rewards at the new scale",
+                          "Replay all Best-of-N raw graphs with tensor rewards under the requested scenario and constraints",
                           "Reselect with original structural/unknown-ID/energy/seed rule",
                           "Audit selected baseline and Best-of-N outputs with cpu_bedroom_audit_v2"],
                 "runtime_scope": "Recalibration is separate from historical generation; no new generation runtime measured"}
@@ -223,7 +237,7 @@ def recalibrate(experiment_dir, output_dir, scenario_path, device="cpu", inferen
     write_json(output / "calibration.json", manifest)
     try:
         for record in records:
-            source, config, rows = record["path"], record["config"], record["rows"]
+            source, config, rows = record["path"], record["effective_config"], record["rows"]
             relative = source.relative_to(root) if source != root else Path(source.name)
             destination = output / relative
             destination.mkdir(parents=True)
@@ -254,7 +268,7 @@ def recalibrate(experiment_dir, output_dir, scenario_path, device="cpu", inferen
                     row["original_artifacts"] = row.pop("artifacts")
                 row["sample"]["scenario"] = asdict(scenario)
                 metadata = row["sample"]["metadata"]
-                metadata.update(scale_recalibration=PROTOCOL, final_evaluation_backend=CHECKER_VERSION if row["selected"] else None)
+                metadata.update(scale_recalibration=protocol, final_evaluation_backend=CHECKER_VERSION if row["selected"] else None)
                 if tensor_records:
                     row["selection_evaluation"] = tensor_records[index]
                     metadata.update(guidance_evaluation=tensor_records[index], guidance_device=str(device),
@@ -274,8 +288,11 @@ def recalibrate(experiment_dir, output_dir, scenario_path, device="cpu", inferen
                 row["recalibration_seconds"] = {"cpu_audit": audit_seconds}
                 revised.append(row)
             changed = sum(not rows[index]["selected"] for index in selected_indices)
-            metadata = {"protocol": PROTOCOL, "source_run_dir": str(source), "source_hashes": record["hashes"],
+            metadata = {"protocol": protocol, "source_run_dir": str(source), "source_hashes": record["hashes"],
                         "checker_version": CHECKER_VERSION, "scenario": asdict(scenario),
+                        "constraints_override": override,
+                        "constraints_changed": config["constraints"] != record["config"]["constraints"],
+                        "original_constraints": record["config"]["constraints"],
                         "reselection": method == "best_of_n", "generation_unchanged": True,
                         "saved_candidates": len(rows), "selected_outputs": trials, "changed_winners": changed,
                         "selected_evaluation_backend": CHECKER_VERSION,
@@ -333,10 +350,12 @@ def main(argv=None):
     parser.add_argument("--experiment_dir", required=True)
     parser.add_argument("--output_dir", required=True)
     parser.add_argument("--scenario", required=True)
+    parser.add_argument("--constraints", help="Explicit replacement registry; omit to retain the source constraint definitions")
     parser.add_argument("--device", default="cpu")
     parser.add_argument("--inference_batch_size", type=int, default=32)
     args = parser.parse_args(argv)
-    result = recalibrate(args.experiment_dir, args.output_dir, args.scenario, args.device, args.inference_batch_size)
+    result = recalibrate(args.experiment_dir, args.output_dir, args.scenario, args.device,
+                         args.inference_batch_size, constraints_path=args.constraints)
     print(f"Saved {args.output_dir}; {result['changed_winners']} Best-of-N winners changed. No model inference performed.")
 
 
