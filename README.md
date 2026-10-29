@@ -2,7 +2,7 @@ Hi Davis,
 
 I’ve implemented inference-time constraint guidance for GSDiff using **11 selected constraints** and explicit scenario assumptions, while keeping the pretrained model frozen.
 
-The evaluation compares baseline generation, Best-of-N and SVDD, with matched denoiser-evaluation budgets for Best-of-N versus SVDD. I also implemented repair-aware SVDD and a Monte Carlo feasibility extension.
+The evaluation compares baseline generation, Best-of-N and SVDD, with matched denoiser-evaluation budgets for Best-of-N versus SVDD. I also implemented two proposed extensions: repair-aware SVDD and Monte Carlo feasibility guidance.
 
 You already have access to the [repository](https://github.com/rb876/GSDiff-rb876-northflank). The main entry points are:
 
@@ -12,13 +12,13 @@ You already have access to the [repository](https://github.com/rb876/GSDiff-rb87
 
 For a quick visual overview:
 
-- **[Constraint success rates](docs/assets/bathroom_001/constraint_success.png)** and **[ventilation failure breakdown](docs/assets/bathroom_001/ventilation_bottleneck.png)** — where each method succeeds and what still limits validity.
+- **[Overall validity and ventilation failures](docs/assets/bathroom_001/ventilation_bottleneck.png)** — how often designs pass all eleven checks with valid structure, and what prevents success. [Per-constraint pass rates](docs/assets/bathroom_001/constraint_success.png) show each check separately; high individual rates do not imply that every design passes all checks.
 - **[Six passing SVDD designs](docs/assets/bathroom_001/svdd_passing_examples.png)** — floorplans with labelled room types and areas.
 - **[Annotated SVG example](docs/assets/bathroom_001/passing_svdd/svdd_last10_seed10000.svg)** — requirements and passing reasons for all eleven checks, plus the shared bathroom arrangement. PNGs, vector figures and source graph/evaluation JSONs are in **[docs/assets/bathroom_001](docs/assets/bathroom_001/)**.
 
 The **late-guidance evaluation is complete**, with 100 outputs per method. SVDD guided over the last 10% of steps reaches **56% validity**, versus **47% for Best-of-2**, at the same 2,000 denoiser evaluations per output. The report includes uncertainty estimates, comparison tables, figures and annotated success/failure examples.
 
-Full-trajectory SVDD and the extension evaluations remain **pending**. Full SVDD is estimated to require approximately **30 hours for 100 outputs** on the H100; this is a planning estimate, not a measured full-run duration.
+Full evaluation of the extensions was deferred due to **time constraints**. Full-trajectory SVDD remains **pending** and is estimated to take about **30 hours for 100 outputs** on the H100.
 
 This work builds on [the original GSDiff implementation](https://github.com/SizheHu/GSDiff). Its dataset instructions and pretrained-weight links are preserved in [README.upstream.md](README.upstream.md).
 

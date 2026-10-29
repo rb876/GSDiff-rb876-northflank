@@ -271,7 +271,7 @@ The joint term replaces the three bathroom severities during selection, avoiding
 
 ## Evaluation and Compute
 
-**Protocol:** 100 selected designs per completed method, paired trial seeds `10000–10099`, the same frozen checkpoints, eleven scored checks and the declared 18 m canvas scenario. All final outcomes use the CPU bathroom audit. Full SVDD and both extensions remain **pending**.
+**Protocol:** 100 selected designs per completed method, paired trial seeds `10000–10099`, the same frozen checkpoints, eleven scored checks and the declared 18 m canvas scenario. All final outcomes use the CPU bathroom audit. Full SVDD remains **pending**; full evaluation of the extensions was deferred due to **time constraints**.
 
 **Table 1.** Overall validity requires valid structure and every applicable scored check to pass. Brackets give 95% Wilson intervals. Check success is passes/all applicable checks, including unknowns in the denominator; all eleven checks are applicable here. Severity averages measured per-check penalties, excluding unknowns and the structural penalty. Room-count $W_1$ measures distribution shift from baseline on usable, structurally valid layouts. The full-SVDD NFE budget is planned.
 
@@ -285,7 +285,7 @@ The joint term replaces the three bathroom severities during selection, avoiding
 
 **Main finding:** late SVDD improves observed validity by **9 percentage points over Best-of-2 at equal NFE**. On paired seeds, 19 designs succeed only with SVDD and 10 only with Best-of-2; 37 succeed with both. A paired bootstrap gives a 95% interval of **−1 to +19 points**, so this batch suggests a benefit without establishing superiority. Best-of-11 reaches 94% using **5.5×** the denoiser budget; its matched full-SVDD comparison is pending.
 
-**Compute:** for $T=1{,}000$, SVDD costs $T+KG$ and Best-of-N costs $NT$ sample-wise denoiser evaluations. Here $K=10$, $G=100$, so both late SVDD and Best-of-2 cost 2,000 NFE/output. Controls use generation/inference batches **4/10**, versus **10/32** for SVDD. Its 106.30 s/output is amortized sampling/checking time (2.95 hours total), excluding setup and rendering/export. Edge-model and reward costs are not matched. The earlier **approximately 30-hour** full-run estimate is an unmeasured planning extrapolation from late guidance.
+**Compute:** for $T=1{,}000$, SVDD costs $T+KG$ and Best-of-N costs $NT$ sample-wise denoiser evaluations. Here $K=10$, $G=100$, so both late SVDD and Best-of-2 cost 2,000 NFE/output. Controls use generation/inference batches **4/10**, versus **10/32** for SVDD. Its 106.30 s/output is amortized sampling/checking time (2.95 hours total), excluding setup and rendering/export. Edge-model and reward costs are not matched. Based on late-guidance timing, full SVDD is estimated to take about **30 hours for 100 outputs** on the H100.
 
 **Candidate reuse:** baseline and Best-of-11 reuse saved graphs rescored under the current scenario. Best-of-2 selects from fixed candidate indices 0 and 1 of each Best-of-11 trial using saved GPU scores, followed by CPU validation. Its NFE is the equivalent retained-trajectory cost; reselection performs no new model inference. The controls are nested. Baseline and Best-of-11 timings cover generation with six checks and exclude the current rescoring, so wall times are not directly comparable with SVDD. Standalone Best-of-2 runtime remains unmeasured (—).
 
@@ -332,7 +332,7 @@ The detailed SVGs use the labelled-floorplan and constraint-card layout: each ch
 
 All **86/99/99/100** usable, structurally valid graphs (baseline/Best-of-2/late SVDD/Best-of-11) are unique. Mean pairwise semantic-layout distance stays within **0.804–0.810**. These diagnostics show no exact-duplicate collapse, while Best-of-11 has the largest room-count shift from baseline. Fixed-canvas diversity measures do not establish fidelity to real floorplans; no RPLAN reference dataset was available for FID/KID. The [saved metrics and provenance](assets/bathroom_001/result_audit.json) include the diversity results and source hashes.
 
-This evaluation supplies the assessment's frozen-model baseline, explicit constraint subset and assumptions, scalar reward, matched-NFE comparison, per-check outcomes, failure analysis and annotated vector outputs. The full-versus-late ablation and extension results remain pending. One scenario and one batch of 100 paired trials limit generalization. [Numerical audit](assets/bathroom_001/result_audit.json) · [Figure generator](../test_time/report_assets.py) · [Reproduction instructions](../test_time/README.md) · [Constraint definitions](../test_time/configs/constraints_bathroom_v1.json).
+This evaluation supplies the assessment's frozen-model baseline, explicit constraint subset and assumptions, scalar reward, matched-NFE comparison, per-check outcomes, failure analysis and annotated vector outputs. The full-versus-late ablation remains pending; full extension evaluations were deferred due to time constraints. One scenario and one batch of 100 paired trials limit generalization. [Numerical audit](assets/bathroom_001/result_audit.json) · [Figure generator](../test_time/report_assets.py) · [Reproduction instructions](../test_time/README.md) · [Constraint definitions](../test_time/configs/constraints_bathroom_v1.json).
 
 
 ## Practical Limits
@@ -377,7 +377,7 @@ At the assumed height, C077 implies C078. C036/C037/C041 share one bathroom arra
 
 ## Extensions: Late Hard-Feasibility and Repair-Aware SVDD
 
-These extensions test two ways to improve the information used for branch selection: **the chance of eventual success** and **the feasibility attainable through small repairs**. Both use the same frozen checkpoints, eleven scored constraints and declared scenario, without reward gradients. Decisions are concentrated in the **last 10% of denoising**, within the final 100 transitions, where proposals have less noisy geometry. **Results are pending for both extensions.**
+We propose two extensions to improve the information used for branch selection: **the chance of eventual success** and **the feasibility attainable through small repairs**. Both are implemented using the same frozen checkpoints, eleven scored constraints and declared scenario, without reward gradients. Decisions are concentrated in the **last 10% of denoising**, within the final 100 transitions, where proposals have less noisy geometry. **Full evaluation was deferred due to time constraints.**
 
 ### Hard-Feasibility MC: Predicting Eventual Success (`hard_h_mc`)
 
