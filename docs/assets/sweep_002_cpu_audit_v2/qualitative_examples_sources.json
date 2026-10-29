@@ -1,0 +1,37 @@
+{
+  "source": "test_time/outputs/sweep_002_cpu_audit_v2",
+  "selection": "First valid full-SVDD output in trial order and its paired baseline; first invalid full-SVDD output.",
+  "semantics": "Room types are saved model labels; no geometry was edited. Dashed overlays are saved hypothetical placement witnesses.",
+  "examples": [
+    {
+      "method": "baseline",
+      "seed": 10009,
+      "trial": 9,
+      "overall_validity": "invalid",
+      "graph": "examples/baseline_seed10009_graph.json",
+      "evaluation": "examples/baseline_seed10009_evaluation.json",
+      "source": "test_time/outputs/sweep_002_cpu_audit_v2/batch_1_seed_10000/baseline/candidates.jsonl",
+      "source_sha256": "fdb3796a490fcfa94fc3cac9e6e49db423cf313d6553971005712ee76970b332"
+    },
+    {
+      "method": "svdd_pm_full",
+      "seed": 10009,
+      "trial": 9,
+      "overall_validity": "valid",
+      "graph": "examples/svdd_pm_full_seed10009_graph.json",
+      "evaluation": "examples/svdd_pm_full_seed10009_evaluation.json",
+      "source": "test_time/outputs/sweep_002_cpu_audit_v2/batch_1_seed_10000/svdd_pm_full/candidates.jsonl",
+      "source_sha256": "0beb362d9281ad33f591bbbcc760aa6b036140e89d08252390a56a92aebb8c92"
+    },
+    {
+      "method": "svdd_pm_full",
+      "seed": 10000,
+      "trial": 0,
+      "overall_validity": "invalid",
+      "graph": "examples/svdd_pm_full_seed10000_graph.json",
+      "evaluation": "examples/svdd_pm_full_seed10000_evaluation.json",
+      "source": "test_time/outputs/sweep_002_cpu_audit_v2/batch_1_seed_10000/svdd_pm_full/candidates.jsonl",
+      "source_sha256": "0beb362d9281ad33f591bbbcc760aa6b036140e89d08252390a56a92aebb8c92"
+    }
+  ]
+}

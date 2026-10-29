@@ -158,15 +158,37 @@ Bedroom feasibility uses binary penalties. Dimensional deficits use normalized s
 
 **Compute:** sample-wise denoiser evaluations (NFE) cost $T+KL$ for SVDD and $NT$ for Best-of-N. Multipliers are **1× / 11× / 3× / 10.99×**, respectively. Best-of-11 matches full SVDD within 0.091% in NFE. NFE excludes edge/reward costs: full SVDD takes **11.4× longer** than Best-of-11. Timings exclude loading, rendering and the offline audit.
 
-**Interpretation:** full SVDD has the highest observed validity, but 15 versus 14 successes does not establish an advantage over late guidance. This ablation changes both guidance timing and budget. C035 fails in **80/100** full-SVDD outputs and is the sole scored failure in 76; C036 passes in 99. Clearance envelopes need at least **9.92 m²**, explaining many small-bedroom failures.
+**Main finding:** SVDD improves observed joint validity, but the benefit is uneven across constraints. Late guidance yields **14 valid designs**, versus **15** for full guidance, using 3,000 rather than 10,990 NFE. On paired seeds there are 12 late-only and 13 full-only successes; this batch does not establish that full guidance is superior. The comparison changes both guidance timing and budget.
 
-**Diversity:** among usable, structurally valid outputs (86/100/98/99), all graphs are unique and mean pairwise semantic-layout distance stays near **0.804–0.807**. This shows no obvious collapse under these diagnostics, not equivalence to RPLAN. Unknown-check rates are 9.3%/0%/2.3%/0.8%; an unresolved placement search is not proof of impossibility. [Metrics and complete analysis](../test_time/outputs/sweep_002_cpu_audit_v2/analysis/REPORT.md).
+### Which constraints improve?
 
-### One successful SVDD design
+![Pass rates for each of the six constraints, comparing baseline, Best-of-11, late SVDD and full SVDD.](assets/sweep_002_cpu_audit_v2/constraint_success.png)
 
-![Full SVDD seed 10009: labelled rooms and explanations for all six passing constraints.](assets/svdd_full_seed10009.png)
+**Figure 1.** Per-constraint passes divided by all 100 selected outputs. Unknowns remain in the denominator and do not count as passes. These are individual-check outcomes; overall validity additionally requires valid structure and joint success. [Vector PDF](assets/sweep_002_cpu_audit_v2/constraint_success.pdf).
 
-**Figure 1.** First valid full-SVDD output in trial order: seed **10009**, valid structure, **six passes, zero unknowns**. Bedroom 3 accommodates the bed, clearances and turning circle together. Habitable area is **49.30 m²** and volume **123.24 m³**. The [paired baseline](../test_time/outputs/sweep_002_cpu_audit_v2/analysis/samples/01_baseline/trial-0009-sample-0009.svg) fails C035 (largest bedroom 8.41 m² <9.92 m²) and C036 (circle diameter upper bound 1.20 m <1.50 m). This is an illustrative pair. [SVG](assets/svdd_full_seed10009.svg) · [Vector graph](assets/svdd_full_seed10009_graph.json) · [Check evidence](assets/svdd_full_seed10009_evaluation.json).
+- **Bathroom turning space (C036):** success rises from **32%** for baseline to **80%** for Best-of-11 and **97–99%** for SVDD. This is the clearest improvement among the initially difficult checks.
+- **Bedroom accessibility (C033/C035):** fitting a bed and turning circle reaches **97–100%** under selection/guidance, but adding circulation clearance remains difficult. Best-of-11 has the highest C035 pass rate (**20%**), ahead of late/full SVDD (**14%/16%**), yet lower overall validity. Improving one constraint does not guarantee better joint performance.
+- **Habitability (C076–C078):** baseline already passes **91–93%**; selection/guidance reaches **98–100%**. C077 and C078 have identical outcomes across this sweep. At the assumed 2.5 m height, their area-equivalent thresholds are 28 m² and $66/2.5=26.4$ m², so passing C077 implies C078; these are partly redundant objectives.
+
+### C035 limits joint validity
+
+![Designs partitioned into overall valid, C035 as the sole failure, and other outcomes.](assets/sweep_002_cpu_audit_v2/c035_bottleneck.png)
+
+**Figure 2.** A sole C035 failure means **valid structure and all five other checks passing**. Other outcomes include additional failures, unknowns and invalid structure. This diagnoses the bottleneck; it does not measure how many designs a repair algorithm could fix. [Vector PDF](assets/sweep_002_cpu_audit_v2/c035_bottleneck.pdf).
+
+C035 is the only obstacle in **71 Best-of-11, 81 late-SVDD and 76 full-SVDD designs**. Full SVDD has **80 confirmed C035 failures and four unknowns**: the failures violate necessary geometric bounds, while unknowns remain unresolved placement searches. The low success rate therefore persists even after the improved CPU audit; it is predominantly a geometric limitation under the assumed scale.
+
+For the assumed 1.40 × 1.90 m bed, the two clearance options require rectangular envelopes of **3.20 × 3.10 m** or **3.80 × 2.80 m**. Hence **9.92 m² is a necessary minimum**, not a sufficient condition: room shape and a shared bed/turning-circle placement still matter. The binary C035 penalty gives the same score to all confirmed failures, providing little information about incremental geometric improvement. This motivates the repair-aware extension, whose results are still pending.
+
+**Diversity:** among usable, structurally valid outputs (86/100/98/99), all graphs are unique and mean pairwise semantic-layout distance stays near **0.804–0.807**. These diagnostics show no obvious collapse, but neither establish RPLAN fidelity nor rule out changes in unmeasured layout features. [Metrics and complete analysis](../test_time/outputs/sweep_002_cpu_audit_v2/analysis/REPORT.md).
+
+### What success and failure look like
+
+![Paired baseline and successful full-SVDD floorplans at seed 10009, plus a full-SVDD floorplan failing only C035 at seed 10000.](assets/sweep_002_cpu_audit_v2/qualitative_examples.png)
+
+**Figure 3.** Saved floorplans at the same drawing scale, with room types labelled. The first valid full-SVDD output (seed **10009**) is paired with its baseline; the third panel is the first invalid full-SVDD output (seed **10000**). Furniture/turning-space overlays are hypothetical checker witnesses, not predicted furnishings. [Vector PDF](assets/sweep_002_cpu_audit_v2/qualitative_examples.pdf).
+
+The paired baseline fails **C035 and C036**: its largest bedroom is **8.41 m²**, and its bathroom's turning-circle diameter upper bound is **1.20 m**. Full SVDD passes all six checks, with a shared bedroom placement and **49.30 m²** habitable area. The separate failed SVDD example passes C033 and C036 but has bedrooms of only **7.77 and 7.07 m²**, demonstrating why turning space alone does not establish C035 clearance. These are different generated outputs, not before/after repairs. [Detailed successful design](assets/svdd_full_seed10009.svg) · [Vector graph](assets/svdd_full_seed10009_graph.json) · [Check evidence](assets/svdd_full_seed10009_evaluation.json).
 
 ### Assessment coverage
 

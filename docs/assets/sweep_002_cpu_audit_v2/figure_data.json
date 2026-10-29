@@ -1,0 +1,234 @@
+{
+  "source_audit": "test_time/outputs/sweep_002_cpu_audit_v2",
+  "source_files": [
+    {
+      "path": "test_time/outputs/sweep_002_cpu_audit_v2/batch_1_seed_10000/baseline/candidates.jsonl",
+      "sha256": "fdb3796a490fcfa94fc3cac9e6e49db423cf313d6553971005712ee76970b332"
+    },
+    {
+      "path": "test_time/outputs/sweep_002_cpu_audit_v2/batch_1_seed_10000/baseline/config.json",
+      "sha256": "20caab42de6fb8a83239be056b4f9bf9b8a792ddbef96157798b3d60650bc7e3"
+    },
+    {
+      "path": "test_time/outputs/sweep_002_cpu_audit_v2/batch_1_seed_10000/best_of_n/candidates.jsonl",
+      "sha256": "c110d60034fe3a5f90969ab799e296f35687c9ba3b8ab1695f382a11d42c1fce"
+    },
+    {
+      "path": "test_time/outputs/sweep_002_cpu_audit_v2/batch_1_seed_10000/best_of_n/config.json",
+      "sha256": "956d52f864b70e3c6aa02e9cfb834680fd94fecae0f07fe4f492d63fbb994f40"
+    },
+    {
+      "path": "test_time/outputs/sweep_002_cpu_audit_v2/batch_1_seed_10000/svdd_pm_last20/candidates.jsonl",
+      "sha256": "dee6ae7d3deef3a31a7f5c05053396c536a1f69ee39b34fa73cc8692364930c7"
+    },
+    {
+      "path": "test_time/outputs/sweep_002_cpu_audit_v2/batch_1_seed_10000/svdd_pm_last20/config.json",
+      "sha256": "43cd8b7cfb1626929c0510ddad124658f92a526fbb2e27227e9d02a1774e6cb3"
+    },
+    {
+      "path": "test_time/outputs/sweep_002_cpu_audit_v2/batch_1_seed_10000/svdd_pm_full/candidates.jsonl",
+      "sha256": "0beb362d9281ad33f591bbbcc760aa6b036140e89d08252390a56a92aebb8c92"
+    },
+    {
+      "path": "test_time/outputs/sweep_002_cpu_audit_v2/batch_1_seed_10000/svdd_pm_full/config.json",
+      "sha256": "823a09b641373dde3746a157db4d4170dea5203db07ee4668d05aa0812bf51b3"
+    }
+  ],
+  "method_order": [
+    "baseline",
+    "best_of_n",
+    "svdd_pm_last20",
+    "svdd_pm_full"
+  ],
+  "constraint_labels": {
+    "C033": "Bedroom turning space",
+    "C035": "Bed circulation",
+    "C036": "Bathroom turning space",
+    "C076": "Main-room area / volume",
+    "C077": "Habitable area",
+    "C078": "Habitable volume"
+  },
+  "definitions": {
+    "denominator": "All saved selected designs per method; unknowns and structural failures remain included.",
+    "constraint_success": "Saved pass count divided by all selected designs; supporting definitions are excluded.",
+    "valid": "Valid structure and all six applicable scored checks measurably pass.",
+    "c035_only": "Valid structure, C035 fails, and each other scored check measurably passes; no unknown check.",
+    "other": "All remaining designs, including additional failures, unknown checks and invalid structure.",
+    "interpretation": "The C035-only category identifies a bottleneck; it is not a measured gain from repairing or removing C035.",
+    "diagnostics": "Structural-invalid and has-unknown counts are descriptive and may overlap."
+  },
+  "records": [
+    {
+      "method": "baseline",
+      "label": "Baseline",
+      "selected_outputs": 100,
+      "seed_min": 10000,
+      "seed_max": 10099,
+      "constraints": {
+        "C033": {
+          "pass": 72,
+          "unknown": 28
+        },
+        "C035": {
+          "fail": 84,
+          "unknown": 12,
+          "pass": 4
+        },
+        "C036": {
+          "fail": 64,
+          "pass": 32,
+          "unknown": 4
+        },
+        "C076": {
+          "pass": 93,
+          "fail": 3,
+          "unknown": 4
+        },
+        "C077": {
+          "pass": 91,
+          "fail": 5,
+          "unknown": 4
+        },
+        "C078": {
+          "pass": 91,
+          "fail": 5,
+          "unknown": 4
+        }
+      },
+      "categories": {
+        "valid": 2,
+        "c035_only": 16,
+        "other": 82
+      },
+      "diagnostics": {
+        "structurally_invalid": 14,
+        "has_unknown_check": 36
+      }
+    },
+    {
+      "method": "best_of_n",
+      "label": "Best-of-11",
+      "selected_outputs": 100,
+      "seed_min": 10005,
+      "seed_max": 9114824883256314382,
+      "constraints": {
+        "C033": {
+          "pass": 100
+        },
+        "C035": {
+          "fail": 80,
+          "pass": 20
+        },
+        "C036": {
+          "pass": 80,
+          "fail": 20
+        },
+        "C076": {
+          "pass": 100
+        },
+        "C077": {
+          "pass": 100
+        },
+        "C078": {
+          "pass": 100
+        }
+      },
+      "categories": {
+        "valid": 9,
+        "c035_only": 71,
+        "other": 20
+      },
+      "diagnostics": {
+        "structurally_invalid": 0,
+        "has_unknown_check": 0
+      }
+    },
+    {
+      "method": "svdd_pm_last20",
+      "label": "SVDD (last 20%)",
+      "selected_outputs": 100,
+      "seed_min": 10000,
+      "seed_max": 10099,
+      "constraints": {
+        "C033": {
+          "pass": 97,
+          "unknown": 3
+        },
+        "C035": {
+          "fail": 83,
+          "pass": 14,
+          "unknown": 3
+        },
+        "C036": {
+          "pass": 97,
+          "unknown": 2,
+          "fail": 1
+        },
+        "C076": {
+          "pass": 98,
+          "unknown": 2
+        },
+        "C077": {
+          "pass": 98,
+          "unknown": 2
+        },
+        "C078": {
+          "pass": 98,
+          "unknown": 2
+        }
+      },
+      "categories": {
+        "valid": 14,
+        "c035_only": 81,
+        "other": 5
+      },
+      "diagnostics": {
+        "structurally_invalid": 2,
+        "has_unknown_check": 4
+      }
+    },
+    {
+      "method": "svdd_pm_full",
+      "label": "SVDD (full)",
+      "selected_outputs": 100,
+      "seed_min": 10000,
+      "seed_max": 10099,
+      "constraints": {
+        "C033": {
+          "pass": 99,
+          "unknown": 1
+        },
+        "C035": {
+          "fail": 80,
+          "pass": 16,
+          "unknown": 4
+        },
+        "C036": {
+          "pass": 99,
+          "fail": 1
+        },
+        "C076": {
+          "pass": 100
+        },
+        "C077": {
+          "pass": 98,
+          "fail": 2
+        },
+        "C078": {
+          "pass": 98,
+          "fail": 2
+        }
+      },
+      "categories": {
+        "valid": 15,
+        "c035_only": 76,
+        "other": 9
+      },
+      "diagnostics": {
+        "structurally_invalid": 1,
+        "has_unknown_check": 5
+      }
+    }
+  ],
+  "export_note": "Report-only figures derived from the saved audited evaluations; no model inference or fresh constraint audit."
+}

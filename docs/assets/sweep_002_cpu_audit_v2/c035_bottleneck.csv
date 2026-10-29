@@ -1,0 +1,5 @@
+method,selected_outputs,valid,c035_only,other
+baseline,100,2,16,82
+best_of_n,100,9,71,20
+svdd_pm_last20,100,14,81,5
+svdd_pm_full,100,15,76,9
