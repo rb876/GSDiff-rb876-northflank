@@ -81,7 +81,8 @@ def method_metrics(record):
     low, high = wilson_interval(summary["overall_valid_count"], n)
     return {
         "method": record["label"], "selected_outputs": n,
-        **{key: summary["parameters"][key] for key in ("n", "k", "guided_steps", "temperature", "reward_backend")},
+        **{key: summary["parameters"][key] for key in ("n", "k", "guided_steps", "temperature", "reward_backend",
+                                                       "batch_size", "inference_batch_size")},
         "scored_constraints": len(ids), "supporting_rules": summary["constraint_counts"]["active_supporting"],
         "overall_valid_count": summary["overall_valid_count"], "overall_valid_rate": summary["overall_valid_rate"],
         "overall_ci_low": low, "overall_ci_high": high,
@@ -98,6 +99,7 @@ def method_metrics(record):
         "edge_samples_per_trial": fraction(summary["compute"]["edge_samples"], n)
             if summary["compute"]["edge_samples"] is not None else None,
         "comparison_group": summary["comparison_group"],
+        "denoiser_comparison_group": _outcome_comparison_group(summary),
     }
 
 
@@ -135,11 +137,16 @@ def constraint_metrics(record):
     return output
 
 
+def _outcome_comparison_group(summary):
+    """Match saved evaluation settings while allowing different batching controls."""
+    return summary.get("denoiser_comparison_group", summary["comparison_group"])
+
+
 def paired_validity(records):
     comparisons = []
     for first, second in combinations(records, 2):
         a, b = first["summary"], second["summary"]
-        if (a["comparison_group"] != b["comparison_group"] or a["trial_seed_start"] is None
+        if (_outcome_comparison_group(a) != _outcome_comparison_group(b) or a["trial_seed_start"] is None
                 or a["trial_seed_start"] != b["trial_seed_start"]
                 or a["selected_trial_ids"] != b["selected_trial_ids"]):
             continue
@@ -156,9 +163,12 @@ def paired_validity(records):
 def baseline_for(record, records):
     matches = [candidate for candidate in records
                if candidate["summary"]["method"] == "baseline"
-               and candidate["summary"]["comparison_group"] == record["summary"]["comparison_group"]]
-    same_batch = [candidate for candidate in matches if candidate["run_dir"].parent == record["run_dir"].parent]
-    return same_batch[0] if len(same_batch) == 1 else matches[0] if len(matches) == 1 else None
+               and _outcome_comparison_group(candidate["summary"]) == _outcome_comparison_group(record["summary"])]
+    same_sweep = [candidate for candidate in matches if candidate["run_dir"].parent == record["run_dir"].parent]
+    matches = same_sweep or matches
+    same_batching = [candidate for candidate in matches
+                     if candidate["summary"]["comparison_group"] == record["summary"]["comparison_group"]]
+    return same_batching[0] if len(same_batching) == 1 else matches[0] if len(matches) == 1 else None
 
 
 def write_csv(path, rows, fieldnames=None):
@@ -227,12 +237,13 @@ def write_analysis_report(output, records, skipped, figures, gallery):
              "C085/C086/C090 use graph-derived main-room counts and declared ventilation-system rates, "
              "not measured airflow. Historical profiles keep their original checks and denominators.", "",
              "## Saved run settings", "",
-             "| Method | N | K | Guided steps | Temperature | Reward backend |",
-             "|---|---:|---:|---:|---:|---|"]
+             "| Method | N | K | Guided steps | Temperature | Reward backend | Batch size | Inference batch size |",
+             "|---|---:|---:|---:|---:|---|---:|---:|"]
     for record in records:
         parameters = record["summary"]["parameters"]
         settings = " | ".join(str(parameters[key]) if parameters[key] is not None else "—"
-                              for key in ("n", "k", "guided_steps", "temperature", "reward_backend"))
+                              for key in ("n", "k", "guided_steps", "temperature", "reward_backend",
+                                          "batch_size", "inference_batch_size"))
         lines.append(f"| {record['label']} | {settings} |")
     lines += ["", "Full checkpoint paths/hashes, source hashes and scenario values are preserved per run in `analysis.json`.", "",
              "## Method comparison", "",
@@ -251,10 +262,15 @@ def write_analysis_report(output, records, skipped, figures, gallery):
                      f"{_number(m['mean_measured_severity'])} | {_number(m['wall_seconds_per_trial'])} | "
                      f"{_number(m['runtime_multiplier_vs_baseline'])} | {_number(m['node_samples_per_trial'])} | "
                      f"{_number(m['denoiser_multiplier_vs_baseline'])} |")
-    if len({record["summary"]["comparison_group"] for record in records}) > 1:
-        lines += ["", "**Multiple configuration groups are present.** These figures describe each run, but differences across groups "
+    outcome_groups = {_outcome_comparison_group(record["summary"]) for record in records}
+    runtime_groups = {record["summary"]["comparison_group"] for record in records}
+    if len(outcome_groups) > 1:
+        lines += ["", "**Multiple evaluation configuration groups are present.** These figures describe each run, but differences across groups "
                   "are not controlled method comparisons. Baseline-relative metrics and paired comparisons are restricted to compatible groups; "
-                  "`tables/methods.csv` records each group."]
+                  "`tables/methods.csv` records the evaluation/denoiser and runtime comparison groups."]
+    if len(runtime_groups) > len(outcome_groups):
+        lines += ["", "**Batching settings differ within otherwise compatible evaluation groups.** Outcome, distribution and denoiser-budget "
+                  "comparisons allow these differences. Runtime multipliers require identical batching settings and are omitted where they differ."]
     lines += ["", "Intervals are 95% Wilson intervals for each method's overall-valid indicator; "
               "they describe sampling uncertainty under the fixed scenario. They do not establish legal compliance or test a difference between methods.", "",
               "## Constraint groups", "",
@@ -312,14 +328,17 @@ def write_analysis_report(output, records, skipped, figures, gallery):
               "These are descriptive distribution diagnostics, not fidelity to real floorplans. RPLAN reference data is unavailable; no FID/KID is claimed.", "",
               "## Paired outputs and compute", "",
               "`tables/paired_validity.csv` records changes on shared trial seeds, including outputs only one method validates. "
-              "It does not pair by the winning Best-of-N candidate's seed. Runs with different saved comparison settings or seed sets are not paired. "
+              "It does not pair by the winning Best-of-N candidate's seed. Outcome and baseline-relative distribution comparisons require "
+              "matching scenario, model, constraint registry, final checker, reward backend and tensor settings; batching may differ. "
+              "Paired outputs additionally require matching trial seed starts and trial IDs. "
               "Different seed batches remain separate in this report; no cross-batch pooling is performed.", "",
               "Denoiser-count comparisons are in `denoiser_comparison.json`. Each method's NFE is the recorded number of "
               "evaluated denoiser sample states per selected output, including candidate trajectories and SVDD lookahead. "
               "Prefix-reselected controls use the equivalent generation budget of their retained candidates. "
               "Each Best-of-N and SVDD budget is compared separately; only compatible completed runs with recorded counts establish a match. "
               "Matching denoiser counts does not match edge-model work, constraint checking or elapsed time. "
-              "Timing is amortized per selected output and excludes model loading/rendering/export.", "",
+              "Timing is amortized per selected output and excludes model loading/rendering/export. "
+              "Runtime multipliers also require identical batch size and inference batch size.", "",
               "## Annotated examples", "",
               f"[Open the complete sample gallery](index.html): {gallery['sample_count']} selected samples, each with PNG, SVG, vector graph JSON and evaluation JSON. "
               "Filters show methods, validity status and failed/unknown constraints. The examples below are the first trial of each status, not hand-picked successes.", "",
@@ -369,6 +388,9 @@ def analyze(experiment_dir, output_dir=None):
                           ("node_samples_per_trial", "denoiser_multiplier_vs_baseline")):
             value = record["metrics"][key]
             denominator = reference["summary"]["compute"].get(key) if reference else None
+            if (key == "wall_seconds_per_trial" and reference
+                    and record["summary"]["comparison_group"] != reference["summary"]["comparison_group"]):
+                denominator = None
             record["metrics"][name] = value / denominator if value is not None and denominator else None
     paired = paired_validity(records)
     write_csv(output / "tables/methods.csv", [record["metrics"] for record in records])

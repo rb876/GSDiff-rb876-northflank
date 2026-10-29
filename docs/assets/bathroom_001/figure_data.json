@@ -1,0 +1,629 @@
+{
+  "source_experiment": "test_time/outputs/bathroom_001",
+  "source_files": [
+    {
+      "path": "test_time/outputs/bathroom_001/controls_rebuilt/batch_1_seed_10000/baseline/candidates.jsonl",
+      "sha256": "a09acd8fe8a9b7fd97f1e5b83ef64449e5f8328787ed078758177056f080f399"
+    },
+    {
+      "path": "test_time/outputs/bathroom_001/controls_rebuilt/batch_1_seed_10000/baseline/config.json",
+      "sha256": "ceb2091cbddb7b75d2323c69132be244831801e0c51f02d1d4d8d3f91646563c"
+    },
+    {
+      "path": "test_time/outputs/bathroom_001/controls_rebuilt/batch_1_seed_10000/baseline/run.json",
+      "sha256": "bc2f8978e751c40fa25d439bfbedeeea0b71338248f117271142df93017f28d7"
+    },
+    {
+      "path": "test_time/outputs/bathroom_001/controls_rebuilt/batch_1_seed_10000/best_of_n_last10/candidates.jsonl",
+      "sha256": "17fd6ba3334097687baee862eb3f8718ffd9bc47f77ea39005a2af0e0ed31a6d"
+    },
+    {
+      "path": "test_time/outputs/bathroom_001/controls_rebuilt/batch_1_seed_10000/best_of_n_last10/config.json",
+      "sha256": "0533795351a62983e6055167d85574b2a986284b06e505981aee1c6a750b8eba"
+    },
+    {
+      "path": "test_time/outputs/bathroom_001/controls_rebuilt/batch_1_seed_10000/best_of_n_last10/run.json",
+      "sha256": "3550a7045c8872123f776f43e03478fea77044bf5befb61099919b381125f0ac"
+    },
+    {
+      "path": "test_time/outputs/bathroom_001/guided/svdd_pm_last10/candidates.jsonl",
+      "sha256": "56658b181e280a27dc4950df045cbe6f2d9ce455018a128b36af32cb66b724fc"
+    },
+    {
+      "path": "test_time/outputs/bathroom_001/guided/svdd_pm_last10/config.json",
+      "sha256": "1b0ae0bc0cb592fdfdb0d3df864f5737c6825c187e53903762c76f815426674a"
+    },
+    {
+      "path": "test_time/outputs/bathroom_001/guided/svdd_pm_last10/run.json",
+      "sha256": "d48d8a7fd36dfddb19ed9030e088c6868ac6d4874d48ed283c6d338ad246efe7"
+    },
+    {
+      "path": "test_time/outputs/bathroom_001/controls_rebuilt/batch_1_seed_10000/best_of_n/candidates.jsonl",
+      "sha256": "9bd6cccda80b89d80cf076959972b25777b8b860fa2a278b560f6f40a824bcbe"
+    },
+    {
+      "path": "test_time/outputs/bathroom_001/controls_rebuilt/batch_1_seed_10000/best_of_n/config.json",
+      "sha256": "85e92230941378a4c7fa6b047ceee84cdfa61b6f4f09adcfd3929fec6347cf9c"
+    },
+    {
+      "path": "test_time/outputs/bathroom_001/controls_rebuilt/batch_1_seed_10000/best_of_n/run.json",
+      "sha256": "438a5b1e38d591d0ad4a8a38e265e919ea48639d60935fe8c79b1e84aa2163fa"
+    }
+  ],
+  "method_order": [
+    "baseline",
+    "best_of_n_2",
+    "svdd_pm_last10",
+    "best_of_n_11"
+  ],
+  "method_labels": {
+    "baseline": "Baseline",
+    "best_of_n_2": "Best-of-2",
+    "svdd_pm_last10": "SVDD (last 10%)",
+    "best_of_n_11": "Best-of-11"
+  },
+  "constraint_labels": {
+    "C033": "Bedroom turning space",
+    "C035": "Bed circulation",
+    "C036": "Bathroom turning space",
+    "C037": "WC lateral transfer",
+    "C041": "Bathroom overlap limits",
+    "C076": "Main-room area / volume",
+    "C077": "Habitable area",
+    "C078": "Habitable volume",
+    "C085": "Kitchen extraction",
+    "C086": "Bathroom extraction",
+    "C090": "Reduced-mode extraction"
+  },
+  "definitions": {
+    "denominator": "All 100 selected outputs per method, including invalid and unresolved outputs.",
+    "constraint_success": "Applicable, measurable saved passes / all selected outputs; supporting rules excluded.",
+    "valid": "Valid structure and every applicable scored check measurably passes, with at least one applicable check.",
+    "ventilation_failure_only": "Valid structure, all eight non-ventilation checks measurably pass, and at least one ventilation check fails. This bin takes precedence over ventilation unknowns.",
+    "ventilation_unknown_only": "Valid structure, all eight non-ventilation checks measurably pass, no ventilation check fails, and at least one applicable ventilation check is unknown or unmeasurable.",
+    "other": "All remaining outputs, including structural failures and failed or unresolved non-ventilation checks.",
+    "ventilation_checks": [
+      "C085",
+      "C086",
+      "C090"
+    ],
+    "partition": "Mutually exclusive and exhaustive; every selected output belongs to exactly one bin."
+  },
+  "constraint_success": [
+    {
+      "method": "baseline",
+      "constraint": "C033",
+      "description": "Bedroom turning space",
+      "selected_outputs": 100,
+      "pass": 96,
+      "fail": 0,
+      "unknown": 4,
+      "not_applicable": 0,
+      "pass_percent": 96.0
+    },
+    {
+      "method": "baseline",
+      "constraint": "C035",
+      "description": "Bed circulation",
+      "selected_outputs": 100,
+      "pass": 93,
+      "fail": 1,
+      "unknown": 6,
+      "not_applicable": 0,
+      "pass_percent": 93.0
+    },
+    {
+      "method": "baseline",
+      "constraint": "C036",
+      "description": "Bathroom turning space",
+      "selected_outputs": 100,
+      "pass": 71,
+      "fail": 7,
+      "unknown": 22,
+      "not_applicable": 0,
+      "pass_percent": 71.0
+    },
+    {
+      "method": "baseline",
+      "constraint": "C037",
+      "description": "WC lateral transfer",
+      "selected_outputs": 100,
+      "pass": 75,
+      "fail": 5,
+      "unknown": 20,
+      "not_applicable": 0,
+      "pass_percent": 75.0
+    },
+    {
+      "method": "baseline",
+      "constraint": "C041",
+      "description": "Bathroom overlap limits",
+      "selected_outputs": 100,
+      "pass": 71,
+      "fail": 7,
+      "unknown": 22,
+      "not_applicable": 0,
+      "pass_percent": 71.0
+    },
+    {
+      "method": "baseline",
+      "constraint": "C076",
+      "description": "Main-room area / volume",
+      "selected_outputs": 100,
+      "pass": 96,
+      "fail": 0,
+      "unknown": 4,
+      "not_applicable": 0,
+      "pass_percent": 96.0
+    },
+    {
+      "method": "baseline",
+      "constraint": "C077",
+      "description": "Habitable area",
+      "selected_outputs": 100,
+      "pass": 95,
+      "fail": 1,
+      "unknown": 4,
+      "not_applicable": 0,
+      "pass_percent": 95.0
+    },
+    {
+      "method": "baseline",
+      "constraint": "C078",
+      "description": "Habitable volume",
+      "selected_outputs": 100,
+      "pass": 96,
+      "fail": 0,
+      "unknown": 4,
+      "not_applicable": 0,
+      "pass_percent": 96.0
+    },
+    {
+      "method": "baseline",
+      "constraint": "C085",
+      "description": "Kitchen extraction",
+      "selected_outputs": 100,
+      "pass": 52,
+      "fail": 38,
+      "unknown": 10,
+      "not_applicable": 0,
+      "pass_percent": 52.0
+    },
+    {
+      "method": "baseline",
+      "constraint": "C086",
+      "description": "Bathroom extraction",
+      "selected_outputs": 100,
+      "pass": 92,
+      "fail": 0,
+      "unknown": 8,
+      "not_applicable": 0,
+      "pass_percent": 92.0
+    },
+    {
+      "method": "baseline",
+      "constraint": "C090",
+      "description": "Reduced-mode extraction",
+      "selected_outputs": 100,
+      "pass": 52,
+      "fail": 38,
+      "unknown": 10,
+      "not_applicable": 0,
+      "pass_percent": 52.0
+    },
+    {
+      "method": "best_of_n_2",
+      "constraint": "C033",
+      "description": "Bedroom turning space",
+      "selected_outputs": 100,
+      "pass": 100,
+      "fail": 0,
+      "unknown": 0,
+      "not_applicable": 0,
+      "pass_percent": 100.0
+    },
+    {
+      "method": "best_of_n_2",
+      "constraint": "C035",
+      "description": "Bed circulation",
+      "selected_outputs": 100,
+      "pass": 98,
+      "fail": 1,
+      "unknown": 1,
+      "not_applicable": 0,
+      "pass_percent": 98.0
+    },
+    {
+      "method": "best_of_n_2",
+      "constraint": "C036",
+      "description": "Bathroom turning space",
+      "selected_outputs": 100,
+      "pass": 87,
+      "fail": 2,
+      "unknown": 11,
+      "not_applicable": 0,
+      "pass_percent": 87.0
+    },
+    {
+      "method": "best_of_n_2",
+      "constraint": "C037",
+      "description": "WC lateral transfer",
+      "selected_outputs": 100,
+      "pass": 89,
+      "fail": 1,
+      "unknown": 10,
+      "not_applicable": 0,
+      "pass_percent": 89.0
+    },
+    {
+      "method": "best_of_n_2",
+      "constraint": "C041",
+      "description": "Bathroom overlap limits",
+      "selected_outputs": 100,
+      "pass": 87,
+      "fail": 2,
+      "unknown": 11,
+      "not_applicable": 0,
+      "pass_percent": 87.0
+    },
+    {
+      "method": "best_of_n_2",
+      "constraint": "C076",
+      "description": "Main-room area / volume",
+      "selected_outputs": 100,
+      "pass": 100,
+      "fail": 0,
+      "unknown": 0,
+      "not_applicable": 0,
+      "pass_percent": 100.0
+    },
+    {
+      "method": "best_of_n_2",
+      "constraint": "C077",
+      "description": "Habitable area",
+      "selected_outputs": 100,
+      "pass": 100,
+      "fail": 0,
+      "unknown": 0,
+      "not_applicable": 0,
+      "pass_percent": 100.0
+    },
+    {
+      "method": "best_of_n_2",
+      "constraint": "C078",
+      "description": "Habitable volume",
+      "selected_outputs": 100,
+      "pass": 100,
+      "fail": 0,
+      "unknown": 0,
+      "not_applicable": 0,
+      "pass_percent": 100.0
+    },
+    {
+      "method": "best_of_n_2",
+      "constraint": "C085",
+      "description": "Kitchen extraction",
+      "selected_outputs": 100,
+      "pass": 53,
+      "fail": 43,
+      "unknown": 4,
+      "not_applicable": 0,
+      "pass_percent": 53.0
+    },
+    {
+      "method": "best_of_n_2",
+      "constraint": "C086",
+      "description": "Bathroom extraction",
+      "selected_outputs": 100,
+      "pass": 100,
+      "fail": 0,
+      "unknown": 0,
+      "not_applicable": 0,
+      "pass_percent": 100.0
+    },
+    {
+      "method": "best_of_n_2",
+      "constraint": "C090",
+      "description": "Reduced-mode extraction",
+      "selected_outputs": 100,
+      "pass": 53,
+      "fail": 43,
+      "unknown": 4,
+      "not_applicable": 0,
+      "pass_percent": 53.0
+    },
+    {
+      "method": "svdd_pm_last10",
+      "constraint": "C033",
+      "description": "Bedroom turning space",
+      "selected_outputs": 100,
+      "pass": 99,
+      "fail": 0,
+      "unknown": 1,
+      "not_applicable": 0,
+      "pass_percent": 99.0
+    },
+    {
+      "method": "svdd_pm_last10",
+      "constraint": "C035",
+      "description": "Bed circulation",
+      "selected_outputs": 100,
+      "pass": 98,
+      "fail": 0,
+      "unknown": 2,
+      "not_applicable": 0,
+      "pass_percent": 98.0
+    },
+    {
+      "method": "svdd_pm_last10",
+      "constraint": "C036",
+      "description": "Bathroom turning space",
+      "selected_outputs": 100,
+      "pass": 94,
+      "fail": 5,
+      "unknown": 1,
+      "not_applicable": 0,
+      "pass_percent": 94.0
+    },
+    {
+      "method": "svdd_pm_last10",
+      "constraint": "C037",
+      "description": "WC lateral transfer",
+      "selected_outputs": 100,
+      "pass": 94,
+      "fail": 5,
+      "unknown": 1,
+      "not_applicable": 0,
+      "pass_percent": 94.0
+    },
+    {
+      "method": "svdd_pm_last10",
+      "constraint": "C041",
+      "description": "Bathroom overlap limits",
+      "selected_outputs": 100,
+      "pass": 94,
+      "fail": 5,
+      "unknown": 1,
+      "not_applicable": 0,
+      "pass_percent": 94.0
+    },
+    {
+      "method": "svdd_pm_last10",
+      "constraint": "C076",
+      "description": "Main-room area / volume",
+      "selected_outputs": 100,
+      "pass": 99,
+      "fail": 0,
+      "unknown": 1,
+      "not_applicable": 0,
+      "pass_percent": 99.0
+    },
+    {
+      "method": "svdd_pm_last10",
+      "constraint": "C077",
+      "description": "Habitable area",
+      "selected_outputs": 100,
+      "pass": 99,
+      "fail": 0,
+      "unknown": 1,
+      "not_applicable": 0,
+      "pass_percent": 99.0
+    },
+    {
+      "method": "svdd_pm_last10",
+      "constraint": "C078",
+      "description": "Habitable volume",
+      "selected_outputs": 100,
+      "pass": 99,
+      "fail": 0,
+      "unknown": 1,
+      "not_applicable": 0,
+      "pass_percent": 99.0
+    },
+    {
+      "method": "svdd_pm_last10",
+      "constraint": "C085",
+      "description": "Kitchen extraction",
+      "selected_outputs": 100,
+      "pass": 62,
+      "fail": 32,
+      "unknown": 6,
+      "not_applicable": 0,
+      "pass_percent": 62.0
+    },
+    {
+      "method": "svdd_pm_last10",
+      "constraint": "C086",
+      "description": "Bathroom extraction",
+      "selected_outputs": 100,
+      "pass": 99,
+      "fail": 0,
+      "unknown": 1,
+      "not_applicable": 0,
+      "pass_percent": 99.0
+    },
+    {
+      "method": "svdd_pm_last10",
+      "constraint": "C090",
+      "description": "Reduced-mode extraction",
+      "selected_outputs": 100,
+      "pass": 62,
+      "fail": 32,
+      "unknown": 6,
+      "not_applicable": 0,
+      "pass_percent": 62.0
+    },
+    {
+      "method": "best_of_n_11",
+      "constraint": "C033",
+      "description": "Bedroom turning space",
+      "selected_outputs": 100,
+      "pass": 100,
+      "fail": 0,
+      "unknown": 0,
+      "not_applicable": 0,
+      "pass_percent": 100.0
+    },
+    {
+      "method": "best_of_n_11",
+      "constraint": "C035",
+      "description": "Bed circulation",
+      "selected_outputs": 100,
+      "pass": 100,
+      "fail": 0,
+      "unknown": 0,
+      "not_applicable": 0,
+      "pass_percent": 100.0
+    },
+    {
+      "method": "best_of_n_11",
+      "constraint": "C036",
+      "description": "Bathroom turning space",
+      "selected_outputs": 100,
+      "pass": 100,
+      "fail": 0,
+      "unknown": 0,
+      "not_applicable": 0,
+      "pass_percent": 100.0
+    },
+    {
+      "method": "best_of_n_11",
+      "constraint": "C037",
+      "description": "WC lateral transfer",
+      "selected_outputs": 100,
+      "pass": 100,
+      "fail": 0,
+      "unknown": 0,
+      "not_applicable": 0,
+      "pass_percent": 100.0
+    },
+    {
+      "method": "best_of_n_11",
+      "constraint": "C041",
+      "description": "Bathroom overlap limits",
+      "selected_outputs": 100,
+      "pass": 100,
+      "fail": 0,
+      "unknown": 0,
+      "not_applicable": 0,
+      "pass_percent": 100.0
+    },
+    {
+      "method": "best_of_n_11",
+      "constraint": "C076",
+      "description": "Main-room area / volume",
+      "selected_outputs": 100,
+      "pass": 100,
+      "fail": 0,
+      "unknown": 0,
+      "not_applicable": 0,
+      "pass_percent": 100.0
+    },
+    {
+      "method": "best_of_n_11",
+      "constraint": "C077",
+      "description": "Habitable area",
+      "selected_outputs": 100,
+      "pass": 100,
+      "fail": 0,
+      "unknown": 0,
+      "not_applicable": 0,
+      "pass_percent": 100.0
+    },
+    {
+      "method": "best_of_n_11",
+      "constraint": "C078",
+      "description": "Habitable volume",
+      "selected_outputs": 100,
+      "pass": 100,
+      "fail": 0,
+      "unknown": 0,
+      "not_applicable": 0,
+      "pass_percent": 100.0
+    },
+    {
+      "method": "best_of_n_11",
+      "constraint": "C085",
+      "description": "Kitchen extraction",
+      "selected_outputs": 100,
+      "pass": 94,
+      "fail": 6,
+      "unknown": 0,
+      "not_applicable": 0,
+      "pass_percent": 94.0
+    },
+    {
+      "method": "best_of_n_11",
+      "constraint": "C086",
+      "description": "Bathroom extraction",
+      "selected_outputs": 100,
+      "pass": 100,
+      "fail": 0,
+      "unknown": 0,
+      "not_applicable": 0,
+      "pass_percent": 100.0
+    },
+    {
+      "method": "best_of_n_11",
+      "constraint": "C090",
+      "description": "Reduced-mode extraction",
+      "selected_outputs": 100,
+      "pass": 94,
+      "fail": 6,
+      "unknown": 0,
+      "not_applicable": 0,
+      "pass_percent": 94.0
+    }
+  ],
+  "ventilation_bottleneck": [
+    {
+      "method": "baseline",
+      "selected_outputs": 100,
+      "valid": 34,
+      "ventilation_failure_only": 26,
+      "ventilation_unknown_only": 3,
+      "other": 37
+    },
+    {
+      "method": "best_of_n_2",
+      "selected_outputs": 100,
+      "valid": 47,
+      "ventilation_failure_only": 35,
+      "ventilation_unknown_only": 3,
+      "other": 15
+    },
+    {
+      "method": "svdd_pm_last10",
+      "selected_outputs": 100,
+      "valid": 56,
+      "ventilation_failure_only": 32,
+      "ventilation_unknown_only": 5,
+      "other": 7
+    },
+    {
+      "method": "best_of_n_11",
+      "selected_outputs": 100,
+      "valid": 94,
+      "ventilation_failure_only": 6,
+      "ventilation_unknown_only": 0,
+      "other": 0
+    }
+  ],
+  "example_selection": "First trial, in ascending trial order, where the selected last-10% SVDD output is overall valid and its same-trial, same-seed baseline is overall invalid; show that baseline and SVDD pair, then the first overall-invalid SVDD output. This outcome-conditioned illustration is not a representative random sample or a repair trace.",
+  "figures": [
+    "constraint_success.png",
+    "constraint_success.pdf",
+    "constraint_success.svg",
+    "ventilation_bottleneck.png",
+    "ventilation_bottleneck.pdf",
+    "ventilation_bottleneck.svg",
+    "qualitative_examples.png",
+    "qualitative_examples.pdf",
+    "qualitative_examples.svg"
+  ],
+  "generator": {
+    "path": "test_time/report_assets.py",
+    "sha256": "2ec2c0bfce1e1b0641dc01093b85d775bd93936be9ec5614c116539a6814fe18"
+  },
+  "regenerate": "python3 -m test_time.report_assets --experiment-dir test_time/outputs/bathroom_001 --output-dir docs/assets/bathroom_001"
+}

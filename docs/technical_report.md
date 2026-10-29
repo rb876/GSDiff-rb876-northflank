@@ -39,6 +39,17 @@ We choose **SVDD-PM** because it can guide generation using a reward that is **n
 
 At each guided step, SVDD draws several proposals from the current noisy state and scores their predicted clean floorplans. It then selects one noisy proposal to continue denoising. Each output therefore follows one active trajectory, with the reward informing which branch survives at each guided step.
 
+```mermaid
+flowchart LR
+    A["K noisy proposals"] --> B["Predicted clean nodes"]
+    B --> C["Decoded floorplan graphs<br/>Walls + labelled room polygons"]
+    C --> D["Constraint checks<br/>Scalar reward"]
+    D --> E["Select one noisy proposal<br/>Continue denoising"]
+    A -. "Original candidate states" .-> E
+```
+
+The decoded graphs supply the scores; the selected **noisy state** continues the trajectory.
+
 We benchmark against **Best-of-N**, which generates $N$ independent, complete designs and applies the same selection rule afterward. This comparison tests whether using the reward during denoising improves constraint satisfaction over selecting from a larger pool of finished designs. Denoiser budgets are accounted for in the evaluation below.
 
 ### The Energy-Tilted Target
@@ -260,40 +271,96 @@ The joint term replaces the three bathroom severities during selection, avoiding
 
 ## Evaluation and Compute
 
-**Results for this eleven-check profile are pending.** Baseline designs and the complete Best-of-11 candidate banks can be reused by rescoring them under the declared scenario. SVDD must use the same reward during generation. The table records planned denoiser budgets, not measured results:
+**Protocol:** 100 selected designs per completed method, paired trial seeds `10000–10099`, the same frozen checkpoints, eleven scored checks and the declared 18 m canvas scenario. All final outcomes use the CPU bathroom audit. Full SVDD and both extensions remain **pending**.
 
-| Method | Outputs | Planned NFE/output | Overall valid |
-|---|---:|---:|---|
-| Baseline | 100 | 1,000 | Pending |
-| Best-of-2 | 100 | 2,000 | Pending |
-| SVDD, last 10% | 100 | 2,000 | Pending |
-| Best-of-11 | 100 | 11,000 | Pending |
-| SVDD, full | 100 | 10,990 | Pending |
+**Table 1.** Overall validity requires valid structure and every applicable scored check to pass. Brackets give 95% Wilson intervals. Check success is passes/all applicable checks, including unknowns in the denominator; all eleven checks are applicable here. Severity averages measured per-check penalties, excluding unknowns and the structural penalty. Room-count $W_1$ measures distribution shift from baseline on usable, structurally valid layouts. The full-SVDD NFE budget is planned.
 
-**Two budget comparisons:** Best-of-2 matches late SVDD at **2,000 NFE/output**; Best-of-11 approximately matches full SVDD at **11,000 versus 10,990**. To construct Best-of-2, retain candidate indices **0 and 1** in every saved Best-of-11 trial, fixed before inspecting scores. Reapply the same selection rule to their saved GPU scores, then CPU-audit the selected design. Retain all 100 trials and keep the Best-of-11 results. These are nested, paired controls rather than independent candidate banks.
+| Method | Overall valid, % [95% CI] | Check success, % | Severity ↓ | Structure valid, % | Room-count $W_1$ ↓ | NFE/output | Seconds/output |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| Baseline | 34 [25.5–43.7] | 80.8 | 0.0280 | 86 | 0.000 | 1,000 | — |
+| Best-of-2 | 47 [37.5–56.7] | 87.9 | 0.0166 | 99 | 0.108 | 2,000 | — |
+| SVDD, last 10% | **56 [46.2–65.3]** | **90.8** | 0.0176 | 99 | 0.098 | **2,000** | 106.30 |
+| Best-of-11 | 94 [87.5–97.2] | 98.9 | 0.00159 | 100 | 0.416 | 11,000 | — |
+| SVDD, full | Pending | — | — | — | — | 10,990 | — |
 
-**Pilot protocol:** 100 outputs per method with paired seeds `10000–10099`, shared frozen checkpoints, eleven scored checks and the scenario above. Final selected outputs use the CPU placement audit; preserve failed and unresolved cases in the denominators. Report **bedroom, bathroom, habitability and ventilation** results alongside overall success. These groups organize the analysis; overall validity still requires all applicable scored checks to pass. Keep search budgets identical across methods, and report bathroom unknowns separately from proven failures.
+**Main finding:** late SVDD improves observed validity by **9 percentage points over Best-of-2 at equal NFE**. On paired seeds, 19 designs succeed only with SVDD and 10 only with Best-of-2; 37 succeed with both. A paired bootstrap gives a 95% interval of **−1 to +19 points**, so this batch suggests a benefit without establishing superiority. Best-of-11 reaches 94% using **5.5×** the denoiser budget; its matched full-SVDD comparison is pending.
 
-Report overall validity with 95% Wilson intervals, per-constraint pass/fail/unknown rates, structural validity, measured severity and layout diversity. Record NFE and elapsed sampling/checking time separately. Sample-wise denoiser cost is $T+KG$ for SVDD and $NT$ for Best-of-N, where $G$ is the number of guided transitions. For late SVDD, $1{,}000+10\times100=2{,}000$ NFE per output; this does not match edge-model or checker cost.
+**Compute:** for $T=1{,}000$, SVDD costs $T+KG$ and Best-of-N costs $NT$ sample-wise denoiser evaluations. Here $K=10$, $G=100$, so both late SVDD and Best-of-2 cost 2,000 NFE/output. Controls use generation/inference batches **4/10**, versus **10/32** for SVDD. Its 106.30 s/output is amortized sampling/checking time (2.95 hours total), excluding setup and rendering/export. Edge-model and reward costs are not matched. The earlier **approximately 30-hour** full-run estimate is an unmeasured planning extrapolation from late guidance.
 
-Best-of-2's **2,000 NFE** is the equivalent generation cost of its retained prefix. Reselection performs no new model inference; the source bank already cost 11,000 NFE/output. Its standalone runtime and batched forward-call counts are unmeasured, so no speedup is inferred from this reuse.
+**Candidate reuse:** baseline and Best-of-11 reuse saved graphs rescored under the current scenario. Best-of-2 selects from fixed candidate indices 0 and 1 of each Best-of-11 trial using saved GPU scores, followed by CPU validation. Its NFE is the equivalent retained-trajectory cost; reselection performs no new model inference. The controls are nested, and their standalone generation times under this profile are unmeasured (—).
 
-The 10% protocol requires explicit settings for standard SVDD: `launch_eval.sh` still defaults to 200 late guided steps. The bathroom extension configuration uses 100. Saved run configurations must confirm the guidance window and NFE before results are entered here.
+### Which Constraints Improve?
 
-The completed evaluation will include one comparison table, per-constraint results and labelled success/failure examples at the corrected metric scale. [Reproduction instructions](../test_time/README.md), [sweep launcher](../test_time/launch_eval.sh) and [machine-readable constraints](../test_time/configs/constraints_bathroom_v1.json) provide the assessment's baseline comparison, compute accounting and reproducibility requirements. One scenario and seed batch limit generalization; this profile does not guarantee a lower Best-of-N success rate or an SVDD advantage.
+![Pass rates for eleven checks, comparing baseline, Best-of-2, late SVDD and Best-of-11.](assets/bathroom_001/constraint_success.png)
+
+**Figure 1.** Passes per 100 selected designs; unknowns remain nonsuccesses. These individual rates do not replace joint validity. [Vector PDF](assets/bathroom_001/constraint_success.pdf).
+
+- **Bathroom layout (C036/C037/C041):** late SVDD reaches **94%** for all three checks, versus **87%/89%/87%** for Best-of-2. Bathroom unknowns fall from **10–11** designs to **one**, although confirmed failures rise to five per check. This explains why overall success improves while mean measured severity is slightly higher.
+- **Ventilation (C085/C090):** pass rates rise from **53% to 62%** at matched NFE. The declared fixed airflow capacities make generated room count consequential; this is scenario-conditioned feasibility, not a prediction of installed ventilation.
+- **Bedroom and habitability:** C035 passes **98%** under both methods. C076–C078 pass **99%** with SVDD and 100% with Best-of-2. Bedroom clearance is no longer the dominant obstacle in this corrected-scale profile.
+
+### Ventilation Limits Joint Validity
+
+![Overall validity and outcomes blocked only by ventilation, with other outcomes shown separately.](assets/bathroom_001/ventilation_bottleneck.png)
+
+**Figure 2.** Ventilation-only categories require valid structure and all eight non-ventilation checks to pass. They distinguish confirmed airflow failures from unresolved checks; remaining outcomes form a separate category. [Vector PDF](assets/bathroom_001/ventilation_bottleneck.pdf).
+
+For late SVDD, **32 designs fail only ventilation**, and another **five** have ventilation-only unknowns because no kitchen polygon is available to map the declared kitchen flows. Seven remaining designs have other obstacles. Best-of-11 has six failures, all ventilation-only. The two failing ventilation rules often respond to the same main-room count, so they should not be interpreted as independent failure mechanisms.
+
+### What Success and Failure Look Like
+
+![Baseline and successful late-SVDD designs at seed 10004, alongside a late-SVDD design failing ventilation at seed 10001.](assets/bathroom_001/qualitative_examples.png)
+
+**Figure 3.** Common drawing scale and labelled room types. Seed **10004** is the first trial where SVDD passes and baseline fails; seed **10001** is the first invalid SVDD trial. This deterministic selection illustrates outcomes, not representative improvement or a before/after repair. Fixtures and turning spaces are hypothetical checker witnesses. [Vector PDF](assets/bathroom_001/qualitative_examples.pdf) · [Source graphs and check evidence](assets/bathroom_001/qualitative_examples_sources.json).
+
+At seed 10004, baseline has **four main rooms** and fails C085/C090: the required kitchen flow is **120 m³/h**, exceeding the supplied 105, and reduced total flow requires **90 m³/h**, exceeding 75. SVDD generates **three main rooms** and passes all eleven checks. The failed SVDD example at seed 10001 retains four main rooms and the same airflow deficits despite passing all bathroom checks.
+
+### Diversity, Reproduction and Assessment Coverage
+
+All **86/99/99/100** usable, structurally valid graphs (baseline/Best-of-2/late SVDD/Best-of-11) are unique. Mean pairwise semantic-layout distance stays within **0.804–0.810**. These diagnostics show no exact-duplicate collapse, while Best-of-11 has the largest room-count shift from baseline. Fixed-canvas diversity measures do not establish fidelity to real floorplans; no RPLAN reference dataset was available for FID/KID. See the [complete analysis](../test_time/outputs/bathroom_001/analysis/REPORT.md).
+
+This evaluation supplies the assessment's frozen-model baseline, explicit constraint subset and assumptions, scalar reward, matched-NFE comparison, per-check outcomes, failure analysis and annotated vector outputs. The full-versus-late ablation and extension results remain pending. One scenario and one batch of 100 paired trials limit generalization. [Numerical audit](assets/bathroom_001/result_audit.json) · [Figure generator](../test_time/report_assets.py) · [Reproduction instructions](../test_time/README.md) · [Constraint definitions](../test_time/configs/constraints_bathroom_v1.json).
+
 
 ## Practical Limits
 
-**Why We Use a CPU Checker.** Guidance needs fast scores for many candidate floorplans, while reporting needs a consistent decision about whether each constraint passes. We therefore separate the two:
+**Fast Scoring, Common Evaluation**
 
-- **GPU guidance:** batched geometry searches and proxy penalties rank candidate moves during denoising. A low penalty can indicate a promising layout without establishing that every check passes.
-- **CPU evaluation:** the reference checker evaluates completed layouts using Shapely polygon operations and placement searches. For example, it verifies that a proposed bathroom arrangement fits inside the room and satisfies the fixture, door-swing and clearance rules. It repeats the same bathroom candidate bank and independently checks positive placements; bedroom evaluation also uses the refined placement search.
+- **GPU:** scores many proposals quickly, helping the sampler choose promising moves.
+- **CPU:** checks completed layouts with the same reference evaluator for every method, including independent geometry checks of proposed placements.
 
-Using the same reference checker for every method makes final success rates comparable and helps detect disagreements with the guidance scores. **The CPU is an implementation choice:** our reference geometry routines run there. Non-differentiable rewards can run on a GPU, and a validated GPU implementation could perform this audit too. In standard SVDD, the CPU check runs after generation; hard-feasibility MC also uses it for rollout outcomes, and final repair uses it to assess edits. These extra checks contribute to the extensions' runtime.
+A good guidance score alone does not establish validity. The CPU hosts our Shapely geometry implementation; **non-differentiable rewards do not inherently require a CPU**.
 
-Finite searches may remain unknown, bedroom binary penalties provide weak incremental feedback, and greedy selection may reduce diversity. The bathroom search covers a limited family of placements; it cannot certify that no other furnishing arrangement exists. At the assumed height, C077 already implies C078. C036/C037/C041 share geometry, and the fixed ventilation capacities correlate C085 with C090; the declared bathroom flow satisfies C086 across its table. These checks are not independent. Report room counts and diversity alongside success; baseline-relative diagnostics do not establish RPLAN fidelity.
+**Example: C036 — Bathroom Turning Space**
 
-[Technical notes](technical_notes.md) retain checkpoint details and exact process-weighting equations; their historical result tables are not part of this evaluation.
+At least one bathroom must fit a **1.50 m diameter turning circle**, inside the room and clear of the toilet. The GPU searches possible arrangements and ranks their geometric shortfalls. The CPU repeats the same finite search and independently verifies claimed passes.
+
+| Result | What It Means in This Example |
+|---|---|
+| **Pass** | A circle placement is found and verified within the shared bathroom arrangement. |
+| **Fail** | For example, every bathroom is rectangular and only **1.40 m wide**: a **1.50 m** circle cannot fit, even before adding fixtures. |
+| **Unknown** | No tested arrangement gives a verified placement, but no geometric bound proves that placement is impossible. |
+
+The width example is illustrative. Door and basin overlaps are checked separately by C041 using the same arrangement. **An unsuccessful search is not proof of failure.**
+
+**Other Limits**
+
+- **Feedback:** binary bedroom penalties give little information about incremental improvements.
+- **Diversity:** greedy selection may narrow the range of layouts, so success rates must be read alongside room counts and diversity.
+- **Overlapping checks:** some constraints share geometry or imply others, so eleven checks do not represent eleven independent challenges.
+
+<details>
+<summary>Checker Details and Dependencies Between Constraints</summary>
+
+Bathroom evaluation uses the same bounded placement bank on both backends, with independent CPU verification of positive placements. Bedroom evaluation additionally uses a refined placement search. Neither search is exhaustive.
+
+Standard SVDD uses the CPU checker after generation. Hard-feasibility MC also audits rollout outcomes, and final repair audits candidate edits; these checks add runtime. Equivalent verification could run on GPU after implementation and validation.
+
+At the assumed height, C077 implies C078. C036/C037/C041 share one bathroom arrangement. Fixed ventilation capacities link C085 and C090, while the declared bathroom flow satisfies C086 across its table. Baseline-relative diagnostics do not establish fidelity to RPLAN.
+
+[Technical notes](technical_notes.md) retain checkpoint details and exact process-weighting equations; their historical results are separate from this evaluation.
+
+</details>
 
 ## Extensions: Late Hard-Feasibility and Repair-Aware SVDD
 
@@ -396,7 +463,21 @@ Budget exhaustion can reduce this count; fresh-base fallbacks add denoising work
 
 ## Future Directions
 
-### Feynman–Kac Steering: Population Search
+### Faster Sampling and Model Execution
+
+- **Fewer denoising steps:** investigate [DDIM](https://arxiv.org/abs/2010.02502) with a shorter sampling schedule and guidance windows defined by noise level. Our SVDD proposal mechanism needs distinct candidates: deterministic DDIM from the same parent would require added stochasticity or an alternative proposal mechanism.
+- **One-step steerability:** investigate distillation approaches such as [consistency models](https://arxiv.org/abs/2303.01469), then test steering through initial-noise search, candidate selection or conditioning a distilled student. Reliable one-step generation would require adaptation and validation; it removes the intermediate branch-selection opportunities used by current SVDD.
+- **Quantization and caching:** assess lower-precision inference, informed by [Q-Diffusion](https://arxiv.org/abs/2302.04304), and reuse of intermediate Transformer features across timesteps, inspired by [TokenCache](https://arxiv.org/abs/2409.18523). Both require adaptation to GSDiff and checks that approximation errors preserve graph structure and constraint outcomes. Caches must respect separate candidate trajectories.
+
+Measure **total generation-and-checking time, audited validity and diversity together**: faster neural inference may leave edge decoding or reward evaluation as the dominant cost.
+
+### Learned Rewards and Visual Question Answering
+
+**Learn a cheaper constraint scorer.** Train a compact graph model on a separate set of CPU-audited plans and their scenario variables to predict per-constraint status, severity and a scalar guidance reward. Include intermediate predicted graphs across timesteps, and retain unknown outcomes as a separate category. Validate false-pass rates on held-out plans and keep the reference checker for final evaluation.
+
+**Explore a VLM/VQA reward.** Inspired by [TIFA's question-based image evaluation](https://arxiv.org/abs/2303.11897), ask constraint-specific questions about labelled floorplan renderings, supplied dimensions and scenario metadata. Renderings must exclude checker verdicts to avoid leaking the answers. Such a model could estimate whether a plan satisfies the requested conditions, but its geometric accuracy and calibration need validation against the reference checks. A large VLM may itself be expensive; using it offline as a teacher for a smaller reward model is another option. Any claimed speedup must include rendering and reward inference.
+
+### Feynman–Kac Steering as Alternative to SVDD
 
 Given more time, we would also investigate [**Feynman–Kac steering** (Singhal et al., ICML 2025)](https://proceedings.mlr.press/v267/singhal25b.html) as an alternative to SVDD, maintaining and resampling a population of diffusion trajectories using constraint-based potentials. This could improve exploration and reduce the risk of prematurely discarding promising floorplans.
 

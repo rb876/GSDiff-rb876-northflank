@@ -1,0 +1,5 @@
+method,selected_outputs,valid,ventilation_failure_only,ventilation_unknown_only,other
+baseline,100,34,26,3,37
+best_of_n_2,100,47,35,3,15
+svdd_pm_last10,100,56,32,5,7
+best_of_n_11,100,94,6,0,0

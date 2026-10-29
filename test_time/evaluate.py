@@ -17,6 +17,10 @@ ROOM_NAMES = {0: "living", 1: "bedroom", 2: "storage", 3: "kitchen",
               4: "bathroom", 5: "balcony", 6: "outside"}
 
 
+class _UnfinishedRunError(ValueError):
+    """A readable run has not yet saved its complete selected population."""
+
+
 def _supporting(record):
     # Legacy C034 may carry the new default role='check' while its historical
     # explicit denominator flag remains false. Never turn that into a check.
@@ -222,7 +226,7 @@ def summarize_run(run_dir):
     rows = _configured_rows(rows, specs)
     selected = [row for row in rows if row.get("selected", False)]
     if not selected:
-        raise ValueError(f"{run_dir}: no selected candidates; complete the run before evaluating")
+        raise _UnfinishedRunError(f"{run_dir}: no selected candidates; complete the run before evaluating")
     trial_ids = [row["trial"] for row in selected]
     if len(set(trial_ids)) != len(trial_ids):
         raise ValueError(f"{run_dir}: expected exactly one selected candidate per trial")
@@ -355,9 +359,12 @@ def recorded_count(value):
     return "unknown" if value is None else str(value)
 
 
-def write_report(run_dir):
+def write_report(run_dir, *, require_complete=False):
     run_dir = Path(run_dir)
     result = summarize_run(run_dir)
+    if require_complete and result["status"] != "complete":
+        raise _UnfinishedRunError(f"{run_dir}: run status is {result['status']}; "
+                                  f"saved {result['selected_trials']} selected trials; expected {result['expected_trials']}")
     write_json(run_dir / "summary.json", result)
     scenario = result["scenario"]
     counts = result["constraint_counts"]
@@ -633,7 +640,12 @@ def main():
     directory = args.experiment_dir
     runs = [directory] if (directory / "candidates.jsonl").exists() else sorted(
         p.parent for p in directory.rglob("candidates.jsonl") if (p.parent / "run.json").exists())
-    summaries = [write_report(run) for run in runs]
+    summaries = []
+    for run in runs:
+        try:
+            summaries.append(write_report(run, require_complete=True))
+        except _UnfinishedRunError as error:
+            print(f"Skipping unfinished run: {error}")
     write_comparison(directory, summaries)
     print(f"Wrote {len(summaries)} run reports and {directory / 'comparison.md'}")
 

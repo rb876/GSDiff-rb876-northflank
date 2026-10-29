@@ -1,0 +1,53 @@
+{
+  "source": "test_time/outputs/bathroom_001",
+  "selection": "First trial, in ascending trial order, where the selected last-10% SVDD output is overall valid and its same-trial, same-seed baseline is overall invalid; show that baseline and SVDD pair, then the first overall-invalid SVDD output. This outcome-conditioned illustration is not a representative random sample or a repair trace.",
+  "examples": [
+    {
+      "method": "baseline",
+      "seed": 10004,
+      "trial": 4,
+      "candidate_id": "trial-004-seed-10004",
+      "overall_validity": "invalid",
+      "graph": "examples/baseline_seed10004_graph.json",
+      "evaluation": "examples/baseline_seed10004_evaluation.json",
+      "source": {
+        "path": "test_time/outputs/bathroom_001/controls_rebuilt/batch_1_seed_10000/baseline/candidates.jsonl",
+        "sha256": "a09acd8fe8a9b7fd97f1e5b83ef64449e5f8328787ed078758177056f080f399"
+      }
+    },
+    {
+      "method": "svdd_pm_last10",
+      "seed": 10004,
+      "trial": 4,
+      "candidate_id": "trial-004-seed-10004",
+      "overall_validity": "valid",
+      "graph": "examples/svdd_pm_last10_seed10004_graph.json",
+      "evaluation": "examples/svdd_pm_last10_seed10004_evaluation.json",
+      "source": {
+        "path": "test_time/outputs/bathroom_001/guided/svdd_pm_last10/candidates.jsonl",
+        "sha256": "56658b181e280a27dc4950df045cbe6f2d9ce455018a128b36af32cb66b724fc"
+      }
+    },
+    {
+      "method": "svdd_pm_last10",
+      "seed": 10001,
+      "trial": 1,
+      "candidate_id": "trial-001-seed-10001",
+      "overall_validity": "invalid",
+      "graph": "examples/svdd_pm_last10_seed10001_graph.json",
+      "evaluation": "examples/svdd_pm_last10_seed10001_evaluation.json",
+      "source": {
+        "path": "test_time/outputs/bathroom_001/guided/svdd_pm_last10/candidates.jsonl",
+        "sha256": "56658b181e280a27dc4950df045cbe6f2d9ce455018a128b36af32cb66b724fc"
+      }
+    }
+  ],
+  "semantics": "Unedited saved room polygons and model labels. Bathroom overlays are saved, audited hypothetical witnesses; no new placements are searched.",
+  "plan_limits_m": [
+    1.53515625,
+    16.4296875,
+    1.53515625,
+    16.4296875
+  ],
+  "bathroom_inset_span_m": 3.46796875
+}

@@ -1,0 +1,45 @@
+method,constraint,description,selected_outputs,pass,fail,unknown,not_applicable,pass_percent
+baseline,C033,Bedroom turning space,100,96,0,4,0,96.0
+baseline,C035,Bed circulation,100,93,1,6,0,93.0
+baseline,C036,Bathroom turning space,100,71,7,22,0,71.0
+baseline,C037,WC lateral transfer,100,75,5,20,0,75.0
+baseline,C041,Bathroom overlap limits,100,71,7,22,0,71.0
+baseline,C076,Main-room area / volume,100,96,0,4,0,96.0
+baseline,C077,Habitable area,100,95,1,4,0,95.0
+baseline,C078,Habitable volume,100,96,0,4,0,96.0
+baseline,C085,Kitchen extraction,100,52,38,10,0,52.0
+baseline,C086,Bathroom extraction,100,92,0,8,0,92.0
+baseline,C090,Reduced-mode extraction,100,52,38,10,0,52.0
+best_of_n_2,C033,Bedroom turning space,100,100,0,0,0,100.0
+best_of_n_2,C035,Bed circulation,100,98,1,1,0,98.0
+best_of_n_2,C036,Bathroom turning space,100,87,2,11,0,87.0
+best_of_n_2,C037,WC lateral transfer,100,89,1,10,0,89.0
+best_of_n_2,C041,Bathroom overlap limits,100,87,2,11,0,87.0
+best_of_n_2,C076,Main-room area / volume,100,100,0,0,0,100.0
+best_of_n_2,C077,Habitable area,100,100,0,0,0,100.0
+best_of_n_2,C078,Habitable volume,100,100,0,0,0,100.0
+best_of_n_2,C085,Kitchen extraction,100,53,43,4,0,53.0
+best_of_n_2,C086,Bathroom extraction,100,100,0,0,0,100.0
+best_of_n_2,C090,Reduced-mode extraction,100,53,43,4,0,53.0
+svdd_pm_last10,C033,Bedroom turning space,100,99,0,1,0,99.0
+svdd_pm_last10,C035,Bed circulation,100,98,0,2,0,98.0
+svdd_pm_last10,C036,Bathroom turning space,100,94,5,1,0,94.0
+svdd_pm_last10,C037,WC lateral transfer,100,94,5,1,0,94.0
+svdd_pm_last10,C041,Bathroom overlap limits,100,94,5,1,0,94.0
+svdd_pm_last10,C076,Main-room area / volume,100,99,0,1,0,99.0
+svdd_pm_last10,C077,Habitable area,100,99,0,1,0,99.0
+svdd_pm_last10,C078,Habitable volume,100,99,0,1,0,99.0
+svdd_pm_last10,C085,Kitchen extraction,100,62,32,6,0,62.0
+svdd_pm_last10,C086,Bathroom extraction,100,99,0,1,0,99.0
+svdd_pm_last10,C090,Reduced-mode extraction,100,62,32,6,0,62.0
+best_of_n_11,C033,Bedroom turning space,100,100,0,0,0,100.0
+best_of_n_11,C035,Bed circulation,100,100,0,0,0,100.0
+best_of_n_11,C036,Bathroom turning space,100,100,0,0,0,100.0
+best_of_n_11,C037,WC lateral transfer,100,100,0,0,0,100.0
+best_of_n_11,C041,Bathroom overlap limits,100,100,0,0,0,100.0
+best_of_n_11,C076,Main-room area / volume,100,100,0,0,0,100.0
+best_of_n_11,C077,Habitable area,100,100,0,0,0,100.0
+best_of_n_11,C078,Habitable volume,100,100,0,0,0,100.0
+best_of_n_11,C085,Kitchen extraction,100,94,6,0,0,94.0
+best_of_n_11,C086,Bathroom extraction,100,100,0,0,0,100.0
+best_of_n_11,C090,Reduced-mode extraction,100,94,6,0,0,94.0

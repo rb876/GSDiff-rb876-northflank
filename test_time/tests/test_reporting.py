@@ -4,11 +4,12 @@ from dataclasses import asdict
 import csv
 import json
 from pathlib import Path
+import sys
 
 from PIL import Image
 import pytest
 
-from test_time.evaluate import constraint_selection, comparison_group, summarize_run, write_comparison, write_report
+from test_time.evaluate import constraint_selection, comparison_group, main, summarize_run, write_comparison, write_report
 from test_time.types import ConstraintResult, FloorplanSample, PolicyEvaluation, Room, write_json
 from test_time.visualize import save_sample
 
@@ -388,6 +389,84 @@ def test_partial_run_is_labelled_and_not_a_compute_reference(tmp_path):
     rows = write_comparison(tmp_path, [partial])
     assert rows[0]["compute_multiplier"] is None
     assert "**incomplete**" in (directory / "report.md").read_text()
+
+
+def test_cli_skips_unfinished_runs_and_keeps_complete_population(tmp_path, monkeypatch, capsys):
+    complete = make_run(tmp_path / "complete", [
+        candidate(0, [result("C076", "pass")]),
+        candidate(1, [result("C076", "fail")], valid=False),
+        candidate(2, [result("C076", "unknown")]),
+        candidate(3, [result("C076", "not_applicable")]),
+        candidate(0, [result("C076", "pass")], selected=False),
+    ])
+    skipped = []
+    for status in ("running", "failed", "incomplete"):
+        directory = make_run(tmp_path / status, [candidate(0, [result("C076", "pass")])])
+        run = json.loads((directory / "run.json").read_text())
+        write_json(directory / "run.json", {**run, "status": status})
+        skipped.append(directory)
+    partial = make_run(tmp_path / "partial", [candidate(0, [result("C076", "pass")])])
+    config = json.loads((partial / "config.json").read_text())
+    write_json(partial / "config.json", {**config, "trials": 8})
+    skipped.extend([partial, make_run(tmp_path / "empty", []),
+                    make_run(tmp_path / "unselected", [candidate(0, [result("C076", "pass")], selected=False)])])
+
+    monkeypatch.setattr(sys, "argv", ["evaluate", "--experiment-dir", str(tmp_path)])
+    main()
+
+    output = capsys.readouterr().out
+    for directory in skipped:
+        assert f"Skipping unfinished run: {directory}:" in output
+        assert not (directory / "summary.json").exists()
+        assert not (directory / "report.md").exists()
+    assert "saved 1 selected trials; expected 8" in output
+    assert "Wrote 1 run reports" in output
+    summary = json.loads((complete / "summary.json").read_text())
+    assert summary["selected_trials"] == 4
+    assert summary["saved_final_candidates"] == 5
+    assert summary["overall_valid_rate"] == 1 / 4
+    assert summary["overall_validity_counts"] == {"valid": 1, "invalid": 1, "unknown": 1, "not_applicable": 1}
+    assert summary["all_candidates"]["overall_valid_rate"] == 2 / 5
+    with (tmp_path / "comparison.csv").open() as stream:
+        comparisons = list(csv.DictReader(stream))
+    assert [row["run"] for row in comparisons] == ["complete"]
+
+
+@pytest.mark.parametrize("filename", ["candidates.jsonl", "config.json", "run.json"])
+def test_cli_does_not_skip_corrupt_json(tmp_path, monkeypatch, filename):
+    directory = make_run(tmp_path / "corrupt", [candidate(0, [result("C076", "pass")])])
+    (directory / filename).write_text("{invalid json\n")
+    monkeypatch.setattr(sys, "argv", ["evaluate", "--experiment-dir", str(tmp_path)])
+    with pytest.raises(json.JSONDecodeError):
+        main()
+    assert not (directory / "report.md").exists()
+
+
+def test_cli_does_not_skip_duplicate_selected_trials(tmp_path, monkeypatch):
+    make_run(tmp_path / "duplicate", [candidate(0, [result("C076", "pass")]) for _ in range(2)])
+    monkeypatch.setattr(sys, "argv", ["evaluate", "--experiment-dir", str(tmp_path)])
+    with pytest.raises(ValueError, match="one selected candidate"):
+        main()
+
+
+def test_cli_does_not_hide_corrupt_rows_in_partial_runs(tmp_path, monkeypatch):
+    row = candidate(0, [result("C076", "pass")])
+    del row["sample"]
+    directory = make_run(tmp_path / "corrupt_partial", [row])
+    config = json.loads((directory / "config.json").read_text())
+    write_json(directory / "config.json", {**config, "trials": 8})
+    monkeypatch.setattr(sys, "argv", ["evaluate", "--experiment-dir", str(tmp_path)])
+    with pytest.raises(KeyError, match="sample"):
+        main()
+
+
+def test_cli_reports_when_no_completed_runs_remain(tmp_path, monkeypatch, capsys):
+    directory = make_run(tmp_path / "empty", [])
+    monkeypatch.setattr(sys, "argv", ["evaluate", "--experiment-dir", str(directory)])
+    with pytest.raises(ValueError, match="No completed experiment runs found"):
+        main()
+    assert f"Skipping unfinished run: {directory}: no selected candidates" in capsys.readouterr().out
+    assert not (directory / "comparison.csv").exists()
 
 
 def test_png_and_svg_include_actual_checks_and_assumptions(tmp_path):

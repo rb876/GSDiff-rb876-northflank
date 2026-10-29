@@ -1,0 +1,3153 @@
+{
+  "audit_schema_version": 1,
+  "audit_scope": "Recomputed summaries and descriptive geometry statistics from saved selected JSONL evaluations; no new model inference or independent reevaluation of every geometry checker. Source/provenance hashes verified where available.",
+  "experiment": "bathroom_001",
+  "methods_in_reporting_order": [
+    "baseline",
+    "best_of_n_last10",
+    "svdd_pm_last10",
+    "best_of_n"
+  ],
+  "definitions": {
+    "overall_valid": "Structurally valid and every applicable scored check measurably passes.",
+    "all_applicable_pass_fraction": "Fraction of outputs with all applicable scored checks passing; does not itself require structural validity.",
+    "all_measurable_pass_fraction": "Fraction of outputs with all measurable scored checks passing, ignoring unknowns and not itself requiring structural validity.",
+    "applicable_check_pass_fraction": "Passed scored checks / all applicable scored checks, including unknowns.",
+    "compliance": "Passed scored checks / measurable scored checks; unknowns excluded.",
+    "severity": "Mean normalized severity over measurable scored checks; unknowns excluded.",
+    "compute": "Node NFE counts evaluated sample states, excluding edge/reward evaluations. Current control runtime is unmeasured because controls were rebuilt offline. Historical generation and audit times retained separately."
+  },
+  "assessment_coverage": {
+    "registered": 14,
+    "scored": 11,
+    "supporting": 3,
+    "statement": "11 scored Appendix A constraints across accessibility, habitability and ventilation; C034/C079/C080 support definitions and are excluded from compliance. Four reporting groups split bedroom and bathroom accessibility. Claims concern potential placements or scenario assumptions, not verified physical installations.",
+    "submission_requirements": "PDF section 2.7: runnable code, machine-readable specs, vector/rendered outputs, report on method/compute/metrics/ablation/results/failures/limitations, comparison table, annotated success/failure evidence.",
+    "assessment_weights": {
+      "ideas_reasoning": 0.5,
+      "subset_breadth": 0.25,
+      "constraint_respect": 0.25
+    },
+    "pdf_sha256": "51fa96e011caaf1b6d59bf74a9acdb6c8f4d60daf48e98505ac4489209508b70"
+  },
+  "methods": [
+    {
+      "method": "baseline",
+      "parameters": {
+        "n": 1,
+        "k": null,
+        "guided_steps": null,
+        "temperature": null,
+        "batch_size": 4,
+        "inference_batch_size": 10,
+        "reward_backend": "gpu"
+      },
+      "overall_valid_count": 34,
+      "overall_valid_rate": 0.34,
+      "overall_validity_counts": {
+        "valid": 34,
+        "invalid": 52,
+        "unknown": 14,
+        "not_applicable": 0
+      },
+      "structural_valid_count": 86,
+      "structural_valid_rate": 0.86,
+      "all_applicable_pass_fraction": 0.37,
+      "all_measurable_pass_fraction": 0.52,
+      "pass": 889,
+      "fail": 97,
+      "unknown": 114,
+      "applicable_count": 1100,
+      "measurable_count": 986,
+      "not_applicable": 0,
+      "compliance": 0.9016227180527383,
+      "measurable_fraction": 0.8963636363636364,
+      "unknown_fraction": 0.10363636363636364,
+      "severity": {
+        "count": 986,
+        "mean": 0.027959000155041363,
+        "median": 0.0,
+        "min": 0.0,
+        "max": 1.0
+      },
+      "compute": {
+        "total_wall_seconds": null,
+        "node_calls": 25000,
+        "edge_calls": 25,
+        "node_samples": 100000,
+        "edge_samples": 100,
+        "graph_completions": null,
+        "candidate_evaluations": null,
+        "gpu_candidate_evaluations": null,
+        "cpu_candidate_evaluations": null,
+        "peak_gpu_allocated_bytes": null,
+        "peak_gpu_reserved_bytes": null,
+        "fallback_count": null,
+        "nfe_provenance": "recorded_run_counter",
+        "wall_seconds_per_trial": null,
+        "node_samples_per_trial": 1000.0,
+        "time_per_trial_interpretation": "amortized throughput, not isolated latency"
+      },
+      "per_constraint": {
+        "C033": {
+          "pass": 96,
+          "fail": 0,
+          "unknown": 4,
+          "not_applicable": 0,
+          "applicable_count": 100,
+          "measurable_count": 96,
+          "assumption_based_count": 100,
+          "compliance": 1.0,
+          "measurable_fraction": 0.96,
+          "unknown_fraction": 0.04,
+          "assumption_based_fraction": 1.0,
+          "severity": {
+            "count": 96,
+            "mean": 0.0,
+            "median": 0.0,
+            "min": 0.0,
+            "max": 0.0
+          }
+        },
+        "C035": {
+          "pass": 93,
+          "fail": 1,
+          "unknown": 6,
+          "not_applicable": 0,
+          "applicable_count": 100,
+          "measurable_count": 94,
+          "assumption_based_count": 100,
+          "compliance": 0.9893617021276596,
+          "measurable_fraction": 0.94,
+          "unknown_fraction": 0.06,
+          "assumption_based_fraction": 1.0,
+          "severity": {
+            "count": 94,
+            "mean": 0.010638297872340425,
+            "median": 0.0,
+            "min": 0.0,
+            "max": 1.0
+          }
+        },
+        "C036": {
+          "pass": 71,
+          "fail": 7,
+          "unknown": 22,
+          "not_applicable": 0,
+          "applicable_count": 100,
+          "measurable_count": 78,
+          "assumption_based_count": 100,
+          "compliance": 0.9102564102564102,
+          "measurable_fraction": 0.78,
+          "unknown_fraction": 0.22,
+          "assumption_based_fraction": 1.0,
+          "severity": {
+            "count": 78,
+            "mean": 0.06360176282051282,
+            "median": 0.0,
+            "min": 0.0,
+            "max": 1.0
+          }
+        },
+        "C037": {
+          "pass": 75,
+          "fail": 5,
+          "unknown": 20,
+          "not_applicable": 0,
+          "applicable_count": 100,
+          "measurable_count": 80,
+          "assumption_based_count": 100,
+          "compliance": 0.9375,
+          "measurable_fraction": 0.8,
+          "unknown_fraction": 0.2,
+          "assumption_based_fraction": 1.0,
+          "severity": {
+            "count": 80,
+            "mean": 0.0625,
+            "median": 0.0,
+            "min": 0.0,
+            "max": 1.0
+          }
+        },
+        "C041": {
+          "pass": 71,
+          "fail": 7,
+          "unknown": 22,
+          "not_applicable": 0,
+          "applicable_count": 100,
+          "measurable_count": 78,
+          "assumption_based_count": 100,
+          "compliance": 0.9102564102564102,
+          "measurable_fraction": 0.78,
+          "unknown_fraction": 0.22,
+          "assumption_based_fraction": 1.0,
+          "severity": {
+            "count": 78,
+            "mean": 0.06360176282051282,
+            "median": 0.0,
+            "min": 0.0,
+            "max": 1.0
+          }
+        },
+        "C076": {
+          "pass": 96,
+          "fail": 0,
+          "unknown": 4,
+          "not_applicable": 0,
+          "applicable_count": 100,
+          "measurable_count": 96,
+          "assumption_based_count": 100,
+          "compliance": 1.0,
+          "measurable_fraction": 0.96,
+          "unknown_fraction": 0.04,
+          "assumption_based_fraction": 1.0,
+          "severity": {
+            "count": 96,
+            "mean": 0.0,
+            "median": 0.0,
+            "min": 0.0,
+            "max": 0.0
+          }
+        },
+        "C077": {
+          "pass": 95,
+          "fail": 1,
+          "unknown": 4,
+          "not_applicable": 0,
+          "applicable_count": 100,
+          "measurable_count": 96,
+          "assumption_based_count": 100,
+          "compliance": 0.9895833333333334,
+          "measurable_fraction": 0.96,
+          "unknown_fraction": 0.04,
+          "assumption_based_fraction": 1.0,
+          "severity": {
+            "count": 96,
+            "mean": 0.0004222960699172247,
+            "median": 0.0,
+            "min": 0.0,
+            "max": 0.04054042271205357
+          }
+        },
+        "C078": {
+          "pass": 96,
+          "fail": 0,
+          "unknown": 4,
+          "not_applicable": 0,
+          "applicable_count": 100,
+          "measurable_count": 96,
+          "assumption_based_count": 100,
+          "compliance": 1.0,
+          "measurable_fraction": 0.96,
+          "unknown_fraction": 0.04,
+          "assumption_based_fraction": 1.0,
+          "severity": {
+            "count": 96,
+            "mean": 0.0,
+            "median": 0.0,
+            "min": 0.0,
+            "max": 0.0
+          }
+        },
+        "C085": {
+          "pass": 52,
+          "fail": 38,
+          "unknown": 10,
+          "not_applicable": 0,
+          "applicable_count": 100,
+          "measurable_count": 90,
+          "assumption_based_count": 100,
+          "compliance": 0.5777777777777777,
+          "measurable_fraction": 0.9,
+          "unknown_fraction": 0.1,
+          "assumption_based_fraction": 1.0,
+          "severity": {
+            "count": 90,
+            "mean": 0.05493827160493827,
+            "median": 0.0,
+            "min": 0.0,
+            "max": 0.2222222222222222
+          }
+        },
+        "C086": {
+          "pass": 92,
+          "fail": 0,
+          "unknown": 8,
+          "not_applicable": 0,
+          "applicable_count": 100,
+          "measurable_count": 92,
+          "assumption_based_count": 100,
+          "compliance": 1.0,
+          "measurable_fraction": 0.92,
+          "unknown_fraction": 0.08,
+          "assumption_based_fraction": 1.0,
+          "severity": {
+            "count": 92,
+            "mean": 0.0,
+            "median": 0.0,
+            "min": 0.0,
+            "max": 0.0
+          }
+        },
+        "C090": {
+          "pass": 52,
+          "fail": 38,
+          "unknown": 10,
+          "not_applicable": 0,
+          "applicable_count": 100,
+          "measurable_count": 90,
+          "assumption_based_count": 100,
+          "compliance": 0.5777777777777777,
+          "measurable_fraction": 0.9,
+          "unknown_fraction": 0.1,
+          "assumption_based_fraction": 1.0,
+          "severity": {
+            "count": 90,
+            "mean": 0.07400793650793651,
+            "median": 0.0,
+            "min": 0.0,
+            "max": 0.375
+          }
+        }
+      },
+      "per_group": {
+        "bathroom_fixtures_turning": {
+          "status": "assessed",
+          "active_scored_ids": [
+            "C036",
+            "C037",
+            "C041"
+          ],
+          "active_supporting_ids": [],
+          "disabled_ids": [],
+          "selected_trials": 100,
+          "missing_result_count": 0,
+          "overall_valid_count": 64,
+          "overall_valid_rate": 0.64,
+          "overall_validity_counts": {
+            "valid": 64,
+            "invalid": 17,
+            "unknown": 19,
+            "not_applicable": 0,
+            "not_assessed": 0
+          },
+          "pass": 217,
+          "fail": 19,
+          "unknown": 64,
+          "not_applicable": 0,
+          "applicable_count": 300,
+          "measurable_count": 236,
+          "assumption_based_count": 300,
+          "compliance": 0.9194915254237288,
+          "measurable_fraction": 0.7866666666666666,
+          "unknown_fraction": 0.21333333333333335,
+          "assumption_based_fraction": 1.0,
+          "severity": {
+            "count": 236,
+            "mean": 0.06322828389830508,
+            "median": 0.0,
+            "min": 0.0,
+            "max": 1.0
+          },
+          "check_pass_rate": 0.7233333333333334,
+          "check_pass_rate_denominator": "observed applicable active scored checks, including unknowns",
+          "claim_levels": [
+            "potential_layout"
+          ]
+        },
+        "bedroom_accessibility": {
+          "status": "assessed",
+          "active_scored_ids": [
+            "C033",
+            "C035"
+          ],
+          "active_supporting_ids": [
+            "C034"
+          ],
+          "disabled_ids": [],
+          "selected_trials": 100,
+          "missing_result_count": 0,
+          "overall_valid_count": 84,
+          "overall_valid_rate": 0.84,
+          "overall_validity_counts": {
+            "valid": 84,
+            "invalid": 15,
+            "unknown": 1,
+            "not_applicable": 0,
+            "not_assessed": 0
+          },
+          "pass": 189,
+          "fail": 1,
+          "unknown": 10,
+          "not_applicable": 0,
+          "applicable_count": 200,
+          "measurable_count": 190,
+          "assumption_based_count": 200,
+          "compliance": 0.9947368421052631,
+          "measurable_fraction": 0.95,
+          "unknown_fraction": 0.05,
+          "assumption_based_fraction": 1.0,
+          "severity": {
+            "count": 190,
+            "mean": 0.005263157894736842,
+            "median": 0.0,
+            "min": 0.0,
+            "max": 1.0
+          },
+          "check_pass_rate": 0.945,
+          "check_pass_rate_denominator": "observed applicable active scored checks, including unknowns",
+          "claim_levels": [
+            "potential_layout"
+          ]
+        },
+        "habitability": {
+          "status": "assessed",
+          "active_scored_ids": [
+            "C076",
+            "C077",
+            "C078"
+          ],
+          "active_supporting_ids": [
+            "C079",
+            "C080"
+          ],
+          "disabled_ids": [],
+          "selected_trials": 100,
+          "missing_result_count": 0,
+          "overall_valid_count": 86,
+          "overall_valid_rate": 0.86,
+          "overall_validity_counts": {
+            "valid": 86,
+            "invalid": 14,
+            "unknown": 0,
+            "not_applicable": 0,
+            "not_assessed": 0
+          },
+          "pass": 287,
+          "fail": 1,
+          "unknown": 12,
+          "not_applicable": 0,
+          "applicable_count": 300,
+          "measurable_count": 288,
+          "assumption_based_count": 300,
+          "compliance": 0.9965277777777778,
+          "measurable_fraction": 0.96,
+          "unknown_fraction": 0.04,
+          "assumption_based_fraction": 1.0,
+          "severity": {
+            "count": 288,
+            "mean": 0.00014076535663907488,
+            "median": 0.0,
+            "min": 0.0,
+            "max": 0.04054042271205357
+          },
+          "check_pass_rate": 0.9566666666666667,
+          "check_pass_rate_denominator": "observed applicable active scored checks, including unknowns",
+          "claim_levels": [
+            "assumption_based"
+          ]
+        },
+        "ventilation": {
+          "status": "assessed",
+          "active_scored_ids": [
+            "C085",
+            "C086",
+            "C090"
+          ],
+          "active_supporting_ids": [],
+          "disabled_ids": [],
+          "selected_trials": 100,
+          "missing_result_count": 0,
+          "overall_valid_count": 47,
+          "overall_valid_rate": 0.47,
+          "overall_validity_counts": {
+            "valid": 47,
+            "invalid": 49,
+            "unknown": 4,
+            "not_applicable": 0,
+            "not_assessed": 0
+          },
+          "pass": 196,
+          "fail": 76,
+          "unknown": 28,
+          "not_applicable": 0,
+          "applicable_count": 300,
+          "measurable_count": 272,
+          "assumption_based_count": 300,
+          "compliance": 0.7205882352941176,
+          "measurable_fraction": 0.9066666666666666,
+          "unknown_fraction": 0.09333333333333334,
+          "assumption_based_fraction": 1.0,
+          "severity": {
+            "count": 272,
+            "mean": 0.04266602474323063,
+            "median": 0.0,
+            "min": 0.0,
+            "max": 0.375
+          },
+          "check_pass_rate": 0.6533333333333333,
+          "check_pass_rate_denominator": "observed applicable active scored checks, including unknowns",
+          "claim_levels": [
+            "assumption_based"
+          ]
+        }
+      },
+      "constraint_counts": {
+        "registered": 14,
+        "scored": 11,
+        "supporting": 3,
+        "active": 14,
+        "active_scored": 11,
+        "active_supporting": 3,
+        "disabled": 0
+      },
+      "active_scored_ids": [
+        "C033",
+        "C035",
+        "C036",
+        "C037",
+        "C041",
+        "C076",
+        "C077",
+        "C078",
+        "C085",
+        "C086",
+        "C090"
+      ],
+      "active_supporting_ids": [
+        "C034",
+        "C079",
+        "C080"
+      ],
+      "run_id": "baseline",
+      "run_dir": "test_time/outputs/bathroom_001/controls_rebuilt/batch_1_seed_10000/baseline",
+      "selected_count": 100,
+      "saved_candidate_count": 100,
+      "trial_seed_range": [
+        10000,
+        10099
+      ],
+      "overall_wilson95": [
+        0.25461520797348164,
+        0.43722271145275377
+      ],
+      "applicability_coverage": 1.0,
+      "applicable_check_pass_fraction": 0.8081818181818182,
+      "historical_generation_seconds": 353.7188291620041,
+      "recalibration_timing": {
+        "wall_seconds": 65.92793581399019,
+        "tensor_rescore_and_selection_seconds": 0.0,
+        "cpu_audit_seconds": 65.66600677098904,
+        "tensor_candidates": 0,
+        "cpu_candidates": 100,
+        "new_denoiser_evaluations": 0
+      },
+      "prefix_reselection_timing": null,
+      "comparison_group": "f057e81e8344",
+      "denoiser_comparison_group": "3ce5444aa393",
+      "checker": "cpu_bathroom_audit_v1",
+      "registry_sha256": "41b440008944cc8ccd9357e1e79774d6fbd7d5c3ba9e012a3c8348e81debe163",
+      "scenario_sha256": "b8d76d84e6eb12d9b197f149544ce0d28896c0c00d76b33409ed10d9827f65a2",
+      "summary_recomputation_matches": {
+        "overall_valid_count": true,
+        "structural_valid_count": true,
+        "per_constraint": true,
+        "severity": true,
+        "compliance": true,
+        "all_applicable_pass_fraction": true
+      },
+      "source_sha256": {
+        "config.json": "ceb2091cbddb7b75d2323c69132be244831801e0c51f02d1d4d8d3f91646563c",
+        "run.json": "bc2f8978e751c40fa25d439bfbedeeea0b71338248f117271142df93017f28d7",
+        "candidates.jsonl": "a09acd8fe8a9b7fd97f1e5b83ef64449e5f8328787ed078758177056f080f399"
+      },
+      "diversity": {
+        "population": "structurally_valid_with_usable_geometry",
+        "input_count": 100,
+        "eligible_count": 86,
+        "excluded_count": 14,
+        "exclusion_reasons": {
+          "structurally_invalid_or_unrecorded": 14
+        },
+        "graph_unique_count": 86,
+        "graph_unique_fraction": 1.0,
+        "graph_duplicate_fraction": 0.0,
+        "graph_coordinate_rounding_decimals": 6,
+        "raster_eligible_count": 86,
+        "raster_excluded_count": 0,
+        "raster_size": 64,
+        "canvas_size_drawing_pixels": 512,
+        "room_labels": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "pair_count": 3655,
+        "mean_pairwise_semantic_distance": 0.8042143289381939,
+        "near_duplicate_threshold": 0.05,
+        "near_duplicate_fraction": 0.0,
+        "interpretation": "Semantic distance is 1 minus intersection/union across room-label masks; background and outside are excluded. Near-duplicate fraction counts layouts with at least one close neighbor. All pairs are evaluated.",
+        "limitations": "Fixed-canvas low-resolution diagnostics; no translation/rotation/scale alignment. Raster geometry is clipped to the 512-pixel canvas and does not separately encode walls. Eligible counts differ if methods have different structural validity. This is not reference-data fidelity."
+      },
+      "distribution_vs_baseline": {
+        "reference": "generated_baseline_not_RPLAN",
+        "population": "structurally_valid_with_usable_geometry",
+        "input_count": 100,
+        "eligible_count": 86,
+        "excluded_count": 14,
+        "baseline_input_count": 100,
+        "baseline_eligible_count": 86,
+        "baseline_excluded_count": 14,
+        "exclusion_reasons": {
+          "structurally_invalid_or_unrecorded": 14
+        },
+        "baseline_exclusion_reasons": {
+          "structurally_invalid_or_unrecorded": 14
+        },
+        "features": {
+          "rooms": {
+            "method_mean": 6.686046511627907,
+            "baseline_mean": 6.686046511627907,
+            "wasserstein_distance": 0.0
+          },
+          "junctions": {
+            "method_mean": 22.53488372093023,
+            "baseline_mean": 22.53488372093023,
+            "wasserstein_distance": 0.0
+          },
+          "edges": {
+            "method_mean": 27.953488372093023,
+            "baseline_mean": 27.953488372093023,
+            "wasserstein_distance": 0.0
+          },
+          "total_room_area_drawing_units2": {
+            "method_mean": 70434.16279069768,
+            "baseline_mean": 70434.16279069768,
+            "wasserstein_distance": 0.0
+          }
+        },
+        "room_type_js_divergence_bits": 0.0,
+        "room_type_frequencies": {
+          "0": 0.14956521739130435,
+          "1": 0.36695652173913046,
+          "2": 0.006956521739130435,
+          "3": 0.1426086956521739,
+          "4": 0.16869565217391305,
+          "5": 0.16521739130434782
+        },
+        "baseline_room_type_frequencies": {
+          "0": 0.14956521739130435,
+          "1": 0.36695652173913046,
+          "2": 0.006956521739130435,
+          "3": 0.1426086956521739,
+          "4": 0.16869565217391305,
+          "5": 0.16521739130434782
+        },
+        "interpretation": "Room counts/areas exclude outside label 6; area is a sum of polygons in drawing-pixel squared units. Wasserstein distances have the original feature units. Composition is pooled over room instances. These marginal diagnostics do not establish perceptual quality or real-data fidelity.",
+        "comparison_scope": "Same scenario, registry, model/checkpoint and representation; SVDD batching differs, so descriptive cross-batch geometry comparison only."
+      }
+    },
+    {
+      "method": "best_of_n",
+      "parameters": {
+        "n": 2,
+        "k": null,
+        "guided_steps": null,
+        "temperature": null,
+        "batch_size": 4,
+        "inference_batch_size": 10,
+        "reward_backend": "gpu"
+      },
+      "overall_valid_count": 47,
+      "overall_valid_rate": 0.47,
+      "overall_validity_counts": {
+        "valid": 47,
+        "invalid": 46,
+        "unknown": 7,
+        "not_applicable": 0
+      },
+      "structural_valid_count": 99,
+      "structural_valid_rate": 0.99,
+      "all_applicable_pass_fraction": 0.48,
+      "all_measurable_pass_fraction": 0.55,
+      "pass": 967,
+      "fail": 92,
+      "unknown": 41,
+      "applicable_count": 1100,
+      "measurable_count": 1059,
+      "not_applicable": 0,
+      "compliance": 0.9131255901794145,
+      "measurable_fraction": 0.9627272727272728,
+      "unknown_fraction": 0.03727272727272727,
+      "severity": {
+        "count": 1059,
+        "mean": 0.016573736828694334,
+        "median": 0.0,
+        "min": 0.0,
+        "max": 1.0
+      },
+      "compute": {
+        "total_wall_seconds": null,
+        "node_calls": null,
+        "edge_calls": null,
+        "node_samples": 200000,
+        "edge_samples": null,
+        "graph_completions": null,
+        "candidate_evaluations": null,
+        "gpu_candidate_evaluations": null,
+        "cpu_candidate_evaluations": null,
+        "peak_gpu_allocated_bytes": null,
+        "peak_gpu_reserved_bytes": null,
+        "fallback_count": null,
+        "nfe_provenance": "derived_prefix_budget",
+        "wall_seconds_per_trial": null,
+        "node_samples_per_trial": 2000.0,
+        "time_per_trial_interpretation": "amortized throughput, not isolated latency"
+      },
+      "per_constraint": {
+        "C033": {
+          "pass": 100,
+          "fail": 0,
+          "unknown": 0,
+          "not_applicable": 0,
+          "applicable_count": 100,
+          "measurable_count": 100,
+          "assumption_based_count": 100,
+          "compliance": 1.0,
+          "measurable_fraction": 1.0,
+          "unknown_fraction": 0.0,
+          "assumption_based_fraction": 1.0,
+          "severity": {
+            "count": 100,
+            "mean": 0.0,
+            "median": 0.0,
+            "min": 0.0,
+            "max": 0.0
+          }
+        },
+        "C035": {
+          "pass": 98,
+          "fail": 1,
+          "unknown": 1,
+          "not_applicable": 0,
+          "applicable_count": 100,
+          "measurable_count": 99,
+          "assumption_based_count": 100,
+          "compliance": 0.98989898989899,
+          "measurable_fraction": 0.99,
+          "unknown_fraction": 0.01,
+          "assumption_based_fraction": 1.0,
+          "severity": {
+            "count": 99,
+            "mean": 0.010101010101010102,
+            "median": 0.0,
+            "min": 0.0,
+            "max": 1.0
+          }
+        },
+        "C036": {
+          "pass": 87,
+          "fail": 2,
+          "unknown": 11,
+          "not_applicable": 0,
+          "applicable_count": 100,
+          "measurable_count": 89,
+          "assumption_based_count": 100,
+          "compliance": 0.9775280898876404,
+          "measurable_fraction": 0.89,
+          "unknown_fraction": 0.11,
+          "assumption_based_fraction": 1.0,
+          "severity": {
+            "count": 89,
+            "mean": 0.009831460674157303,
+            "median": 0.0,
+            "min": 0.0,
+            "max": 0.71875
+          }
+        },
+        "C037": {
+          "pass": 89,
+          "fail": 1,
+          "unknown": 10,
+          "not_applicable": 0,
+          "applicable_count": 100,
+          "measurable_count": 90,
+          "assumption_based_count": 100,
+          "compliance": 0.9888888888888889,
+          "measurable_fraction": 0.9,
+          "unknown_fraction": 0.1,
+          "assumption_based_fraction": 1.0,
+          "severity": {
+            "count": 90,
+            "mean": 0.011111111111111112,
+            "median": 0.0,
+            "min": 0.0,
+            "max": 1.0
+          }
+        },
+        "C041": {
+          "pass": 87,
+          "fail": 2,
+          "unknown": 11,
+          "not_applicable": 0,
+          "applicable_count": 100,
+          "measurable_count": 89,
+          "assumption_based_count": 100,
+          "compliance": 0.9775280898876404,
+          "measurable_fraction": 0.89,
+          "unknown_fraction": 0.11,
+          "assumption_based_fraction": 1.0,
+          "severity": {
+            "count": 89,
+            "mean": 0.009831460674157303,
+            "median": 0.0,
+            "min": 0.0,
+            "max": 0.71875
+          }
+        },
+        "C076": {
+          "pass": 100,
+          "fail": 0,
+          "unknown": 0,
+          "not_applicable": 0,
+          "applicable_count": 100,
+          "measurable_count": 100,
+          "assumption_based_count": 100,
+          "compliance": 1.0,
+          "measurable_fraction": 1.0,
+          "unknown_fraction": 0.0,
+          "assumption_based_fraction": 1.0,
+          "severity": {
+            "count": 100,
+            "mean": 0.0,
+            "median": 0.0,
+            "min": 0.0,
+            "max": 0.0
+          }
+        },
+        "C077": {
+          "pass": 100,
+          "fail": 0,
+          "unknown": 0,
+          "not_applicable": 0,
+          "applicable_count": 100,
+          "measurable_count": 100,
+          "assumption_based_count": 100,
+          "compliance": 1.0,
+          "measurable_fraction": 1.0,
+          "unknown_fraction": 0.0,
+          "assumption_based_fraction": 1.0,
+          "severity": {
+            "count": 100,
+            "mean": 0.0,
+            "median": 0.0,
+            "min": 0.0,
+            "max": 0.0
+          }
+        },
+        "C078": {
+          "pass": 100,
+          "fail": 0,
+          "unknown": 0,
+          "not_applicable": 0,
+          "applicable_count": 100,
+          "measurable_count": 100,
+          "assumption_based_count": 100,
+          "compliance": 1.0,
+          "measurable_fraction": 1.0,
+          "unknown_fraction": 0.0,
+          "assumption_based_fraction": 1.0,
+          "severity": {
+            "count": 100,
+            "mean": 0.0,
+            "median": 0.0,
+            "min": 0.0,
+            "max": 0.0
+          }
+        },
+        "C085": {
+          "pass": 53,
+          "fail": 43,
+          "unknown": 4,
+          "not_applicable": 0,
+          "applicable_count": 100,
+          "measurable_count": 96,
+          "assumption_based_count": 100,
+          "compliance": 0.5520833333333334,
+          "measurable_fraction": 0.96,
+          "unknown_fraction": 0.04,
+          "assumption_based_fraction": 1.0,
+          "severity": {
+            "count": 96,
+            "mean": 0.06105324074074074,
+            "median": 0.0,
+            "min": 0.0,
+            "max": 0.2222222222222222
+          }
+        },
+        "C086": {
+          "pass": 100,
+          "fail": 0,
+          "unknown": 0,
+          "not_applicable": 0,
+          "applicable_count": 100,
+          "measurable_count": 100,
+          "assumption_based_count": 100,
+          "compliance": 1.0,
+          "measurable_fraction": 1.0,
+          "unknown_fraction": 0.0,
+          "assumption_based_fraction": 1.0,
+          "severity": {
+            "count": 100,
+            "mean": 0.0,
+            "median": 0.0,
+            "min": 0.0,
+            "max": 0.0
+          }
+        },
+        "C090": {
+          "pass": 53,
+          "fail": 43,
+          "unknown": 4,
+          "not_applicable": 0,
+          "applicable_count": 100,
+          "measurable_count": 96,
+          "assumption_based_count": 100,
+          "compliance": 0.5520833333333334,
+          "measurable_fraction": 0.96,
+          "unknown_fraction": 0.04,
+          "assumption_based_fraction": 1.0,
+          "severity": {
+            "count": 96,
+            "mean": 0.08271329365079365,
+            "median": 0.0,
+            "min": 0.0,
+            "max": 0.375
+          }
+        }
+      },
+      "per_group": {
+        "bathroom_fixtures_turning": {
+          "status": "assessed",
+          "active_scored_ids": [
+            "C036",
+            "C037",
+            "C041"
+          ],
+          "active_supporting_ids": [],
+          "disabled_ids": [],
+          "selected_trials": 100,
+          "missing_result_count": 0,
+          "overall_valid_count": 86,
+          "overall_valid_rate": 0.86,
+          "overall_validity_counts": {
+            "valid": 86,
+            "invalid": 3,
+            "unknown": 11,
+            "not_applicable": 0,
+            "not_assessed": 0
+          },
+          "pass": 263,
+          "fail": 5,
+          "unknown": 32,
+          "not_applicable": 0,
+          "applicable_count": 300,
+          "measurable_count": 268,
+          "assumption_based_count": 300,
+          "compliance": 0.9813432835820896,
+          "measurable_fraction": 0.8933333333333333,
+          "unknown_fraction": 0.10666666666666667,
+          "assumption_based_fraction": 1.0,
+          "severity": {
+            "count": 268,
+            "mean": 0.010261194029850746,
+            "median": 0.0,
+            "min": 0.0,
+            "max": 1.0
+          },
+          "check_pass_rate": 0.8766666666666667,
+          "check_pass_rate_denominator": "observed applicable active scored checks, including unknowns",
+          "claim_levels": [
+            "potential_layout"
+          ]
+        },
+        "bedroom_accessibility": {
+          "status": "assessed",
+          "active_scored_ids": [
+            "C033",
+            "C035"
+          ],
+          "active_supporting_ids": [
+            "C034"
+          ],
+          "disabled_ids": [],
+          "selected_trials": 100,
+          "missing_result_count": 0,
+          "overall_valid_count": 97,
+          "overall_valid_rate": 0.97,
+          "overall_validity_counts": {
+            "valid": 97,
+            "invalid": 2,
+            "unknown": 1,
+            "not_applicable": 0,
+            "not_assessed": 0
+          },
+          "pass": 198,
+          "fail": 1,
+          "unknown": 1,
+          "not_applicable": 0,
+          "applicable_count": 200,
+          "measurable_count": 199,
+          "assumption_based_count": 200,
+          "compliance": 0.9949748743718593,
+          "measurable_fraction": 0.995,
+          "unknown_fraction": 0.005,
+          "assumption_based_fraction": 1.0,
+          "severity": {
+            "count": 199,
+            "mean": 0.005025125628140704,
+            "median": 0.0,
+            "min": 0.0,
+            "max": 1.0
+          },
+          "check_pass_rate": 0.99,
+          "check_pass_rate_denominator": "observed applicable active scored checks, including unknowns",
+          "claim_levels": [
+            "potential_layout"
+          ]
+        },
+        "habitability": {
+          "status": "assessed",
+          "active_scored_ids": [
+            "C076",
+            "C077",
+            "C078"
+          ],
+          "active_supporting_ids": [
+            "C079",
+            "C080"
+          ],
+          "disabled_ids": [],
+          "selected_trials": 100,
+          "missing_result_count": 0,
+          "overall_valid_count": 99,
+          "overall_valid_rate": 0.99,
+          "overall_validity_counts": {
+            "valid": 99,
+            "invalid": 1,
+            "unknown": 0,
+            "not_applicable": 0,
+            "not_assessed": 0
+          },
+          "pass": 300,
+          "fail": 0,
+          "unknown": 0,
+          "not_applicable": 0,
+          "applicable_count": 300,
+          "measurable_count": 300,
+          "assumption_based_count": 300,
+          "compliance": 1.0,
+          "measurable_fraction": 1.0,
+          "unknown_fraction": 0.0,
+          "assumption_based_fraction": 1.0,
+          "severity": {
+            "count": 300,
+            "mean": 0.0,
+            "median": 0.0,
+            "min": 0.0,
+            "max": 0.0
+          },
+          "check_pass_rate": 1.0,
+          "check_pass_rate_denominator": "observed applicable active scored checks, including unknowns",
+          "claim_levels": [
+            "assumption_based"
+          ]
+        },
+        "ventilation": {
+          "status": "assessed",
+          "active_scored_ids": [
+            "C085",
+            "C086",
+            "C090"
+          ],
+          "active_supporting_ids": [],
+          "disabled_ids": [],
+          "selected_trials": 100,
+          "missing_result_count": 0,
+          "overall_valid_count": 52,
+          "overall_valid_rate": 0.52,
+          "overall_validity_counts": {
+            "valid": 52,
+            "invalid": 44,
+            "unknown": 4,
+            "not_applicable": 0,
+            "not_assessed": 0
+          },
+          "pass": 206,
+          "fail": 86,
+          "unknown": 8,
+          "not_applicable": 0,
+          "applicable_count": 300,
+          "measurable_count": 292,
+          "assumption_based_count": 300,
+          "compliance": 0.7054794520547946,
+          "measurable_fraction": 0.9733333333333334,
+          "unknown_fraction": 0.02666666666666667,
+          "assumption_based_fraction": 1.0,
+          "severity": {
+            "count": 292,
+            "mean": 0.04726570993694281,
+            "median": 0.0,
+            "min": 0.0,
+            "max": 0.375
+          },
+          "check_pass_rate": 0.6866666666666666,
+          "check_pass_rate_denominator": "observed applicable active scored checks, including unknowns",
+          "claim_levels": [
+            "assumption_based"
+          ]
+        }
+      },
+      "constraint_counts": {
+        "registered": 14,
+        "scored": 11,
+        "supporting": 3,
+        "active": 14,
+        "active_scored": 11,
+        "active_supporting": 3,
+        "disabled": 0
+      },
+      "active_scored_ids": [
+        "C033",
+        "C035",
+        "C036",
+        "C037",
+        "C041",
+        "C076",
+        "C077",
+        "C078",
+        "C085",
+        "C086",
+        "C090"
+      ],
+      "active_supporting_ids": [
+        "C034",
+        "C079",
+        "C080"
+      ],
+      "run_id": "best_of_n_last10",
+      "run_dir": "test_time/outputs/bathroom_001/controls_rebuilt/batch_1_seed_10000/best_of_n_last10",
+      "selected_count": 100,
+      "saved_candidate_count": 200,
+      "trial_seed_range": [
+        10000,
+        10099
+      ],
+      "overall_wilson95": [
+        0.3751081795934127,
+        0.5671114302990063
+      ],
+      "applicability_coverage": 1.0,
+      "applicable_check_pass_fraction": 0.8790909090909091,
+      "historical_generation_seconds": null,
+      "recalibration_timing": null,
+      "prefix_reselection_timing": {
+        "new_denoiser_evaluations": 0,
+        "cpu_candidates": 100,
+        "wall_seconds": 71.27881160700053,
+        "cpu_audit_seconds": 70.502613695935
+      },
+      "comparison_group": "f057e81e8344",
+      "denoiser_comparison_group": "3ce5444aa393",
+      "checker": "cpu_bathroom_audit_v1",
+      "registry_sha256": "41b440008944cc8ccd9357e1e79774d6fbd7d5c3ba9e012a3c8348e81debe163",
+      "scenario_sha256": "b8d76d84e6eb12d9b197f149544ce0d28896c0c00d76b33409ed10d9827f65a2",
+      "summary_recomputation_matches": {
+        "overall_valid_count": true,
+        "structural_valid_count": true,
+        "per_constraint": true,
+        "severity": true,
+        "compliance": true,
+        "all_applicable_pass_fraction": true
+      },
+      "source_sha256": {
+        "config.json": "0533795351a62983e6055167d85574b2a986284b06e505981aee1c6a750b8eba",
+        "run.json": "3550a7045c8872123f776f43e03478fea77044bf5befb61099919b381125f0ac",
+        "candidates.jsonl": "17fd6ba3334097687baee862eb3f8718ffd9bc47f77ea39005a2af0e0ed31a6d"
+      },
+      "diversity": {
+        "population": "structurally_valid_with_usable_geometry",
+        "input_count": 100,
+        "eligible_count": 99,
+        "excluded_count": 1,
+        "exclusion_reasons": {
+          "structurally_invalid_or_unrecorded": 1
+        },
+        "graph_unique_count": 99,
+        "graph_unique_fraction": 1.0,
+        "graph_duplicate_fraction": 0.0,
+        "graph_coordinate_rounding_decimals": 6,
+        "raster_eligible_count": 99,
+        "raster_excluded_count": 0,
+        "raster_size": 64,
+        "canvas_size_drawing_pixels": 512,
+        "room_labels": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "pair_count": 4851,
+        "mean_pairwise_semantic_distance": 0.8047459095762428,
+        "near_duplicate_threshold": 0.05,
+        "near_duplicate_fraction": 0.0,
+        "interpretation": "Semantic distance is 1 minus intersection/union across room-label masks; background and outside are excluded. Near-duplicate fraction counts layouts with at least one close neighbor. All pairs are evaluated.",
+        "limitations": "Fixed-canvas low-resolution diagnostics; no translation/rotation/scale alignment. Raster geometry is clipped to the 512-pixel canvas and does not separately encode walls. Eligible counts differ if methods have different structural validity. This is not reference-data fidelity."
+      },
+      "distribution_vs_baseline": {
+        "reference": "generated_baseline_not_RPLAN",
+        "population": "structurally_valid_with_usable_geometry",
+        "input_count": 100,
+        "eligible_count": 99,
+        "excluded_count": 1,
+        "baseline_input_count": 100,
+        "baseline_eligible_count": 86,
+        "baseline_excluded_count": 14,
+        "exclusion_reasons": {
+          "structurally_invalid_or_unrecorded": 1
+        },
+        "baseline_exclusion_reasons": {
+          "structurally_invalid_or_unrecorded": 14
+        },
+        "features": {
+          "rooms": {
+            "method_mean": 6.6767676767676765,
+            "baseline_mean": 6.686046511627907,
+            "wasserstein_distance": 0.10817477096546856
+          },
+          "junctions": {
+            "method_mean": 22.646464646464647,
+            "baseline_mean": 22.53488372093023,
+            "wasserstein_distance": 0.24242424242424254
+          },
+          "edges": {
+            "method_mean": 27.98989898989899,
+            "baseline_mean": 27.953488372093023,
+            "wasserstein_distance": 0.30655391120507414
+          },
+          "total_room_area_drawing_units2": {
+            "method_mean": 71828.71212121213,
+            "baseline_mean": 70434.16279069768,
+            "wasserstein_distance": 1426.88125440451
+          }
+        },
+        "room_type_js_divergence_bits": 0.0001815182060996741,
+        "room_type_frequencies": {
+          "0": 0.14674735249621784,
+          "1": 0.37821482602118,
+          "2": 0.007564296520423601,
+          "3": 0.1437216338880484,
+          "4": 0.16792738275340394,
+          "5": 0.15582450832072617
+        },
+        "baseline_room_type_frequencies": {
+          "0": 0.14956521739130435,
+          "1": 0.36695652173913046,
+          "2": 0.006956521739130435,
+          "3": 0.1426086956521739,
+          "4": 0.16869565217391305,
+          "5": 0.16521739130434782
+        },
+        "interpretation": "Room counts/areas exclude outside label 6; area is a sum of polygons in drawing-pixel squared units. Wasserstein distances have the original feature units. Composition is pooled over room instances. These marginal diagnostics do not establish perceptual quality or real-data fidelity.",
+        "comparison_scope": "Same scenario, registry, model/checkpoint and representation; SVDD batching differs, so descriptive cross-batch geometry comparison only."
+      }
+    },
+    {
+      "method": "svdd_pm",
+      "parameters": {
+        "n": null,
+        "k": 10,
+        "guided_steps": 100,
+        "temperature": 0.0,
+        "batch_size": 10,
+        "inference_batch_size": 32,
+        "reward_backend": "gpu"
+      },
+      "overall_valid_count": 56,
+      "overall_valid_rate": 0.56,
+      "overall_validity_counts": {
+        "valid": 56,
+        "invalid": 38,
+        "unknown": 6,
+        "not_applicable": 0
+      },
+      "structural_valid_count": 99,
+      "structural_valid_rate": 0.99,
+      "all_applicable_pass_fraction": 0.56,
+      "all_measurable_pass_fraction": 0.62,
+      "pass": 999,
+      "fail": 79,
+      "unknown": 22,
+      "applicable_count": 1100,
+      "measurable_count": 1078,
+      "not_applicable": 0,
+      "compliance": 0.9267161410018553,
+      "measurable_fraction": 0.98,
+      "unknown_fraction": 0.02,
+      "severity": {
+        "count": 1078,
+        "mean": 0.017627135395457818,
+        "median": 0.0,
+        "min": 0.0,
+        "max": 1.0
+      },
+      "compute": {
+        "total_wall_seconds": 10629.652565022989,
+        "node_calls": 14000,
+        "edge_calls": 4020,
+        "node_samples": 200000,
+        "edge_samples": 100200,
+        "graph_completions": 100200,
+        "candidate_evaluations": 100200,
+        "gpu_candidate_evaluations": 100100,
+        "cpu_candidate_evaluations": 100,
+        "peak_gpu_allocated_bytes": 10275006976,
+        "peak_gpu_reserved_bytes": 14394851328,
+        "fallback_count": 2,
+        "nfe_provenance": "recorded_run_counter",
+        "wall_seconds_per_trial": 106.29652565022988,
+        "node_samples_per_trial": 2000.0,
+        "time_per_trial_interpretation": "amortized throughput, not isolated latency"
+      },
+      "per_constraint": {
+        "C033": {
+          "pass": 99,
+          "fail": 0,
+          "unknown": 1,
+          "not_applicable": 0,
+          "applicable_count": 100,
+          "measurable_count": 99,
+          "assumption_based_count": 100,
+          "compliance": 1.0,
+          "measurable_fraction": 0.99,
+          "unknown_fraction": 0.01,
+          "assumption_based_fraction": 1.0,
+          "severity": {
+            "count": 99,
+            "mean": 0.0,
+            "median": 0.0,
+            "min": 0.0,
+            "max": 0.0
+          }
+        },
+        "C035": {
+          "pass": 98,
+          "fail": 0,
+          "unknown": 2,
+          "not_applicable": 0,
+          "applicable_count": 100,
+          "measurable_count": 98,
+          "assumption_based_count": 100,
+          "compliance": 1.0,
+          "measurable_fraction": 0.98,
+          "unknown_fraction": 0.02,
+          "assumption_based_fraction": 1.0,
+          "severity": {
+            "count": 98,
+            "mean": 0.0,
+            "median": 0.0,
+            "min": 0.0,
+            "max": 0.0
+          }
+        },
+        "C036": {
+          "pass": 94,
+          "fail": 5,
+          "unknown": 1,
+          "not_applicable": 0,
+          "applicable_count": 100,
+          "measurable_count": 99,
+          "assumption_based_count": 100,
+          "compliance": 0.9494949494949495,
+          "measurable_fraction": 0.99,
+          "unknown_fraction": 0.01,
+          "assumption_based_fraction": 1.0,
+          "severity": {
+            "count": 99,
+            "mean": 0.022487115059092698,
+            "median": 0.0,
+            "min": 0.0,
+            "max": 0.991849390850177
+          }
+        },
+        "C037": {
+          "pass": 94,
+          "fail": 5,
+          "unknown": 1,
+          "not_applicable": 0,
+          "applicable_count": 100,
+          "measurable_count": 99,
+          "assumption_based_count": 100,
+          "compliance": 0.9494949494949495,
+          "measurable_fraction": 0.99,
+          "unknown_fraction": 0.01,
+          "assumption_based_fraction": 1.0,
+          "severity": {
+            "count": 99,
+            "mean": 0.050505050505050504,
+            "median": 0.0,
+            "min": 0.0,
+            "max": 1.0
+          }
+        },
+        "C041": {
+          "pass": 94,
+          "fail": 5,
+          "unknown": 1,
+          "not_applicable": 0,
+          "applicable_count": 100,
+          "measurable_count": 99,
+          "assumption_based_count": 100,
+          "compliance": 0.9494949494949495,
+          "measurable_fraction": 0.99,
+          "unknown_fraction": 0.01,
+          "assumption_based_fraction": 1.0,
+          "severity": {
+            "count": 99,
+            "mean": 0.022487115059092698,
+            "median": 0.0,
+            "min": 0.0,
+            "max": 0.991849390850177
+          }
+        },
+        "C076": {
+          "pass": 99,
+          "fail": 0,
+          "unknown": 1,
+          "not_applicable": 0,
+          "applicable_count": 100,
+          "measurable_count": 99,
+          "assumption_based_count": 100,
+          "compliance": 1.0,
+          "measurable_fraction": 0.99,
+          "unknown_fraction": 0.01,
+          "assumption_based_fraction": 1.0,
+          "severity": {
+            "count": 99,
+            "mean": 0.0,
+            "median": 0.0,
+            "min": 0.0,
+            "max": 0.0
+          }
+        },
+        "C077": {
+          "pass": 99,
+          "fail": 0,
+          "unknown": 1,
+          "not_applicable": 0,
+          "applicable_count": 100,
+          "measurable_count": 99,
+          "assumption_based_count": 100,
+          "compliance": 1.0,
+          "measurable_fraction": 0.99,
+          "unknown_fraction": 0.01,
+          "assumption_based_fraction": 1.0,
+          "severity": {
+            "count": 99,
+            "mean": 0.0,
+            "median": 0.0,
+            "min": 0.0,
+            "max": 0.0
+          }
+        },
+        "C078": {
+          "pass": 99,
+          "fail": 0,
+          "unknown": 1,
+          "not_applicable": 0,
+          "applicable_count": 100,
+          "measurable_count": 99,
+          "assumption_based_count": 100,
+          "compliance": 1.0,
+          "measurable_fraction": 0.99,
+          "unknown_fraction": 0.01,
+          "assumption_based_fraction": 1.0,
+          "severity": {
+            "count": 99,
+            "mean": 0.0,
+            "median": 0.0,
+            "min": 0.0,
+            "max": 0.0
+          }
+        },
+        "C085": {
+          "pass": 62,
+          "fail": 32,
+          "unknown": 6,
+          "not_applicable": 0,
+          "applicable_count": 100,
+          "measurable_count": 94,
+          "assumption_based_count": 100,
+          "compliance": 0.6595744680851063,
+          "measurable_fraction": 0.94,
+          "unknown_fraction": 0.06,
+          "assumption_based_fraction": 1.0,
+          "severity": {
+            "count": 94,
+            "mean": 0.04358747044917258,
+            "median": 0.0,
+            "min": 0.0,
+            "max": 0.2222222222222222
+          }
+        },
+        "C086": {
+          "pass": 99,
+          "fail": 0,
+          "unknown": 1,
+          "not_applicable": 0,
+          "applicable_count": 100,
+          "measurable_count": 99,
+          "assumption_based_count": 100,
+          "compliance": 1.0,
+          "measurable_fraction": 0.99,
+          "unknown_fraction": 0.01,
+          "assumption_based_fraction": 1.0,
+          "severity": {
+            "count": 99,
+            "mean": 0.0,
+            "median": 0.0,
+            "min": 0.0,
+            "max": 0.0
+          }
+        },
+        "C090": {
+          "pass": 62,
+          "fail": 32,
+          "unknown": 6,
+          "not_applicable": 0,
+          "applicable_count": 100,
+          "measurable_count": 94,
+          "assumption_based_count": 100,
+          "compliance": 0.6595744680851063,
+          "measurable_fraction": 0.94,
+          "unknown_fraction": 0.06,
+          "assumption_based_fraction": 1.0,
+          "severity": {
+            "count": 94,
+            "mean": 0.058004052684903745,
+            "median": 0.0,
+            "min": 0.0,
+            "max": 0.2857142857142857
+          }
+        }
+      },
+      "per_group": {
+        "bathroom_fixtures_turning": {
+          "status": "assessed",
+          "active_scored_ids": [
+            "C036",
+            "C037",
+            "C041"
+          ],
+          "active_supporting_ids": [],
+          "disabled_ids": [],
+          "selected_trials": 100,
+          "missing_result_count": 0,
+          "overall_valid_count": 94,
+          "overall_valid_rate": 0.94,
+          "overall_validity_counts": {
+            "valid": 94,
+            "invalid": 6,
+            "unknown": 0,
+            "not_applicable": 0,
+            "not_assessed": 0
+          },
+          "pass": 282,
+          "fail": 15,
+          "unknown": 3,
+          "not_applicable": 0,
+          "applicable_count": 300,
+          "measurable_count": 297,
+          "assumption_based_count": 300,
+          "compliance": 0.9494949494949495,
+          "measurable_fraction": 0.99,
+          "unknown_fraction": 0.01,
+          "assumption_based_fraction": 1.0,
+          "severity": {
+            "count": 297,
+            "mean": 0.031826426874411964,
+            "median": 0.0,
+            "min": 0.0,
+            "max": 1.0
+          },
+          "check_pass_rate": 0.94,
+          "check_pass_rate_denominator": "observed applicable active scored checks, including unknowns",
+          "claim_levels": [
+            "potential_layout"
+          ]
+        },
+        "bedroom_accessibility": {
+          "status": "assessed",
+          "active_scored_ids": [
+            "C033",
+            "C035"
+          ],
+          "active_supporting_ids": [
+            "C034"
+          ],
+          "disabled_ids": [],
+          "selected_trials": 100,
+          "missing_result_count": 0,
+          "overall_valid_count": 98,
+          "overall_valid_rate": 0.98,
+          "overall_validity_counts": {
+            "valid": 98,
+            "invalid": 1,
+            "unknown": 1,
+            "not_applicable": 0,
+            "not_assessed": 0
+          },
+          "pass": 197,
+          "fail": 0,
+          "unknown": 3,
+          "not_applicable": 0,
+          "applicable_count": 200,
+          "measurable_count": 197,
+          "assumption_based_count": 200,
+          "compliance": 1.0,
+          "measurable_fraction": 0.985,
+          "unknown_fraction": 0.015,
+          "assumption_based_fraction": 1.0,
+          "severity": {
+            "count": 197,
+            "mean": 0.0,
+            "median": 0.0,
+            "min": 0.0,
+            "max": 0.0
+          },
+          "check_pass_rate": 0.985,
+          "check_pass_rate_denominator": "observed applicable active scored checks, including unknowns",
+          "claim_levels": [
+            "potential_layout"
+          ]
+        },
+        "habitability": {
+          "status": "assessed",
+          "active_scored_ids": [
+            "C076",
+            "C077",
+            "C078"
+          ],
+          "active_supporting_ids": [
+            "C079",
+            "C080"
+          ],
+          "disabled_ids": [],
+          "selected_trials": 100,
+          "missing_result_count": 0,
+          "overall_valid_count": 99,
+          "overall_valid_rate": 0.99,
+          "overall_validity_counts": {
+            "valid": 99,
+            "invalid": 1,
+            "unknown": 0,
+            "not_applicable": 0,
+            "not_assessed": 0
+          },
+          "pass": 297,
+          "fail": 0,
+          "unknown": 3,
+          "not_applicable": 0,
+          "applicable_count": 300,
+          "measurable_count": 297,
+          "assumption_based_count": 300,
+          "compliance": 1.0,
+          "measurable_fraction": 0.99,
+          "unknown_fraction": 0.01,
+          "assumption_based_fraction": 1.0,
+          "severity": {
+            "count": 297,
+            "mean": 0.0,
+            "median": 0.0,
+            "min": 0.0,
+            "max": 0.0
+          },
+          "check_pass_rate": 0.99,
+          "check_pass_rate_denominator": "observed applicable active scored checks, including unknowns",
+          "claim_levels": [
+            "assumption_based"
+          ]
+        },
+        "ventilation": {
+          "status": "assessed",
+          "active_scored_ids": [
+            "C085",
+            "C086",
+            "C090"
+          ],
+          "active_supporting_ids": [],
+          "disabled_ids": [],
+          "selected_trials": 100,
+          "missing_result_count": 0,
+          "overall_valid_count": 62,
+          "overall_valid_rate": 0.62,
+          "overall_validity_counts": {
+            "valid": 62,
+            "invalid": 33,
+            "unknown": 5,
+            "not_applicable": 0,
+            "not_assessed": 0
+          },
+          "pass": 223,
+          "fail": 64,
+          "unknown": 13,
+          "not_applicable": 0,
+          "applicable_count": 300,
+          "measurable_count": 287,
+          "assumption_based_count": 300,
+          "compliance": 0.7770034843205574,
+          "measurable_fraction": 0.9566666666666667,
+          "unknown_fraction": 0.043333333333333335,
+          "assumption_based_fraction": 1.0,
+          "severity": {
+            "count": 287,
+            "mean": 0.033273878657153914,
+            "median": 0.0,
+            "min": 0.0,
+            "max": 0.2857142857142857
+          },
+          "check_pass_rate": 0.7433333333333333,
+          "check_pass_rate_denominator": "observed applicable active scored checks, including unknowns",
+          "claim_levels": [
+            "assumption_based"
+          ]
+        }
+      },
+      "constraint_counts": {
+        "registered": 14,
+        "scored": 11,
+        "supporting": 3,
+        "active": 14,
+        "active_scored": 11,
+        "active_supporting": 3,
+        "disabled": 0
+      },
+      "active_scored_ids": [
+        "C033",
+        "C035",
+        "C036",
+        "C037",
+        "C041",
+        "C076",
+        "C077",
+        "C078",
+        "C085",
+        "C086",
+        "C090"
+      ],
+      "active_supporting_ids": [
+        "C034",
+        "C079",
+        "C080"
+      ],
+      "run_id": "svdd_pm_last10",
+      "run_dir": "test_time/outputs/bathroom_001/guided/svdd_pm_last10",
+      "selected_count": 100,
+      "saved_candidate_count": 100,
+      "trial_seed_range": [
+        10000,
+        10099
+      ],
+      "overall_wilson95": [
+        0.4622810465167699,
+        0.6532797336983921
+      ],
+      "applicability_coverage": 1.0,
+      "applicable_check_pass_fraction": 0.9081818181818182,
+      "historical_generation_seconds": null,
+      "recalibration_timing": null,
+      "prefix_reselection_timing": null,
+      "comparison_group": "de4ed8f29338",
+      "denoiser_comparison_group": "3ce5444aa393",
+      "checker": "cpu_bathroom_audit_v1",
+      "registry_sha256": "41b440008944cc8ccd9357e1e79774d6fbd7d5c3ba9e012a3c8348e81debe163",
+      "scenario_sha256": "b8d76d84e6eb12d9b197f149544ce0d28896c0c00d76b33409ed10d9827f65a2",
+      "summary_recomputation_matches": {
+        "overall_valid_count": true,
+        "structural_valid_count": true,
+        "per_constraint": true,
+        "severity": true,
+        "compliance": true,
+        "all_applicable_pass_fraction": true
+      },
+      "source_sha256": {
+        "config.json": "1b0ae0bc0cb592fdfdb0d3df864f5737c6825c187e53903762c76f815426674a",
+        "run.json": "d48d8a7fd36dfddb19ed9030e088c6868ac6d4874d48ed283c6d338ad246efe7",
+        "candidates.jsonl": "56658b181e280a27dc4950df045cbe6f2d9ce455018a128b36af32cb66b724fc"
+      },
+      "diversity": {
+        "population": "structurally_valid_with_usable_geometry",
+        "input_count": 100,
+        "eligible_count": 99,
+        "excluded_count": 1,
+        "exclusion_reasons": {
+          "structurally_invalid_or_unrecorded": 1
+        },
+        "graph_unique_count": 99,
+        "graph_unique_fraction": 1.0,
+        "graph_duplicate_fraction": 0.0,
+        "graph_coordinate_rounding_decimals": 6,
+        "raster_eligible_count": 99,
+        "raster_excluded_count": 0,
+        "raster_size": 64,
+        "canvas_size_drawing_pixels": 512,
+        "room_labels": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "pair_count": 4851,
+        "mean_pairwise_semantic_distance": 0.8096837089923969,
+        "near_duplicate_threshold": 0.05,
+        "near_duplicate_fraction": 0.0,
+        "interpretation": "Semantic distance is 1 minus intersection/union across room-label masks; background and outside are excluded. Near-duplicate fraction counts layouts with at least one close neighbor. All pairs are evaluated.",
+        "limitations": "Fixed-canvas low-resolution diagnostics; no translation/rotation/scale alignment. Raster geometry is clipped to the 512-pixel canvas and does not separately encode walls. Eligible counts differ if methods have different structural validity. This is not reference-data fidelity."
+      },
+      "distribution_vs_baseline": {
+        "reference": "generated_baseline_not_RPLAN",
+        "population": "structurally_valid_with_usable_geometry",
+        "input_count": 100,
+        "eligible_count": 99,
+        "excluded_count": 1,
+        "baseline_input_count": 100,
+        "baseline_eligible_count": 86,
+        "baseline_excluded_count": 14,
+        "exclusion_reasons": {
+          "structurally_invalid_or_unrecorded": 1
+        },
+        "baseline_exclusion_reasons": {
+          "structurally_invalid_or_unrecorded": 14
+        },
+        "features": {
+          "rooms": {
+            "method_mean": 6.626262626262626,
+            "baseline_mean": 6.686046511627907,
+            "wasserstein_distance": 0.0978388536528072
+          },
+          "junctions": {
+            "method_mean": 23.21212121212121,
+            "baseline_mean": 22.53488372093023,
+            "wasserstein_distance": 0.6772374911909793
+          },
+          "edges": {
+            "method_mean": 28.373737373737374,
+            "baseline_mean": 27.953488372093023,
+            "wasserstein_distance": 0.5400516795865636
+          },
+          "total_room_area_drawing_units2": {
+            "method_mean": 72359.3686868687,
+            "baseline_mean": 70434.16279069768,
+            "wasserstein_distance": 2402.2514681700723
+          }
+        },
+        "room_type_js_divergence_bits": 0.0002686819148102794,
+        "room_type_frequencies": {
+          "0": 0.14634146341463414,
+          "1": 0.3551829268292683,
+          "2": 0.009146341463414634,
+          "3": 0.14329268292682926,
+          "4": 0.17530487804878048,
+          "5": 0.17073170731707318
+        },
+        "baseline_room_type_frequencies": {
+          "0": 0.14956521739130435,
+          "1": 0.36695652173913046,
+          "2": 0.006956521739130435,
+          "3": 0.1426086956521739,
+          "4": 0.16869565217391305,
+          "5": 0.16521739130434782
+        },
+        "interpretation": "Room counts/areas exclude outside label 6; area is a sum of polygons in drawing-pixel squared units. Wasserstein distances have the original feature units. Composition is pooled over room instances. These marginal diagnostics do not establish perceptual quality or real-data fidelity.",
+        "comparison_scope": "Same scenario, registry, model/checkpoint and representation; SVDD batching differs, so descriptive cross-batch geometry comparison only."
+      }
+    },
+    {
+      "method": "best_of_n",
+      "parameters": {
+        "n": 11,
+        "k": null,
+        "guided_steps": null,
+        "temperature": null,
+        "batch_size": 4,
+        "inference_batch_size": 10,
+        "reward_backend": "gpu"
+      },
+      "overall_valid_count": 94,
+      "overall_valid_rate": 0.94,
+      "overall_validity_counts": {
+        "valid": 94,
+        "invalid": 6,
+        "unknown": 0,
+        "not_applicable": 0
+      },
+      "structural_valid_count": 100,
+      "structural_valid_rate": 1.0,
+      "all_applicable_pass_fraction": 0.94,
+      "all_measurable_pass_fraction": 0.94,
+      "pass": 1088,
+      "fail": 12,
+      "unknown": 0,
+      "applicable_count": 1100,
+      "measurable_count": 1100,
+      "not_applicable": 0,
+      "compliance": 0.9890909090909091,
+      "measurable_fraction": 1.0,
+      "unknown_fraction": 0.0,
+      "severity": {
+        "count": 1100,
+        "mean": 0.001590909090909091,
+        "median": 0.0,
+        "min": 0.0,
+        "max": 0.16666666666666666
+      },
+      "compute": {
+        "total_wall_seconds": null,
+        "node_calls": 125000,
+        "edge_calls": 250,
+        "node_samples": 1100000,
+        "edge_samples": 2200,
+        "graph_completions": null,
+        "candidate_evaluations": null,
+        "gpu_candidate_evaluations": null,
+        "cpu_candidate_evaluations": null,
+        "peak_gpu_allocated_bytes": null,
+        "peak_gpu_reserved_bytes": null,
+        "fallback_count": null,
+        "nfe_provenance": "recorded_run_counter",
+        "wall_seconds_per_trial": null,
+        "node_samples_per_trial": 11000.0,
+        "time_per_trial_interpretation": "amortized throughput, not isolated latency"
+      },
+      "per_constraint": {
+        "C033": {
+          "pass": 100,
+          "fail": 0,
+          "unknown": 0,
+          "not_applicable": 0,
+          "applicable_count": 100,
+          "measurable_count": 100,
+          "assumption_based_count": 100,
+          "compliance": 1.0,
+          "measurable_fraction": 1.0,
+          "unknown_fraction": 0.0,
+          "assumption_based_fraction": 1.0,
+          "severity": {
+            "count": 100,
+            "mean": 0.0,
+            "median": 0.0,
+            "min": 0.0,
+            "max": 0.0
+          }
+        },
+        "C035": {
+          "pass": 100,
+          "fail": 0,
+          "unknown": 0,
+          "not_applicable": 0,
+          "applicable_count": 100,
+          "measurable_count": 100,
+          "assumption_based_count": 100,
+          "compliance": 1.0,
+          "measurable_fraction": 1.0,
+          "unknown_fraction": 0.0,
+          "assumption_based_fraction": 1.0,
+          "severity": {
+            "count": 100,
+            "mean": 0.0,
+            "median": 0.0,
+            "min": 0.0,
+            "max": 0.0
+          }
+        },
+        "C036": {
+          "pass": 100,
+          "fail": 0,
+          "unknown": 0,
+          "not_applicable": 0,
+          "applicable_count": 100,
+          "measurable_count": 100,
+          "assumption_based_count": 100,
+          "compliance": 1.0,
+          "measurable_fraction": 1.0,
+          "unknown_fraction": 0.0,
+          "assumption_based_fraction": 1.0,
+          "severity": {
+            "count": 100,
+            "mean": 0.0,
+            "median": 0.0,
+            "min": 0.0,
+            "max": 0.0
+          }
+        },
+        "C037": {
+          "pass": 100,
+          "fail": 0,
+          "unknown": 0,
+          "not_applicable": 0,
+          "applicable_count": 100,
+          "measurable_count": 100,
+          "assumption_based_count": 100,
+          "compliance": 1.0,
+          "measurable_fraction": 1.0,
+          "unknown_fraction": 0.0,
+          "assumption_based_fraction": 1.0,
+          "severity": {
+            "count": 100,
+            "mean": 0.0,
+            "median": 0.0,
+            "min": 0.0,
+            "max": 0.0
+          }
+        },
+        "C041": {
+          "pass": 100,
+          "fail": 0,
+          "unknown": 0,
+          "not_applicable": 0,
+          "applicable_count": 100,
+          "measurable_count": 100,
+          "assumption_based_count": 100,
+          "compliance": 1.0,
+          "measurable_fraction": 1.0,
+          "unknown_fraction": 0.0,
+          "assumption_based_fraction": 1.0,
+          "severity": {
+            "count": 100,
+            "mean": 0.0,
+            "median": 0.0,
+            "min": 0.0,
+            "max": 0.0
+          }
+        },
+        "C076": {
+          "pass": 100,
+          "fail": 0,
+          "unknown": 0,
+          "not_applicable": 0,
+          "applicable_count": 100,
+          "measurable_count": 100,
+          "assumption_based_count": 100,
+          "compliance": 1.0,
+          "measurable_fraction": 1.0,
+          "unknown_fraction": 0.0,
+          "assumption_based_fraction": 1.0,
+          "severity": {
+            "count": 100,
+            "mean": 0.0,
+            "median": 0.0,
+            "min": 0.0,
+            "max": 0.0
+          }
+        },
+        "C077": {
+          "pass": 100,
+          "fail": 0,
+          "unknown": 0,
+          "not_applicable": 0,
+          "applicable_count": 100,
+          "measurable_count": 100,
+          "assumption_based_count": 100,
+          "compliance": 1.0,
+          "measurable_fraction": 1.0,
+          "unknown_fraction": 0.0,
+          "assumption_based_fraction": 1.0,
+          "severity": {
+            "count": 100,
+            "mean": 0.0,
+            "median": 0.0,
+            "min": 0.0,
+            "max": 0.0
+          }
+        },
+        "C078": {
+          "pass": 100,
+          "fail": 0,
+          "unknown": 0,
+          "not_applicable": 0,
+          "applicable_count": 100,
+          "measurable_count": 100,
+          "assumption_based_count": 100,
+          "compliance": 1.0,
+          "measurable_fraction": 1.0,
+          "unknown_fraction": 0.0,
+          "assumption_based_fraction": 1.0,
+          "severity": {
+            "count": 100,
+            "mean": 0.0,
+            "median": 0.0,
+            "min": 0.0,
+            "max": 0.0
+          }
+        },
+        "C085": {
+          "pass": 94,
+          "fail": 6,
+          "unknown": 0,
+          "not_applicable": 0,
+          "applicable_count": 100,
+          "measurable_count": 100,
+          "assumption_based_count": 100,
+          "compliance": 0.94,
+          "measurable_fraction": 1.0,
+          "unknown_fraction": 0.0,
+          "assumption_based_fraction": 1.0,
+          "severity": {
+            "count": 100,
+            "mean": 0.0075,
+            "median": 0.0,
+            "min": 0.0,
+            "max": 0.125
+          }
+        },
+        "C086": {
+          "pass": 100,
+          "fail": 0,
+          "unknown": 0,
+          "not_applicable": 0,
+          "applicable_count": 100,
+          "measurable_count": 100,
+          "assumption_based_count": 100,
+          "compliance": 1.0,
+          "measurable_fraction": 1.0,
+          "unknown_fraction": 0.0,
+          "assumption_based_fraction": 1.0,
+          "severity": {
+            "count": 100,
+            "mean": 0.0,
+            "median": 0.0,
+            "min": 0.0,
+            "max": 0.0
+          }
+        },
+        "C090": {
+          "pass": 94,
+          "fail": 6,
+          "unknown": 0,
+          "not_applicable": 0,
+          "applicable_count": 100,
+          "measurable_count": 100,
+          "assumption_based_count": 100,
+          "compliance": 0.94,
+          "measurable_fraction": 1.0,
+          "unknown_fraction": 0.0,
+          "assumption_based_fraction": 1.0,
+          "severity": {
+            "count": 100,
+            "mean": 0.01,
+            "median": 0.0,
+            "min": 0.0,
+            "max": 0.16666666666666666
+          }
+        }
+      },
+      "per_group": {
+        "bathroom_fixtures_turning": {
+          "status": "assessed",
+          "active_scored_ids": [
+            "C036",
+            "C037",
+            "C041"
+          ],
+          "active_supporting_ids": [],
+          "disabled_ids": [],
+          "selected_trials": 100,
+          "missing_result_count": 0,
+          "overall_valid_count": 100,
+          "overall_valid_rate": 1.0,
+          "overall_validity_counts": {
+            "valid": 100,
+            "invalid": 0,
+            "unknown": 0,
+            "not_applicable": 0,
+            "not_assessed": 0
+          },
+          "pass": 300,
+          "fail": 0,
+          "unknown": 0,
+          "not_applicable": 0,
+          "applicable_count": 300,
+          "measurable_count": 300,
+          "assumption_based_count": 300,
+          "compliance": 1.0,
+          "measurable_fraction": 1.0,
+          "unknown_fraction": 0.0,
+          "assumption_based_fraction": 1.0,
+          "severity": {
+            "count": 300,
+            "mean": 0.0,
+            "median": 0.0,
+            "min": 0.0,
+            "max": 0.0
+          },
+          "check_pass_rate": 1.0,
+          "check_pass_rate_denominator": "observed applicable active scored checks, including unknowns",
+          "claim_levels": [
+            "potential_layout"
+          ]
+        },
+        "bedroom_accessibility": {
+          "status": "assessed",
+          "active_scored_ids": [
+            "C033",
+            "C035"
+          ],
+          "active_supporting_ids": [
+            "C034"
+          ],
+          "disabled_ids": [],
+          "selected_trials": 100,
+          "missing_result_count": 0,
+          "overall_valid_count": 100,
+          "overall_valid_rate": 1.0,
+          "overall_validity_counts": {
+            "valid": 100,
+            "invalid": 0,
+            "unknown": 0,
+            "not_applicable": 0,
+            "not_assessed": 0
+          },
+          "pass": 200,
+          "fail": 0,
+          "unknown": 0,
+          "not_applicable": 0,
+          "applicable_count": 200,
+          "measurable_count": 200,
+          "assumption_based_count": 200,
+          "compliance": 1.0,
+          "measurable_fraction": 1.0,
+          "unknown_fraction": 0.0,
+          "assumption_based_fraction": 1.0,
+          "severity": {
+            "count": 200,
+            "mean": 0.0,
+            "median": 0.0,
+            "min": 0.0,
+            "max": 0.0
+          },
+          "check_pass_rate": 1.0,
+          "check_pass_rate_denominator": "observed applicable active scored checks, including unknowns",
+          "claim_levels": [
+            "potential_layout"
+          ]
+        },
+        "habitability": {
+          "status": "assessed",
+          "active_scored_ids": [
+            "C076",
+            "C077",
+            "C078"
+          ],
+          "active_supporting_ids": [
+            "C079",
+            "C080"
+          ],
+          "disabled_ids": [],
+          "selected_trials": 100,
+          "missing_result_count": 0,
+          "overall_valid_count": 100,
+          "overall_valid_rate": 1.0,
+          "overall_validity_counts": {
+            "valid": 100,
+            "invalid": 0,
+            "unknown": 0,
+            "not_applicable": 0,
+            "not_assessed": 0
+          },
+          "pass": 300,
+          "fail": 0,
+          "unknown": 0,
+          "not_applicable": 0,
+          "applicable_count": 300,
+          "measurable_count": 300,
+          "assumption_based_count": 300,
+          "compliance": 1.0,
+          "measurable_fraction": 1.0,
+          "unknown_fraction": 0.0,
+          "assumption_based_fraction": 1.0,
+          "severity": {
+            "count": 300,
+            "mean": 0.0,
+            "median": 0.0,
+            "min": 0.0,
+            "max": 0.0
+          },
+          "check_pass_rate": 1.0,
+          "check_pass_rate_denominator": "observed applicable active scored checks, including unknowns",
+          "claim_levels": [
+            "assumption_based"
+          ]
+        },
+        "ventilation": {
+          "status": "assessed",
+          "active_scored_ids": [
+            "C085",
+            "C086",
+            "C090"
+          ],
+          "active_supporting_ids": [],
+          "disabled_ids": [],
+          "selected_trials": 100,
+          "missing_result_count": 0,
+          "overall_valid_count": 94,
+          "overall_valid_rate": 0.94,
+          "overall_validity_counts": {
+            "valid": 94,
+            "invalid": 6,
+            "unknown": 0,
+            "not_applicable": 0,
+            "not_assessed": 0
+          },
+          "pass": 288,
+          "fail": 12,
+          "unknown": 0,
+          "not_applicable": 0,
+          "applicable_count": 300,
+          "measurable_count": 300,
+          "assumption_based_count": 300,
+          "compliance": 0.96,
+          "measurable_fraction": 1.0,
+          "unknown_fraction": 0.0,
+          "assumption_based_fraction": 1.0,
+          "severity": {
+            "count": 300,
+            "mean": 0.005833333333333333,
+            "median": 0.0,
+            "min": 0.0,
+            "max": 0.16666666666666666
+          },
+          "check_pass_rate": 0.96,
+          "check_pass_rate_denominator": "observed applicable active scored checks, including unknowns",
+          "claim_levels": [
+            "assumption_based"
+          ]
+        }
+      },
+      "constraint_counts": {
+        "registered": 14,
+        "scored": 11,
+        "supporting": 3,
+        "active": 14,
+        "active_scored": 11,
+        "active_supporting": 3,
+        "disabled": 0
+      },
+      "active_scored_ids": [
+        "C033",
+        "C035",
+        "C036",
+        "C037",
+        "C041",
+        "C076",
+        "C077",
+        "C078",
+        "C085",
+        "C086",
+        "C090"
+      ],
+      "active_supporting_ids": [
+        "C034",
+        "C079",
+        "C080"
+      ],
+      "run_id": "best_of_n",
+      "run_dir": "test_time/outputs/bathroom_001/controls_rebuilt/batch_1_seed_10000/best_of_n",
+      "selected_count": 100,
+      "saved_candidate_count": 1100,
+      "trial_seed_range": [
+        10000,
+        10099
+      ],
+      "overall_wilson95": [
+        0.8752318455410406,
+        0.9722138760368118
+      ],
+      "applicability_coverage": 1.0,
+      "applicable_check_pass_fraction": 0.9890909090909091,
+      "historical_generation_seconds": 2014.809457835996,
+      "recalibration_timing": {
+        "wall_seconds": 206.47571971798607,
+        "tensor_rescore_and_selection_seconds": 161.69293239999388,
+        "cpu_audit_seconds": 42.567251043059514,
+        "tensor_candidates": 1100,
+        "cpu_candidates": 100,
+        "new_denoiser_evaluations": 0
+      },
+      "prefix_reselection_timing": null,
+      "comparison_group": "f057e81e8344",
+      "denoiser_comparison_group": "3ce5444aa393",
+      "checker": "cpu_bathroom_audit_v1",
+      "registry_sha256": "41b440008944cc8ccd9357e1e79774d6fbd7d5c3ba9e012a3c8348e81debe163",
+      "scenario_sha256": "b8d76d84e6eb12d9b197f149544ce0d28896c0c00d76b33409ed10d9827f65a2",
+      "summary_recomputation_matches": {
+        "overall_valid_count": true,
+        "structural_valid_count": true,
+        "per_constraint": true,
+        "severity": true,
+        "compliance": true,
+        "all_applicable_pass_fraction": true
+      },
+      "source_sha256": {
+        "config.json": "85e92230941378a4c7fa6b047ceee84cdfa61b6f4f09adcfd3929fec6347cf9c",
+        "run.json": "438a5b1e38d591d0ad4a8a38e265e919ea48639d60935fe8c79b1e84aa2163fa",
+        "candidates.jsonl": "9bd6cccda80b89d80cf076959972b25777b8b860fa2a278b560f6f40a824bcbe"
+      },
+      "diversity": {
+        "population": "structurally_valid_with_usable_geometry",
+        "input_count": 100,
+        "eligible_count": 100,
+        "excluded_count": 0,
+        "exclusion_reasons": {},
+        "graph_unique_count": 100,
+        "graph_unique_fraction": 1.0,
+        "graph_duplicate_fraction": 0.0,
+        "graph_coordinate_rounding_decimals": 6,
+        "raster_eligible_count": 100,
+        "raster_excluded_count": 0,
+        "raster_size": 64,
+        "canvas_size_drawing_pixels": 512,
+        "room_labels": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "pair_count": 4950,
+        "mean_pairwise_semantic_distance": 0.8051373615954414,
+        "near_duplicate_threshold": 0.05,
+        "near_duplicate_fraction": 0.0,
+        "interpretation": "Semantic distance is 1 minus intersection/union across room-label masks; background and outside are excluded. Near-duplicate fraction counts layouts with at least one close neighbor. All pairs are evaluated.",
+        "limitations": "Fixed-canvas low-resolution diagnostics; no translation/rotation/scale alignment. Raster geometry is clipped to the 512-pixel canvas and does not separately encode walls. Eligible counts differ if methods have different structural validity. This is not reference-data fidelity."
+      },
+      "distribution_vs_baseline": {
+        "reference": "generated_baseline_not_RPLAN",
+        "population": "structurally_valid_with_usable_geometry",
+        "input_count": 100,
+        "eligible_count": 100,
+        "excluded_count": 0,
+        "baseline_input_count": 100,
+        "baseline_eligible_count": 86,
+        "baseline_excluded_count": 14,
+        "exclusion_reasons": {},
+        "baseline_exclusion_reasons": {
+          "structurally_invalid_or_unrecorded": 14
+        },
+        "features": {
+          "rooms": {
+            "method_mean": 6.27,
+            "baseline_mean": 6.686046511627907,
+            "wasserstein_distance": 0.41604651162790696
+          },
+          "junctions": {
+            "method_mean": 21.24,
+            "baseline_mean": 22.53488372093023,
+            "wasserstein_distance": 1.3079069767441862
+          },
+          "edges": {
+            "method_mean": 26.26,
+            "baseline_mean": 27.953488372093023,
+            "wasserstein_distance": 1.706511627906977
+          },
+          "total_room_area_drawing_units2": {
+            "method_mean": 67839.35,
+            "baseline_mean": 70434.16279069768,
+            "wasserstein_distance": 3105.1537209302323
+          }
+        },
+        "room_type_js_divergence_bits": 0.002164351186736786,
+        "room_type_frequencies": {
+          "0": 0.1594896331738437,
+          "1": 0.31738437001594894,
+          "2": 0.009569377990430622,
+          "3": 0.1594896331738437,
+          "4": 0.17384370015948963,
+          "5": 0.18022328548644337
+        },
+        "baseline_room_type_frequencies": {
+          "0": 0.14956521739130435,
+          "1": 0.36695652173913046,
+          "2": 0.006956521739130435,
+          "3": 0.1426086956521739,
+          "4": 0.16869565217391305,
+          "5": 0.16521739130434782
+        },
+        "interpretation": "Room counts/areas exclude outside label 6; area is a sum of polygons in drawing-pixel squared units. Wasserstein distances have the original feature units. Composition is pooled over room instances. These marginal diagnostics do not establish perceptual quality or real-data fidelity.",
+        "comparison_scope": "Same scenario, registry, model/checkpoint and representation; SVDD batching differs, so descriptive cross-batch geometry comparison only."
+      }
+    }
+  ],
+  "paired_B2_SVDD": {
+    "method_a": "best_of_n_last10",
+    "method_b": "svdd_pm_last10",
+    "paired_outputs": 100,
+    "pairing_key": "config.seed + row.trial; candidate seed differs when Best-of-N selects another candidate",
+    "trial_seed_range": [
+      10000,
+      10099
+    ],
+    "both_valid": 37,
+    "only_a_valid": 10,
+    "only_b_valid": 19,
+    "neither_valid": 34,
+    "b_minus_a_fraction": 0.09,
+    "paired_bootstrap_95_fraction": [
+      -0.01,
+      0.19
+    ],
+    "bootstrap_recipe": {
+      "replicates": 100000,
+      "python_random_seed": 20261029,
+      "sample_size": 100,
+      "algorithm": "rng=random.Random(20261029); sorted(sum(rng.choices(deltas,k=100))/100 for _ in range(100000)); endpoints at indices 2500 and 97500",
+      "deltas_in_trial_order": [
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        -1,
+        0,
+        -1,
+        0,
+        0,
+        0,
+        -1,
+        0,
+        0,
+        1,
+        1,
+        0,
+        -1,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1,
+        1,
+        0,
+        -1,
+        1,
+        1,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1,
+        -1,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        -1,
+        1,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        -1,
+        0,
+        1,
+        0,
+        0,
+        -1,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1,
+        1,
+        0,
+        0,
+        1,
+        -1,
+        0,
+        1,
+        0,
+        0
+      ]
+    },
+    "mcnemar_exact_two_sided_p": 0.13604594767093658,
+    "equality_checks": {
+      "scenario": true,
+      "constraints": true,
+      "adapter": true,
+      "guidance": true,
+      "reward_backend": true
+    },
+    "equal_denoiser_comparison_group": true,
+    "batching_a": [
+      4,
+      10
+    ],
+    "batching_b": [
+      10,
+      32
+    ],
+    "interpretation": "Observed gain is suggestive; interval includes zero. Same trial seeds do not make batching identical or demonstrate general superiority."
+  },
+  "provenance": {
+    "prefix_source_hash_matches": {
+      "config.json": true,
+      "run.json": true,
+      "candidates.jsonl": true
+    },
+    "prefix_geometry_unchanged": true,
+    "prefix_candidate_indices": [
+      0,
+      1
+    ],
+    "prefix_metadata": {
+      "source_n": 11,
+      "n": 2,
+      "saved_candidates": 200,
+      "selected_outputs": 100,
+      "selection_rule": "Original structural/unknown-ID/energy/seed rule applied only to the fixed candidate-index prefix",
+      "effective_node_samples": 200000,
+      "source_node_samples": 1100000,
+      "new_denoiser_evaluations": 0,
+      "model_inference_performed": false,
+      "population_evaluation_backend": "mixed_tensor_cpu"
+    },
+    "reselection_code_hash_matches": {
+      "reselect.py": true,
+      "gpu_sampling.py": true,
+      "constraints.py": true,
+      "policy.py": true,
+      "audit_geometry.py": true,
+      "bathroom_geometry.py": true
+    },
+    "historical_controls": {
+      "baseline": {
+        "reselection": false,
+        "generation_unchanged": true,
+        "saved_candidates": 100,
+        "selected_outputs": 100,
+        "changed_winners": 0,
+        "selected_evaluation_backend": "cpu_bathroom_audit_v1",
+        "population_evaluation_backend": "cpu_bathroom_audit_v1",
+        "source_hash_matches": {
+          "config.json": true,
+          "run.json": true,
+          "candidates.jsonl": true
+        }
+      },
+      "best_of_n": {
+        "reselection": true,
+        "generation_unchanged": true,
+        "saved_candidates": 1100,
+        "selected_outputs": 100,
+        "changed_winners": 82,
+        "selected_evaluation_backend": "cpu_bathroom_audit_v1",
+        "population_evaluation_backend": "mixed_tensor_cpu",
+        "source_hash_matches": {
+          "config.json": true,
+          "run.json": true,
+          "candidates.jsonl": true
+        }
+      }
+    }
+  },
+  "examples_first_two_trial_seeds": [
+    {
+      "run_id": "baseline",
+      "trial_seed": 10000,
+      "candidate_seed": 10000,
+      "overall_status": "valid",
+      "structurally_valid": true,
+      "nonpass": {},
+      "bathroom_bounds": {
+        "room_area_m2": 4.2999114990234375,
+        "bbox_dimensions_m": [
+          1.72265625,
+          2.49609375
+        ],
+        "circle_radius_upper_bound_m": 0.861328125,
+        "minimum_circle_wc_area_m2": 2.0471458676442587,
+        "minimum_transfer_fixtures_door_area_m2": 2.122654824574367,
+        "transfer_envelope_dimensions_m": [
+          1.2000000000000002,
+          1.3
+        ],
+        "transfer_envelope_fits": true
+      },
+      "bathroom_reason": "One shared fixture, door, transfer and circle completion was witnessed",
+      "bathroom_door_overlap_m": 0.0,
+      "bathroom_basin_overlap_m": 0.09042903073209807,
+      "C085_observations": {
+        "main_room_count": 3,
+        "room_count": 1,
+        "room_indices": [
+          4
+        ],
+        "observed_flow_m3_h": 105.0,
+        "required_flow_m3_h": 105.0
+      },
+      "C090_observations": {
+        "main_room_count": 3,
+        "kitchen_count": 1,
+        "observed_total_flow_m3_h": 75.0,
+        "observed_kitchen_flow_m3_h": 45.0,
+        "ventilation_mode": "occupant_adjustable",
+        "required_total_flow_m3_h": 75.0,
+        "required_kitchen_flow_m3_h": 45.0
+      }
+    },
+    {
+      "run_id": "baseline",
+      "trial_seed": 10001,
+      "candidate_seed": 10001,
+      "overall_status": "invalid",
+      "structurally_valid": true,
+      "nonpass": {
+        "C036": "unknown",
+        "C037": "unknown",
+        "C041": "unknown",
+        "C085": "fail",
+        "C090": "fail"
+      },
+      "bathroom_bounds": {
+        "room_area_m2": 4.7720489501953125,
+        "bbox_dimensions_m": [
+          1.7578125,
+          2.7421875
+        ],
+        "circle_radius_upper_bound_m": 0.87890625,
+        "minimum_circle_wc_area_m2": 2.0471458676442587,
+        "minimum_transfer_fixtures_door_area_m2": 2.122654824574367,
+        "transfer_envelope_dimensions_m": [
+          1.2000000000000002,
+          1.3
+        ],
+        "transfer_envelope_fits": true
+      },
+      "bathroom_reason": "Finite shared-layout search has no complete audited witness; feasibility is unresolved",
+      "bathroom_door_overlap_m": 0.1422713545953983,
+      "bathroom_basin_overlap_m": 0.0,
+      "C085_observations": {
+        "main_room_count": 4,
+        "room_count": 1,
+        "room_indices": [
+          7
+        ],
+        "observed_flow_m3_h": 105.0,
+        "required_flow_m3_h": 120.0
+      },
+      "C090_observations": {
+        "main_room_count": 4,
+        "kitchen_count": 1,
+        "observed_total_flow_m3_h": 75.0,
+        "observed_kitchen_flow_m3_h": 45.0,
+        "ventilation_mode": "occupant_adjustable",
+        "required_total_flow_m3_h": 90.0,
+        "required_kitchen_flow_m3_h": 45.0
+      }
+    },
+    {
+      "run_id": "best_of_n_last10",
+      "trial_seed": 10000,
+      "candidate_seed": 10000,
+      "overall_status": "valid",
+      "structurally_valid": true,
+      "nonpass": {},
+      "bathroom_bounds": {
+        "room_area_m2": 4.2999114990234375,
+        "bbox_dimensions_m": [
+          1.72265625,
+          2.49609375
+        ],
+        "circle_radius_upper_bound_m": 0.861328125,
+        "minimum_circle_wc_area_m2": 2.0471458676442587,
+        "minimum_transfer_fixtures_door_area_m2": 2.122654824574367,
+        "transfer_envelope_dimensions_m": [
+          1.2000000000000002,
+          1.3
+        ],
+        "transfer_envelope_fits": true
+      },
+      "bathroom_reason": "One shared fixture, door, transfer and circle completion was witnessed",
+      "bathroom_door_overlap_m": 0.0,
+      "bathroom_basin_overlap_m": 0.09042903073209807,
+      "C085_observations": {
+        "main_room_count": 3,
+        "room_count": 1,
+        "room_indices": [
+          4
+        ],
+        "observed_flow_m3_h": 105.0,
+        "required_flow_m3_h": 105.0
+      },
+      "C090_observations": {
+        "main_room_count": 3,
+        "kitchen_count": 1,
+        "observed_total_flow_m3_h": 75.0,
+        "observed_kitchen_flow_m3_h": 45.0,
+        "ventilation_mode": "occupant_adjustable",
+        "required_total_flow_m3_h": 75.0,
+        "required_kitchen_flow_m3_h": 45.0
+      }
+    },
+    {
+      "run_id": "best_of_n_last10",
+      "trial_seed": 10001,
+      "candidate_seed": 10001,
+      "overall_status": "invalid",
+      "structurally_valid": true,
+      "nonpass": {
+        "C036": "unknown",
+        "C037": "unknown",
+        "C041": "unknown",
+        "C085": "fail",
+        "C090": "fail"
+      },
+      "bathroom_bounds": {
+        "room_area_m2": 4.7720489501953125,
+        "bbox_dimensions_m": [
+          1.7578125,
+          2.7421875
+        ],
+        "circle_radius_upper_bound_m": 0.87890625,
+        "minimum_circle_wc_area_m2": 2.0471458676442587,
+        "minimum_transfer_fixtures_door_area_m2": 2.122654824574367,
+        "transfer_envelope_dimensions_m": [
+          1.2000000000000002,
+          1.3
+        ],
+        "transfer_envelope_fits": true
+      },
+      "bathroom_reason": "Finite shared-layout search has no complete audited witness; feasibility is unresolved",
+      "bathroom_door_overlap_m": 0.1422713545953983,
+      "bathroom_basin_overlap_m": 0.0,
+      "C085_observations": {
+        "main_room_count": 4,
+        "room_count": 1,
+        "room_indices": [
+          7
+        ],
+        "observed_flow_m3_h": 105.0,
+        "required_flow_m3_h": 120.0
+      },
+      "C090_observations": {
+        "main_room_count": 4,
+        "kitchen_count": 1,
+        "observed_total_flow_m3_h": 75.0,
+        "observed_kitchen_flow_m3_h": 45.0,
+        "ventilation_mode": "occupant_adjustable",
+        "required_total_flow_m3_h": 90.0,
+        "required_kitchen_flow_m3_h": 45.0
+      }
+    },
+    {
+      "run_id": "svdd_pm_last10",
+      "trial_seed": 10000,
+      "candidate_seed": 10000,
+      "overall_status": "valid",
+      "structurally_valid": true,
+      "nonpass": {},
+      "bathroom_bounds": {
+        "room_area_m2": 5.7039642333984375,
+        "bbox_dimensions_m": [
+          2.28515625,
+          2.49609375
+        ],
+        "circle_radius_upper_bound_m": 1.142578125,
+        "minimum_circle_wc_area_m2": 2.0471458676442587,
+        "minimum_transfer_fixtures_door_area_m2": 2.122654824574367,
+        "transfer_envelope_dimensions_m": [
+          1.2000000000000002,
+          1.3
+        ],
+        "transfer_envelope_fits": true
+      },
+      "bathroom_reason": "One shared fixture, door, transfer and circle completion was witnessed",
+      "bathroom_door_overlap_m": 0.0,
+      "bathroom_basin_overlap_m": 0.037594003770254236,
+      "C085_observations": {
+        "main_room_count": 3,
+        "room_count": 1,
+        "room_indices": [
+          4
+        ],
+        "observed_flow_m3_h": 105.0,
+        "required_flow_m3_h": 105.0
+      },
+      "C090_observations": {
+        "main_room_count": 3,
+        "kitchen_count": 1,
+        "observed_total_flow_m3_h": 75.0,
+        "observed_kitchen_flow_m3_h": 45.0,
+        "ventilation_mode": "occupant_adjustable",
+        "required_total_flow_m3_h": 75.0,
+        "required_kitchen_flow_m3_h": 45.0
+      }
+    },
+    {
+      "run_id": "svdd_pm_last10",
+      "trial_seed": 10001,
+      "candidate_seed": 10001,
+      "overall_status": "invalid",
+      "structurally_valid": true,
+      "nonpass": {
+        "C085": "fail",
+        "C090": "fail"
+      },
+      "bathroom_bounds": {
+        "room_area_m2": 5.812110900878906,
+        "bbox_dimensions_m": [
+          2.00390625,
+          2.91796875
+        ],
+        "circle_radius_upper_bound_m": 1.001953125,
+        "minimum_circle_wc_area_m2": 2.0471458676442587,
+        "minimum_transfer_fixtures_door_area_m2": 2.122654824574367,
+        "transfer_envelope_dimensions_m": [
+          1.2000000000000002,
+          1.3
+        ],
+        "transfer_envelope_fits": true
+      },
+      "bathroom_reason": "One shared fixture, door, transfer and circle completion was witnessed",
+      "bathroom_door_overlap_m": 0.22130176662971035,
+      "bathroom_basin_overlap_m": 0.0,
+      "C085_observations": {
+        "main_room_count": 4,
+        "room_count": 1,
+        "room_indices": [
+          7
+        ],
+        "observed_flow_m3_h": 105.0,
+        "required_flow_m3_h": 120.0
+      },
+      "C090_observations": {
+        "main_room_count": 4,
+        "kitchen_count": 1,
+        "observed_total_flow_m3_h": 75.0,
+        "observed_kitchen_flow_m3_h": 45.0,
+        "ventilation_mode": "occupant_adjustable",
+        "required_total_flow_m3_h": 90.0,
+        "required_kitchen_flow_m3_h": 45.0
+      }
+    },
+    {
+      "run_id": "best_of_n",
+      "trial_seed": 10000,
+      "candidate_seed": 10000,
+      "overall_status": "valid",
+      "structurally_valid": true,
+      "nonpass": {},
+      "bathroom_bounds": {
+        "room_area_m2": 4.2999114990234375,
+        "bbox_dimensions_m": [
+          1.72265625,
+          2.49609375
+        ],
+        "circle_radius_upper_bound_m": 0.861328125,
+        "minimum_circle_wc_area_m2": 2.0471458676442587,
+        "minimum_transfer_fixtures_door_area_m2": 2.122654824574367,
+        "transfer_envelope_dimensions_m": [
+          1.2000000000000002,
+          1.3
+        ],
+        "transfer_envelope_fits": true
+      },
+      "bathroom_reason": "One shared fixture, door, transfer and circle completion was witnessed",
+      "bathroom_door_overlap_m": 0.0,
+      "bathroom_basin_overlap_m": 0.09042903073209807,
+      "C085_observations": {
+        "main_room_count": 3,
+        "room_count": 1,
+        "room_indices": [
+          4
+        ],
+        "observed_flow_m3_h": 105.0,
+        "required_flow_m3_h": 105.0
+      },
+      "C090_observations": {
+        "main_room_count": 3,
+        "kitchen_count": 1,
+        "observed_total_flow_m3_h": 75.0,
+        "observed_kitchen_flow_m3_h": 45.0,
+        "ventilation_mode": "occupant_adjustable",
+        "required_total_flow_m3_h": 75.0,
+        "required_kitchen_flow_m3_h": 45.0
+      }
+    },
+    {
+      "run_id": "best_of_n",
+      "trial_seed": 10001,
+      "candidate_seed": 226985069907271918,
+      "overall_status": "valid",
+      "structurally_valid": true,
+      "nonpass": {},
+      "bathroom_bounds": {
+        "room_area_m2": 5.220703125,
+        "bbox_dimensions_m": [
+          2.3203125,
+          2.25
+        ],
+        "circle_radius_upper_bound_m": 1.125,
+        "minimum_circle_wc_area_m2": 2.0471458676442587,
+        "minimum_transfer_fixtures_door_area_m2": 2.122654824574367,
+        "transfer_envelope_dimensions_m": [
+          1.2000000000000002,
+          1.3
+        ],
+        "transfer_envelope_fits": true
+      },
+      "bathroom_reason": "One shared fixture, door, transfer and circle completion was witnessed",
+      "bathroom_door_overlap_m": 0.0,
+      "bathroom_basin_overlap_m": 0.07469067283495345,
+      "C085_observations": {
+        "main_room_count": 3,
+        "room_count": 1,
+        "room_indices": [
+          1
+        ],
+        "observed_flow_m3_h": 105.0,
+        "required_flow_m3_h": 105.0
+      },
+      "C090_observations": {
+        "main_room_count": 3,
+        "kitchen_count": 1,
+        "observed_total_flow_m3_h": 75.0,
+        "observed_kitchen_flow_m3_h": 45.0,
+        "ventilation_mode": "occupant_adjustable",
+        "required_total_flow_m3_h": 75.0,
+        "required_kitchen_flow_m3_h": 45.0
+      }
+    }
+  ],
+  "svdd_ventilation_unknowns": [
+    {
+      "trial_seed": 10027,
+      "structurally_valid": true,
+      "diagnostics": [],
+      "C085_explanation": "No kitchen polygon is available to map the declared extraction flow",
+      "C090_explanation": "No kitchen polygon is available to map the declared reduced kitchen flow",
+      "C085_observations": {
+        "main_room_count": 5,
+        "room_count": 0,
+        "room_indices": [],
+        "observed_flow_m3_h": 105.0
+      }
+    },
+    {
+      "trial_seed": 10032,
+      "structurally_valid": true,
+      "diagnostics": [],
+      "C085_explanation": "No kitchen polygon is available to map the declared extraction flow",
+      "C090_explanation": "No kitchen polygon is available to map the declared reduced kitchen flow",
+      "C085_observations": {
+        "main_room_count": 4,
+        "room_count": 0,
+        "room_indices": [],
+        "observed_flow_m3_h": 105.0
+      }
+    },
+    {
+      "trial_seed": 10049,
+      "structurally_valid": true,
+      "diagnostics": [],
+      "C085_explanation": "No kitchen polygon is available to map the declared extraction flow",
+      "C090_explanation": "No kitchen polygon is available to map the declared reduced kitchen flow",
+      "C085_observations": {
+        "main_room_count": 3,
+        "room_count": 0,
+        "room_indices": [],
+        "observed_flow_m3_h": 105.0
+      }
+    },
+    {
+      "trial_seed": 10056,
+      "structurally_valid": false,
+      "diagnostics": [
+        "Wall segments cross or overlap without a shared junction",
+        "Room 0 polygon is not explicitly closed",
+        "Room 0: Room polygon is invalid or has zero area"
+      ],
+      "C085_explanation": "Unreliable extracted geometry: Room polygon is invalid or has zero area",
+      "C090_explanation": "Unreliable extracted geometry: Room polygon is invalid or has zero area",
+      "C085_observations": {}
+    },
+    {
+      "trial_seed": 10079,
+      "structurally_valid": true,
+      "diagnostics": [],
+      "C085_explanation": "No kitchen polygon is available to map the declared extraction flow",
+      "C090_explanation": "No kitchen polygon is available to map the declared reduced kitchen flow",
+      "C085_observations": {
+        "main_room_count": 4,
+        "room_count": 0,
+        "room_indices": [],
+        "observed_flow_m3_h": 105.0
+      }
+    },
+    {
+      "trial_seed": 10098,
+      "structurally_valid": true,
+      "diagnostics": [],
+      "C085_explanation": "No kitchen polygon is available to map the declared extraction flow",
+      "C090_explanation": "No kitchen polygon is available to map the declared reduced kitchen flow",
+      "C085_observations": {
+        "main_room_count": 4,
+        "room_count": 0,
+        "room_indices": [],
+        "observed_flow_m3_h": 105.0
+      }
+    }
+  ]
+}

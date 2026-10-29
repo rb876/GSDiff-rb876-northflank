@@ -66,12 +66,58 @@ def test_pairing_uses_trial_seeds_not_candidate_seeds_and_checks_compatibility(t
     saved_run(tmp_path / "best_of_n", selected, method="best_of_n")
     saved_run(tmp_path / "different_seed", selected, method="svdd_pm", seed=20000)
     saved_run(tmp_path / "different_scenario", selected, method="svdd_pm", scale=0.05)
+    checker = saved_run(tmp_path / "different_checker", selected, method="svdd_pm")
+    config = read_json(checker / "config.json")
+    write_json(checker / "config.json", {**config, "final_checker": "another_checker"})
     records, _ = load_records(tmp_path)
     pairs = paired_validity(records)
     assert len(pairs) == 1
     assert pairs[0]["only_b_valid"] == 3 and pairs[0]["b_minus_a_validity_points"] == 75
     incompatible = next(record for record in records if record["label"] == "different_scenario")
     assert baseline_for(incompatible, records) is None
+    incompatible = next(record for record in records if record["label"] == "different_checker")
+    assert baseline_for(incompatible, records) is None
+
+
+@pytest.mark.parametrize("batch_size,inference_batch_size", [(4, 32), (32, 10)])
+def test_quality_comparisons_allow_batching_differences_but_runtime_does_not(
+        tmp_path, monkeypatch, batch_size, inference_batch_size):
+    pytest.importorskip("matplotlib")
+    from test_time import analysis_gallery, analysis_plots
+
+    baseline = saved_run(tmp_path / "baseline", mixed_rows())
+    svdd = saved_run(tmp_path / "svdd_pm", [
+        candidate(index, [result("C035", "pass"), result("C077", "pass")]) for index in range(4)
+    ], method="svdd_pm")
+    for directory, batch, inference_batch in ((baseline, 32, 32), (svdd, batch_size, inference_batch_size)):
+        config = read_json(directory / "config.json")
+        write_json(directory / "config.json", {**config, "batch_size": batch, "inference_batch_size": inference_batch})
+
+    monkeypatch.setattr(analysis_plots, "plot_analysis", lambda records, output: {})
+    monkeypatch.setattr(analysis_gallery, "build_gallery", lambda records, output: {"sample_count": 8, "examples": {}})
+    output = Path(analyze(tmp_path)["output_dir"])
+    payload = read_json(output / "analysis.json")
+    baseline_record, svdd_record = payload["methods"]
+    metrics = svdd_record["metrics"]
+    assert baseline_record["metrics"]["comparison_group"] != metrics["comparison_group"]
+    assert baseline_record["metrics"]["denoiser_comparison_group"] == metrics["denoiser_comparison_group"]
+    assert metrics["batch_size"] == batch_size and metrics["inference_batch_size"] == inference_batch_size
+    assert metrics["runtime_multiplier_vs_baseline"] is None
+    assert metrics["denoiser_multiplier_vs_baseline"] == 1
+    assert svdd_record["distribution_baseline"] == "baseline" and svdd_record["distribution_shift"] is not None
+    assert len(payload["paired_validity"]) == 1
+    assert payload["paired_validity"][0]["only_b_valid"] == 3
+    assert payload["paired_validity"][0]["b_minus_a_validity_points"] == 75
+    report = (output / "REPORT.md").read_text()
+    assert "Batching settings differ within otherwise compatible evaluation groups" in report
+    assert "Multiple evaluation configuration groups" not in report
+    assert "denoiser_comparison_group" in (output / "tables/methods.csv").read_text().splitlines()[0]
+
+    records, _ = load_records(tmp_path)
+    for record in records:
+        del record["summary"]["denoiser_comparison_group"]
+    assert paired_validity(records) == []  # Older summaries keep their strict compatibility checks.
+    assert baseline_for(records[1], records) is None
 
 
 def test_wilson_intervals_include_uncertainty_at_zero_and_one():
