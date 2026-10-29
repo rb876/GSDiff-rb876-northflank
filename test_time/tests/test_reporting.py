@@ -227,6 +227,31 @@ def test_mixed_recalibration_reports_selected_cpu_outputs_without_pooling_tensor
     assert "cpu_bedroom_audit_v2" in report
 
 
+def test_prefix_control_reports_equivalent_nfe_without_pooling_mixed_checks(tmp_path):
+    rows = [candidate(0, [result("C035", "fail")]),
+            candidate(0, [result("C035", "pass")], selected=False),
+            candidate(0, [result("C035", "unknown")], selected=False)]
+    directory = make_run(tmp_path / "best_of_n_late", rows, method="best_of_n", seconds=None)
+    config = json.loads((directory / "config.json").read_text())
+    config.update(n=3, final_checker="cpu_bathroom_audit_v1", prefix_reselection={
+        "source_n": 11, "n": 3, "population_evaluation_backend": "mixed_tensor_cpu"})
+    write_json(directory / "config.json", config)
+    run = json.loads((directory / "run.json").read_text())
+    run.update(node_samples=3000, node_calls=None, edge_calls=None, edge_samples=None)
+    write_json(directory / "run.json", run)
+    summary = write_report(directory)
+    assert summary["overall_valid_rate"] == 0
+    assert summary["all_candidates"]["count"] == 3
+    assert summary["all_candidates"]["status"] == "not_reported"
+    assert summary["compute"]["node_samples_per_trial"] == 3000
+    assert summary["compute"]["nfe_provenance"] == "derived_prefix_budget"
+    assert summary["compute"]["node_calls"] is None
+    assert summary["compute"]["wall_seconds_per_trial"] is None
+    write_comparison(tmp_path, [summary])
+    assert "Fixed-prefix Best-of-3" in (directory / "report.md").read_text()
+    assert "equivalent retained-trajectory budget" in (tmp_path / "comparison.md").read_text()
+
+
 def denoiser_run(path, method, evaluations, trial_ids=(0, 1), **settings):
     directory = make_run(path, [candidate(trial, [result("C076", "pass")]) for trial in trial_ids],
                          method=method)

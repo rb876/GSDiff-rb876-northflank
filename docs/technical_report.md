@@ -191,13 +191,18 @@ The joint term replaces the three bathroom severities during selection, avoiding
 | Method | Outputs | Planned NFE/output | Overall valid |
 |---|---:|---:|---|
 | Baseline | 100 | 1,000 | Pending |
-| Best-of-11 | 100 | 11,000 | Pending |
+| Best-of-3 | 100 | 3,000 | Pending |
 | SVDD, last 20% | 100 | 3,000 | Pending |
+| Best-of-11 | 100 | 11,000 | Pending |
 | SVDD, full | 100 | 10,990 | Pending |
 
-**Pilot protocol:** 100 outputs per method with paired seeds `10000–10099`, shared frozen checkpoints, eleven scored checks and the scenario above. Compare baseline, Best-of-11, SVDD over the last 20% and full-trajectory SVDD. Final selected outputs use the CPU placement audit; preserve failed and unresolved cases in the denominators. Report ventilation, accessibility and habitability group results alongside overall success. Keep search budgets identical across methods, and report bathroom unknowns separately from proven failures.
+**Two budget comparisons:** Best-of-3 matches late SVDD at **3,000 NFE/output**; Best-of-11 approximately matches full SVDD at **11,000 versus 10,990**. Construct Best-of-3 from candidate indices **0, 1 and 2** in every saved Best-of-11 trial, fixed before inspecting scores. Reapply the same selection rule to their saved GPU scores, then CPU-audit the selected design. Retain all 100 trials and keep the Best-of-11 results. These are nested, paired controls rather than independent candidate banks.
+
+**Pilot protocol:** 100 outputs per method with paired seeds `10000–10099`, shared frozen checkpoints, eleven scored checks and the scenario above. Final selected outputs use the CPU placement audit; preserve failed and unresolved cases in the denominators. Report ventilation, accessibility and habitability group results alongside overall success. Keep search budgets identical across methods, and report bathroom unknowns separately from proven failures.
 
 Report overall validity with 95% Wilson intervals, per-constraint pass/fail/unknown rates, structural validity, measured severity and layout diversity. Record NFE and elapsed sampling/checking time separately. Sample-wise denoiser cost is $T+KG$ for SVDD and $NT$ for Best-of-N, where $G$ is the number of guided transitions; this does not match edge-model or checker cost.
+
+Best-of-3's **3,000 NFE** is the equivalent generation cost of its retained prefix. Reselection performs no new model inference; the source bank already cost 11,000 NFE/output. Its standalone runtime and batched forward-call counts are unmeasured, so no speedup is inferred from this reuse.
 
 The completed evaluation will include one comparison table, per-constraint results and labelled success/failure examples at the corrected metric scale. [Reproduction instructions](../test_time/README.md), [sweep launcher](../test_time/launch_eval.sh) and [machine-readable constraints](../test_time/configs/constraints_bathroom_v1.json) provide the assessment's baseline comparison, compute accounting and reproducibility requirements. One scenario and seed batch limit generalization; this profile does not guarantee a lower Best-of-N success rate or an SVDD advantage.
 

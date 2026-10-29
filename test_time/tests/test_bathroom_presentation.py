@@ -5,7 +5,8 @@ from html import unescape
 from pathlib import Path
 import xml.etree.ElementTree as ET
 
-from PIL import Image
+from PIL import Image, ImageFont
+import pytest
 
 from test_time.constraint_text import constraint_description
 from test_time.visualize import save_sample
@@ -80,7 +81,16 @@ def test_bathroom_failure_explains_the_saved_bound_in_words():
     assert "cannot exceed 1.4 m, below 1.5 m required" in constraint_description(check, sample)["reason"]
 
 
-def test_bathroom_svg_and_png_display_all_objects_and_keep_saved_results_unchanged(tmp_path):
+@pytest.mark.parametrize("fallback_font", [False, True])
+def test_bathroom_svg_and_png_display_all_objects_and_keep_saved_results_unchanged(tmp_path, monkeypatch, fallback_font):
+    if fallback_font:
+        bitmap_font = getattr(ImageFont, "load_default_imagefont", ImageFont.load_default)()
+
+        def unavailable_system_font(*args, **kwargs):
+            raise OSError("No system fonts installed")
+
+        monkeypatch.setattr(ImageFont, "truetype", unavailable_system_font)
+        monkeypatch.setattr(ImageFont, "load_default", lambda: bitmap_font)
     sample, evaluation = saved_bathroom()
     original = deepcopy((sample, evaluation))
     files = save_sample(sample, evaluation, tmp_path / "shared")
@@ -95,7 +105,10 @@ def test_bathroom_svg_and_png_display_all_objects_and_keep_saved_results_unchang
     assert "circle_center_m" not in unescape(svg)  # Explain geometry rather than dumping JSON.
     with Image.open(files["png"]) as image:
         assert image.width == 1440 and image.height > 1100
-        assert len(image.getcolors(image.width * image.height)) > 20
+        colors = {color for _, color in image.getcolors(image.width * image.height)}
+        # Check the five bathroom drawing colours, independent of font antialiasing.
+        assert {(55, 65, 81), (139, 90, 166), (22, 131, 77),
+                (230, 126, 34), (39, 101, 176)} <= colors
     assert (sample, evaluation) == original
 
 
@@ -120,6 +133,7 @@ def test_missing_metric_scale_does_not_draw_metre_objects_as_pixels(tmp_path):
 def test_bathroom_profile_includes_new_ids_in_plots_gallery_and_group_metrics(tmp_path, monkeypatch):
     import csv
     import json
+    pytest.importorskip("matplotlib")
     from test_time import analysis_plots
     from test_time.analyze import analyze
     from test_time.tests.test_analysis import saved_run

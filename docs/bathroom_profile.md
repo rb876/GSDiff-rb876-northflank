@@ -95,6 +95,7 @@ On the node, use the original sweep containing **all 1,100 Best-of-11 candidates
 ```bash
 cd /workspace/GSDiff
 source /workspace/venvs/gsdiff/bin/activate
+python -m pip install -r test_time/requirements-analysis.txt
 python -m test_time.recalibrate \
   --experiment_dir test_time/outputs/sweep_002 \
   --output_dir test_time/outputs/bathroom_001/controls \
@@ -106,3 +107,20 @@ python -m test_time.analyze --experiment_dir test_time/outputs/bathroom_001/cont
 ```
 
 This reuses unguided generated graphs, reselects Best-of-11 with the new score and CPU-checks selected outputs. It does not rerun diffusion or overwrite the original sweep. Rescoring old guided outputs cannot establish how guidance performs under the new objective: that comparison needs new guided runs.
+
+## Add Best-of-3 for the late-SVDD comparison
+
+Late SVDD with K=10 and 200 guided steps uses **3,000 denoiser NFE/output**. Its matched control is **Best-of-3**. Best-of-11 remains the control for full SVDD (11,000 versus 10,990 NFE/output).
+
+Use the already rescored bank above. Retain original candidate indices **0, 1 and 2 in every trial**, apply the same selection rule to their saved GPU scores, and CPU-audit the selected design. This keeps all 100 outputs. The prefix is fixed independently of validity, reward or the previous winner.
+
+```bash
+python -m test_time.reselect \
+  --source_run test_time/outputs/bathroom_001/controls/batch_1_seed_10000/best_of_n \
+  --output_dir test_time/outputs/bathroom_001/controls/batch_1_seed_10000/best_of_n_late \
+  --n 3
+python -m test_time.evaluate --experiment_dir test_time/outputs/bathroom_001/controls
+python -m test_time.analyze --experiment_dir test_time/outputs/bathroom_001/controls
+```
+
+The separate `best_of_n_late` directory adds Best-of-3 to tables, figures and the gallery while preserving Best-of-11. No new model inference is performed. The reported 3,000 NFE is the equivalent generation budget of the retained prefix; the original 11-candidate generation cost remains in provenance. Standalone Best-of-3 runtime and batched forward-call counts remain unknown. Because Best-of-3 is nested within Best-of-11, their trial outcomes are paired rather than independent.

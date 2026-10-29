@@ -31,8 +31,7 @@ def load_records(experiment_dir):
     paths = [root] if (root / "candidates.jsonl").exists() else sorted(
         {path.parent for path in root.rglob("candidates.jsonl")})
     records, skipped = [], []
-    order = {"baseline": 0, "best_of_n": 1, "svdd_pm_last20": 2, "svdd_pm_full": 3}
-    for path in sorted(paths, key=lambda value: (str(value.parent), order.get(value.name, 4), value.name)):
+    for path in paths:
         if not (path / "config.json").exists() or not (path / "run.json").exists():
             skipped.append({"run": str(path), "reason": "Missing config.json or run.json"})
             continue
@@ -53,8 +52,22 @@ def load_records(experiment_dir):
         selected = sorted((row for row in rows if row.get("selected")), key=lambda row: row["trial"])
         records.append({"label": path.name, "run_dir": path, "config": config,
                         "summary": summary, "rows": selected})
+    def order(record):
+        config = record["config"]
+        method = config.get("method")
+        if method == "baseline":
+            rank = 0
+        elif method == "best_of_n":
+            rank = 1 if config.get("n") == 3 else 3
+        elif method == "svdd_pm":
+            rank = 2 if config.get("guided_steps") == 200 or record["label"] == "svdd_pm_last20" else 4
+        else:
+            rank = 5
+        return str(record["run_dir"].parent), rank, config.get("n") or 0, record["label"]
+    records.sort(key=order)
     labels = Counter(record["label"] for record in records)
-    for record in records:
+    for index, record in enumerate(records):
+        record["display_order"] = index
         if labels[record["label"]] > 1:
             record["label"] = record["run_dir"].relative_to(root).as_posix()
     return records, skipped
@@ -80,6 +93,7 @@ def method_metrics(record):
         "mean_energy": sum(row["evaluation"]["energy"] for row in record["rows"]) / n,
         "wall_seconds_per_trial": summary["compute"]["wall_seconds_per_trial"],
         "node_samples_per_trial": summary["compute"]["node_samples_per_trial"],
+        "nfe_provenance": summary["compute"].get("nfe_provenance", "recorded_run_counter"),
         "edge_samples_per_trial": fraction(summary["compute"]["edge_samples"], n)
             if summary["compute"]["edge_samples"] is not None else None,
         "comparison_group": summary["comparison_group"],
@@ -174,12 +188,20 @@ def write_analysis_report(output, records, skipped, figures, gallery):
              "Best-of-N's rejected candidates are excluded. Final constraint outcomes come from the saved CPU reference audit.", ""]
     if any(record["summary"].get("scale_recalibration") for record in records):
         lines += ["## Scenario and constraint re-evaluation", "",
-                  "Baseline reuses saved unconditioned designs. Best-of-N reselects from its complete saved candidate bank "
+                  "Baseline reuses saved unconditioned designs. Best-of-N reselects from its retained saved candidate pool "
                   "using tensor rewards under the requested scenario and constraint registry; selected designs receive the refined CPU checker. "
                   "Rejected candidates retain tensor scores and do not enter the selected-output comparisons. "
                   "Reused denoiser NFE is historical generation work, not additional inference. "
                   "Generation runtime is unavailable for recalibrated controls; their separate offline rescoring and audit "
                   "times are recorded in each run's `calibration.json`. No runtime multiplier is inferred from these controls.", ""]
+    if any(record["config"].get("prefix_reselection") for record in records):
+        lines += ["## Best-of-N candidate prefixes", "",
+                  "The smaller Best-of-N control uses the first N candidates in each saved trial, ordered by original "
+                  "candidate index before inspecting scores. The same tensor selection rule is reapplied and the selected "
+                  "outputs receive the CPU audit. The full-bank control remains a separate method. "
+                  "The reported prefix NFE is the equivalent generation budget of those retained trajectories, not additional "
+                  "model inference: the original larger bank was already generated. Runtime and batched forward-call counts "
+                  "for the hypothetical smaller run are unavailable. Prefix provenance preserves the original bank's cost.", ""]
     if any(record["summary"].get("evaluation_audit") for record in records):
         lines += ["## Evaluation audit", "",
                   "The re-audited runs reuse the **originally selected outputs**, with no reselection or new generation. "
@@ -199,8 +221,9 @@ def write_analysis_report(output, records, skipped, figures, gallery):
              "compute multiplier, subset size, applicability coverage, compliance, severity, structural validity, "
              "distribution-preservation diagnostics, vector outputs and annotated successful/failed examples. "
              "It also requests an ablation and honest assumptions/limitations. It specifies no sample count or mandatory FID/KID metric.", "",
-             "The tables use each run's saved registry. The default profile has nine Appendix A checks and three supporting "
-             "measurement rules. C085/C086/C090 use graph-derived main-room counts and declared ventilation-system rates, "
+             "The tables use each run's saved registry. The default profile has eleven Appendix A checks and three supporting "
+             "measurement rules. C036/C037/C041 share an explicitly assumed bathroom/WC completion. "
+             "C085/C086/C090 use graph-derived main-room counts and declared ventilation-system rates, "
              "not measured airflow. Historical profiles keep their original checks and denominators.", "",
              "## Saved run settings", "",
              "| Method | N | K | Guided steps | Temperature | Reward backend |",
@@ -290,8 +313,9 @@ def write_analysis_report(output, records, skipped, figures, gallery):
               "`tables/paired_validity.csv` records changes on shared trial seeds, including outputs only one method validates. "
               "It does not pair by the winning Best-of-N candidate's seed. Runs with different saved comparison settings or seed sets are not paired. "
               "Different seed batches remain separate in this report; no cross-batch pooling is performed.", "",
-              "Denoiser-count comparisons are in `denoiser_comparison.json`. Best-of-11 targets full SVDD: 11,000 versus "
-              "10,990 evaluations per output at the default settings. Late SVDD is the guidance-window ablation and uses a smaller budget. "
+              "Denoiser-count comparisons are in `denoiser_comparison.json`. At the default settings, Best-of-3 targets late "
+              "SVDD at 3,000 evaluations per output each; Best-of-11 targets full SVDD at 11,000 versus 10,990. "
+              "These are two separate budget comparisons; only compatible completed runs with recorded counts establish a match. "
               "Matching denoiser counts does not match edge-model work, constraint checking or elapsed time. "
               "Timing is amortized per selected output and excludes model loading/rendering/export.", "",
               "## Annotated examples", "",
@@ -310,8 +334,9 @@ def write_analysis_report(output, records, skipped, figures, gallery):
                          f"[PNG]({example['png']}) · [SVG]({example['svg']}) · [graph]({example['graph']}) · [checks]({example['evaluation']}) |")
     lines += ["", "## Scope and reproducibility", "",
               "`analysis.json` preserves per-run summaries, parameters, scenario, checkpoint metadata, recorded source hashes, "
-              "definitions and diagnostic details. Assumed scale and height remain assumptions; bedroom placement searches are finite "
-              "and bathrooms exclude unobserved fixtures. Unknown checks add no numeric severity, so zero energy alone is not proof of validity.", "",
+              "definitions and diagnostic details. Metric-scale provenance and declared height/fixture assumptions remain recorded per run. "
+              "Finite placement searches can remain unresolved; the current bathroom profile tests hypothetical fixtures, not generated equipment. "
+              "Unknown checks add no numeric severity, so zero energy alone is not proof of validity.", "",
               "Saved input files are not changed. The analysis creates rendered views from the saved evaluations, without rerunning geometry checks or the pretrained networks."]
     if skipped:
         lines += ["", "### Excluded runs", ""]

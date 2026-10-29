@@ -7,7 +7,7 @@ The original GSDiff network architecture and pretrained weights are unchanged.
 three supporting rules, and **0.03515625 m/drawing pixel**. The declared ventilation system supplies
 105 m³/h normal kitchen, 30 m³/h normal bathroom, 75 m³/h reduced total and 45 m³/h reduced kitchen flow.
 These are fixed scenario inputs, not model outputs. Follow the [PDF-profile commands](../docs/bathroom_profile.md)
-to rescore baseline, reselect Best-of-11 and plot the eleven checks.
+to rescore baseline, reselect Best-of-11, derive Best-of-3 and plot the eleven checks.
 The [six-check rerun commands](../docs/rplan18_rerun.md) explicitly retain the previous profile.
 The older `scenario_v2.json` and `experiment_v2.json` remain historical configurations
 at the user-assumed 0.025 m/pixel; explicit commands using them retain that scale.
@@ -32,6 +32,7 @@ test_time/
   gpu_constraints.py         # tensor constraint searches
   gpu_sampling.py            # GPU guidance and selection; final CPU audit
   audit_gpu.py               # compare tensor checks against saved results
+  reselect.py                # fixed-prefix Best-of-N from a scored candidate bank
   run.py                    # one experiment entry point
   launch_eval.sh            # preview/run paired batches; no automatic launch
   evaluate.py               # saved-result summaries and comparisons
@@ -196,12 +197,14 @@ Every trajectory still denoises for all 1,000 steps. The late variant guides onl
 200 stochastic steps (approximately 20%); neither variant guides deterministic `t=0`.
 Both SVDD variants use `--method svdd_pm` with different `--guided_steps` values.
 Every seed batch runs serially in the order above, so late SVDD finishes before full SVDD.
-Best-of-N is matched only to full SVDD. Late SVDD remains a shorter-budget comparison.
+After scoring the saved bank, the prefix-reselection command below adds **Best-of-3** as a
+fifth analysis variant matching late SVDD, with no additional model generation.
 
 For T denoising steps, K proposals and G guided steps, full SVDD evaluates T + K × G node states
 per output; Best-of-N evaluates N × T. The launcher chooses the nearest integer N, rounding ties
 upward. With T=1000, K=10 and G=999, the budgets are **10,990 for full SVDD** and **11,000 for
-Best-of-11**, a **0.091% difference**. Late SVDD evaluates 3,000 states per output. If K=1 or G=0,
+Best-of-11**, a **0.091% difference**. Late SVDD and **Best-of-3** each use a 3,000-state
+budget per output. If K=1 or G=0,
 the sampler takes its baseline shortcut, and the matched N is 1.
 
 The root `compute_budget.json` records the planned match. Reports verify actual
@@ -240,6 +243,27 @@ The script stops on failure; interrupted-run resume is not implemented.
 The offline analysis command below adds overall-validity confidence intervals, duplicate and
 semantic-layout diversity diagnostics, and paired trial outcomes. Seed batches remain separate;
 cross-batch pooling is not implemented. Pair by trial seed, not the Best-of-N winner's seed.
+
+### Add the Best-of-3 control from an existing bank
+
+Retain candidate indices **0, 1 and 2** per trial before inspecting scores. Reapply the same
+structural-validity, unknown-coverage, reward and seed selection rule to the saved GPU scores,
+then CPU-audit the selected candidate. The existing Best-of-11 results and all 100 trials remain.
+
+```bash
+python -m test_time.reselect \
+  --source_run test_time/outputs/bathroom_001/controls/batch_1_seed_10000/best_of_n \
+  --output_dir test_time/outputs/bathroom_001/controls/batch_1_seed_10000/best_of_n_late \
+  --n 3
+python -m test_time.evaluate --experiment_dir test_time/outputs/bathroom_001/controls
+python -m test_time.analyze --experiment_dir test_time/outputs/bathroom_001/controls
+```
+
+Use the complete scored bank, including rejected candidates, as the source. Rebuilding the
+analysis includes both Best-of-3 and Best-of-11 with distinct labels. Their candidate banks are
+nested, so outcomes are paired rather than independent. Reselection performs **zero new model
+inference**: its 3,000 NFE/output is the equivalent cost of the retained prefix, and the original
+full-bank cost stays recorded. Standalone runtime and batched forward-call counts are unknown.
 
 ## Analyse a completed sweep
 

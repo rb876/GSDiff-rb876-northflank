@@ -21,6 +21,8 @@ from .types import overall_validity
 METHOD_STYLES = {
     "baseline": ("#4c80b5", "////"),
     "best_of_n": ("#df8134", "\\\\\\\\"),
+    "best_of_n_3": ("#9e6aa8", "...."),
+    "best_of_n_11": ("#df8134", "\\\\\\\\"),
     "svdd_pm_last20": ("#8b8683", ""),
     "svdd_pm_full": ("#579b50", "xxxx"),
 }
@@ -70,24 +72,26 @@ FIGURE_CAPTIONS = {
     "passed_constraints": "Grouped bars are integer-bin histograms, normalized separately by each method's selected-output count. Unknown, failed and inapplicable checks do not add a pass; supporting definitions are excluded. Passing checks alone does not establish structural validity. Nonzero bars are labelled; zero bins remain empty.",
     "constraint_severity": "All panels share bins and axis limits. Only finite severities of applicable, measured scored checks are included, including zero-severity passes. Panel annotations give unknown check counts. Unknown values are omitted, never converted to zero; structural penalties are excluded.",
     "layout_distributions": "Each method is normalized by its structurally valid selected designs with finite, positive room areas; eligible counts are recorded in the report tables. Bins and axis limits are shared within each row. Outside label 6 is excluded. Area is in drawing pixels squared. These baseline-relative diagnostics are not RPLAN fidelity metrics.",
-    "compute": "Recorded batch sampling/checking time is divided by selected outputs; model loading and rendering/export are excluded. Denoiser NFE (number of function evaluations) counts each evaluated sample within a batch, including candidate trajectories and SVDD lookahead, per selected output. Edge-model and reward evaluations are excluded from NFE. Equal NFE does not imply equal runtime. No uncertainty intervals are inferred from these aggregate counters.",
+    "compute": "Recorded batch sampling/checking time is divided by selected outputs; model loading and rendering/export are excluded. Denoiser NFE (number of function evaluations) counts each evaluated sample within a batch, including candidate trajectories and SVDD lookahead, per selected output. For prefix-reselected controls, NFE is the equivalent cost of retained trajectories; reselection adds no model inference and the full source bank's cost remains in provenance. Edge-model and reward evaluations are excluded from NFE. Equal NFE does not imply equal runtime. No uncertainty intervals are inferred from these aggregate counters.",
 }
 
 
 def _method(record):
     name = record["label"].split("/")[-1]
-    parameters = record.get("summary", {}).get("parameters", {})
+    summary, config = record.get("summary", {}), record.get("config", {})
+    method = config.get("method", summary.get("method", name))
+    parameters = summary.get("parameters", {})
     parameters = {**parameters, **record.get("metrics", {})}
-    if name == "baseline":
+    if method == "baseline":
         return "baseline", "Baseline"
-    if name == "best_of_n":
-        n = parameters.get("n")
-        return "best_of_n", f"Best-of-{n}" if n is not None else "Best-of-N"
-    if name in {"svdd_pm", "svdd_pm_full", "svdd_pm_last20"}:
-        steps = parameters.get("guided_steps")
-        if name == "svdd_pm_last20" or (name == "svdd_pm" and steps == 200):
+    if method == "best_of_n" or name.startswith("best_of_n"):
+        n = config.get("n", parameters.get("n"))
+        return (f"best_of_n_{n}", f"Best-of-{n}") if n is not None else ("best_of_n", "Best-of-N")
+    if method in {"svdd_pm", "svdd_pm_full", "svdd_pm_last20"}:
+        steps = config.get("guided_steps", parameters.get("guided_steps"))
+        if name == "svdd_pm_last20" or (method == "svdd_pm" and steps == 200):
             return "svdd_pm_last20", "SVDD (last 20%)"
-        if name == "svdd_pm_full" or (name == "svdd_pm" and steps == 999):
+        if name == "svdd_pm_full" or (method == "svdd_pm" and steps == 999):
             return "svdd_pm_full", "SVDD (full)"
         return "svdd_pm_full", f"SVDD ({steps} steps)" if steps is not None else "SVDD"
     return "baseline", name.replace("_", " ")
@@ -102,7 +106,14 @@ def _label(record, width=None):
 
 
 def _style(record):
-    return METHOD_STYLES[_method(record)[0]]
+    key = _method(record)[0]
+    if key not in METHOD_STYLES and key.startswith("best_of_n_"):
+        # Keep additional N settings deterministic across subset/reordered plots.
+        n = int(key.rsplit("_", 1)[1])
+        palette = ("#c56078", "#8b744e", "#287c8e", "#b89b32")
+        hatches = ("++", "oo", "--", "**")
+        return palette[n % len(palette)], hatches[(n // len(palette)) % len(hatches)]
+    return METHOD_STYLES[key]
 
 
 def _bar_style(style):

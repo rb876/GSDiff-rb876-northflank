@@ -59,11 +59,15 @@ def build_gallery(records, output_dir):
     """
     output = Path(output_dir)
     output.mkdir(parents=True, exist_ok=True)
-    cards, examples, constraint_ids, labels = [], {}, set(), set()
-    records = sorted(records, key=lambda item: (item["label"], str(item["run_dir"])))
+    cards, examples, constraint_ids, labels = [], {}, set(), {}
+    records = sorted(records, key=lambda item: (item.get("display_order", 0), item["label"], str(item["run_dir"])))
     for record_index, record in enumerate(records, 1):
         label, summary = str(record["label"]), record["summary"]
-        labels.add(label)
+        config = record.get("config", {})
+        display = f"Best-of-{config['n']}" if config.get("method") == "best_of_n" and config.get("n") is not None else label
+        if display != label and "/" in label:
+            display += " · " + label.rsplit("/", 1)[0]
+        labels[label] = display
         examples.setdefault(label, {status: None for status in ("valid", "invalid", "unknown")})
         slug = re.sub(r"[^A-Za-z0-9_-]+", "_", label).strip("_-")[:64] or "method"
         directory = output / "samples" / f"{record_index:02d}_{slug}"
@@ -103,7 +107,7 @@ def build_gallery(records, output_dir):
             cards.append(
                 f'<article class="sample" data-method="{escape(label, quote=True)}" '
                 f'data-status="{status}" data-checks="{escape(check_states, quote=True)}">\n'
-                f'<h2>{escape(label)} · trial {trial + 1}</h2>\n'
+                f'<h2>{escape(display)} · trial {trial + 1}</h2>\n'
                 f'<p>Trial seed: <strong>{escape(seed_text)}</strong> · '
                 f'Candidate seed: {escape(str(row.get("seed", "unrecorded")))}</p>\n'
                 f'<p class="status {status}">{status_text} · '
@@ -112,7 +116,7 @@ def build_gallery(records, output_dir):
                 f'Unresolved: {escape(", ".join(unknown) or "none")}</p>\n'
                 f'<a href="{escape(relative["png"], quote=True)}"><img loading="lazy" '
                 f'src="{escape(relative["png"], quote=True)}" '
-                f'alt="{escape(label, quote=True)} trial {trial + 1} annotated floorplan"></a>\n'
+                f'alt="{escape(display, quote=True)} trial {trial + 1} annotated floorplan"></a>\n'
                 f'<p class="links">{links}</p>\n{_details(checks, diagnostics, row["sample"])}\n</article>')
 
     page = ['<!doctype html><html lang="en"><head><meta charset="utf-8">',
@@ -126,7 +130,7 @@ def build_gallery(records, output_dir):
             'open “Constraint results and reasons” for plain-language requirements and explanations. '
             'Raw check data is available under “Recorded measurements”.</p>',
             '<div class="filters">',
-            '<label>Method<select id="method"><option value="">All methods</option>' + _options(sorted(labels)) + '</select></label>',
+            '<label>Method<select id="method"><option value="">All methods</option>' + _options(labels, labels) + '</select></label>',
             '<label>Overall status<select id="status"><option value="">All statuses</option>' +
             _options(("valid", "invalid", "unknown", "not_applicable"),
                      {"valid": "Valid", "invalid": "Invalid", "unknown": "Unresolved", "not_applicable": "N/A"}) + '</select></label>',

@@ -23,11 +23,14 @@ All methods share frozen unconditional GSDiff checkpoints, scenario and constrai
 | Method | Default configuration | Planned denoiser NFE/output |
 |---|---|---:|
 | Baseline | One ordinary 1,000-step trajectory | 1,000 |
-| Best-of-11 | Select among eleven complete candidates | 11,000 |
+| Best-of-3 | Reselect from candidate indices 0, 1 and 2 of each saved trial | 3,000 |
 | Late SVDD | K=10 at the final 200 stochastic steps | 3,000 |
+| Best-of-11 | Select among eleven complete candidates | 11,000 |
 | Full SVDD | K=10 at all 999 stochastic steps | 10,990 |
 
-Best-of-11 approximately matches full SVDD by denoiser NFE. This does not match edge-model calls, reward evaluations or elapsed time. Hard-feasibility MC and repair-aware SVDD use the same PDF profile with their separately recorded budgets.
+Best-of-3 matches late SVDD by denoiser NFE; Best-of-11 approximately matches full SVDD. Edge-model calls, reward evaluations and elapsed time are separate costs. Hard-feasibility MC and repair-aware SVDD use the same PDF profile with their separately recorded budgets.
+
+Best-of-3 uses a fixed prefix of each Best-of-11 bank, applies the same saved GPU-score selection rule and CPU-audits its winner. All 100 trials remain. This performs no new diffusion; 3,000 NFE is the equivalent prefix cost, while the original full-bank cost remains recorded. Runtime and batched calls for a standalone Best-of-3 run are unknown. The two controls share candidates and are not independent.
 
 ## Evaluation status
 

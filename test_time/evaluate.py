@@ -262,7 +262,9 @@ def summarize_run(run_dir):
                 "failed_ids": [r["id"] for r in counted_results(row) if r["status"] == "fail"],
                 "unknown_ids": [r["id"] for r in counted_results(row) if r["status"] == "unknown"]}
     recalibration = config.get("scale_recalibration")
-    mixed_population = (recalibration or {}).get("population_evaluation_backend") == "mixed_tensor_cpu"
+    prefix_reselection = config.get("prefix_reselection")
+    mixed_population = any((metadata or {}).get("population_evaluation_backend") == "mixed_tensor_cpu"
+                           for metadata in (recalibration, prefix_reselection))
     all_candidates = ({"count": len(rows), "status": "not_reported",
                        "reason": "Selected outputs have CPU audits; rejected candidates retain tensor scores. "
                                  "Mixed checker results are not pooled into compliance or validity rates."}
@@ -291,6 +293,7 @@ def summarize_run(run_dir):
         "guidance": config.get("guidance", {"backend": "cpu", "final_evaluator": "cpu_reference"}),
         "evaluation_audit": config.get("evaluation_audit"),
         "scale_recalibration": recalibration,
+        "prefix_reselection": prefix_reselection,
         "final_evaluation_backend": final_evaluation_backend(config),
         "comparison_group": comparison_group(config), "scenario": config.get("scenario", {}),
         "status": status, "expected_trials": expected_trials,
@@ -325,6 +328,7 @@ def summarize_run(run_dir):
             "total_wall_seconds", "node_calls", "edge_calls", "node_samples", "edge_samples", "graph_completions", "candidate_evaluations",
             "gpu_candidate_evaluations", "cpu_candidate_evaluations",
             "peak_gpu_allocated_bytes", "peak_gpu_reserved_bytes", "fallback_count")},
+            "nfe_provenance": "derived_prefix_budget" if prefix_reselection else "recorded_run_counter",
             "wall_seconds_per_trial": wall / count if wall is not None else None,
             "node_samples_per_trial": run["node_samples"] / count if run.get("node_samples") is not None else None,
             "time_per_trial_interpretation": "amortized throughput, not isolated latency" if config.get("batch_size", 1) > 1
@@ -356,6 +360,7 @@ def write_report(run_dir):
     parameters = ", ".join(f"{key}={value}" for key, value in result["parameters"].items() if value is not None)
     audit = result["evaluation_audit"]
     recalibration = result["scale_recalibration"]
+    prefix = result["prefix_reselection"]
     saved_population = (f"{result['saved_final_candidates']} originally selected outputs saved for this audit; "
                         "the original full candidate pool is excluded" if audit and not recalibration else
                         f"{result['saved_final_candidates']} complete final candidates saved")
@@ -370,6 +375,15 @@ def write_report(run_dir):
                       "and generation runtime was not remeasured.", ""]
         if result["all_candidates"].get("status") == "not_reported":
             audit_note += [result["all_candidates"]["reason"], ""]
+    if prefix:
+        audit_note = [f"Fixed-prefix Best-of-{result['parameters']['n']}: retain the first "
+                      f"{result['parameters']['n']} candidates in each original trial before inspecting their scores, "
+                      "then reselect with the saved tensor rewards and audit the selected output on CPU. "
+                      "The reported NFE is the equivalent budget of the retained complete trajectories, derived from "
+                      "verified source counts. The larger source pool's generation cost remains recorded in "
+                      "`reselection.json`; no new model inference was performed. Generation runtime and batched "
+                      "forward-call counts are unavailable for this derived run.", "",
+                      result["all_candidates"]["reason"], ""]
     lines = [f"# {result['method']} experiment", "",
              f"Status: **{result['status']}**. {result['selected_trials']}/{result['expected_trials']} selected trials; "
              f"{saved_population}. {parameters}.", "", *audit_note,
@@ -482,6 +496,7 @@ def denoiser_comparisons(experiment_dir, summaries):
                 "svdd": str(Path(svdd["run_dir"]).resolve().relative_to(root)),
                 "trial_seed_start": best["trial_seed_start"], "trials": best["selected_trials"],
                 "best_of_n_evaluations_per_output": left, "svdd_evaluations_per_output": right,
+                "best_of_n_nfe_provenance": best["compute"].get("nfe_provenance", "recorded_run_counter"),
                 "ratio_best_of_n_to_svdd": ratio, "relative_difference": difference,
                 "exact": left == right if known else None,
                 "matched": abs(left - right) <= 0.01 * right if known else None,
@@ -571,6 +586,11 @@ def write_comparison(experiment_dir, summaries):
                   "No RPLAN-based FID/KID was measured.", ""])
     if any(s.get("disabled_constraints") for s in summaries):
         lines.extend(["Disabled IDs are excluded from compliance denominators; per-run reports list their reasons.", ""])
+    if any(s.get("prefix_reselection") for s in summaries):
+        lines.extend(["Fixed-prefix Best-of-N controls reuse the first N candidates from each saved trial. "
+                      "Their denoiser counts describe the equivalent retained-trajectory budget; no new model "
+                      "inference was run. The original larger pool's full cost is preserved in `reselection.json`. "
+                      "Runtime and batched forward-call counts are unknown for these derived controls.", ""])
     lines.extend(["## Denoiser evaluation matching", "",
                   "The selected compute metric is evaluated denoiser states (`node_samples`) per selected output, "
                   "not batched forward calls (`node_calls`) or wall time. Counts include every Best-of-N candidate "
