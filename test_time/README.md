@@ -3,11 +3,11 @@
 Edit on Kraken, push the code, pull on Northflank, and run on its H100.
 The original GSDiff network architecture and pretrained weights are unchanged.
 
-**Current profile:** nine PDF-derived checks (C033/C035/C036/C076/C077/C078/C085/C086/C090),
+**Current profile:** eleven PDF-derived checks (C033/C035/C036/C037/C041/C076/C077/C078/C085/C086/C090),
 three supporting rules, and **0.03515625 m/drawing pixel**. The declared ventilation system supplies
 105 m³/h normal kitchen, 30 m³/h normal bathroom, 75 m³/h reduced total and 45 m³/h reduced kitchen flow.
-These are fixed scenario inputs, not model outputs. Follow the [PDF-profile commands](../docs/ventilation_profile.md)
-to rescore baseline, reselect Best-of-11 and plot the nine checks.
+These are fixed scenario inputs, not model outputs. Follow the [PDF-profile commands](../docs/bathroom_profile.md)
+to rescore baseline, reselect Best-of-11 and plot the eleven checks.
 The [six-check rerun commands](../docs/rplan18_rerun.md) explicitly retain the previous profile.
 The older `scenario_v2.json` and `experiment_v2.json` remain historical configurations
 at the user-assumed 0.025 m/pixel; explicit commands using them retain that scale.
@@ -65,10 +65,10 @@ python -m test_time.evaluate --experiment_dir test_time/outputs/004_feasible_con
 ```
 
 Defaults are one trial, seed 42, GPU rewards, and the same scenario/checkpoints for all methods.
-The default configuration is `configs/experiment_ventilation_v1.json`, evaluating nine PDF-derived constraints using
-three supporting measurement rules. C085/C086/C090 use explicit ventilation-system assumptions. Use `--config test_time/configs/experiment_v1.json` to reproduce the original profile.
+The default configuration is `configs/experiment_bathroom_v1.json`, evaluating eleven PDF-derived constraints using
+three supporting measurement rules. C085/C086/C090 use explicit ventilation-system assumptions. C036/C037/C041 use the same declared toilet, basin and inward-door completion. Use `--config test_time/configs/experiment_v1.json` to reproduce the original profile.
 SVDD-PM now defaults to K=10 and greedy selection at all 999 stochastic reverse steps.
-The nine-check profile requires new guided runs; results from different constraint registries remain separate.
+The eleven-check profile requires new guided runs; results from different constraint registries remain separate.
 Larger experiments and their budgets will be decided separately; `--trials` controls their size.
 Use `--config path.json` to change the experiment, or `--output_dir path` for a new explicit run directory.
 `--n`, `--k`, `--guided_steps`, `--temperature`, and `--seed` override JSON settings.
@@ -132,7 +132,7 @@ The Markdown can be pasted into HackMD; no document has been published there aut
 ## GPU room extraction and rewards
 
 The default `--reward_backend gpu` runs intermediate graph extraction, constraint searches and
-proposal selection with PyTorch tensors on the model's device. All nine scored checks run in this
+proposal selection with PyTorch tensors on the model's device. All eleven scored checks run in this
 backend. C034/C079/C080 define the bed/area measurements, including the shared placement for C033/C035. Final saved candidates
 are audited with the existing CPU checker; reports and overall validity always use that audit.
 
@@ -300,16 +300,16 @@ python -m test_time.audit \
 
 ## Scope of the scores
 
-`configs/constraints_ventilation_v1.json` contains twelve implemented entries, with explicit groups, roles
+`configs/constraints_bathroom_v1.json` contains fourteen implemented entries, with explicit groups, roles
 and assumptions. The default profile is:
 
 | Role | IDs | Meaning |
 |---|---|---|
-| Six scored checks, retained | C033, C035, C036, C076, C077, C078 | Bedroom/bathroom feasibility and habitable area/volume |
+| Eight geometric checks | C033, C035, C036, C037, C041, C076, C077, C078 | Bedroom and shared furnished-bathroom feasibility; habitable area/volume |
 | Three scored ventilation checks | C085, C086, C090 | Kitchen/bathroom extraction and occupant-adjustable reduced total/kitchen extraction |
 | Three active supporting rules | C034, C079, C080 | Bed sizes; declared wall-area model; area exclusions |
 
-The nine scored checks contribute to energy and overall validity; the ventilation group is also reported separately. The three supporting rules
+The eleven scored checks determine overall validity and CPU audit energy; GPU guidance replaces the three coupled bathroom severity terms with one graded placement penalty. The ventilation group is also reported separately. The three supporting rules
 define their measurements and add no separate reward or pass/fail result. A check that is
 inconclusive for an individual design remains unknown. The selected set is fixed across all
 four launcher variants. Reports include these IDs and per-group metrics.
@@ -332,7 +332,7 @@ configuration. See the [constraint implementation report](experiments/004_feasib
 
 C033/C035 share one bed placement when both pass. Finite placement-search misses are `unknown`;
 they are not proofs of infeasibility. C034 supplies bed dimensions as a supporting rule;
-its legacy v1 auxiliary footprint diagnostic is retained only in v1. C036 is empty-bathroom feasibility.
+its legacy v1 auxiliary footprint diagnostic is retained only in v1. C036/C037/C041 share one hypothetical bathroom/WC fixture and inward-door layout; see the [bathroom completion protocol](../docs/bathroom_profile.md).
 C076 uses `(area AND height) OR volume`; C077/C078 use the occupancy breakpoint after four people.
 Main rooms are living/bedroom; estimated habitable area includes living, bedroom, kitchen and bathroom,
 and excludes storage, balcony and outside. These are zero-thickness polygon estimates.
@@ -344,7 +344,9 @@ Set scale to `null` and provenance to `missing` to obtain `unknown` dimensionful
 Furniture, fixtures, doors, physical wall thickness and headroom are not generated; these scores
 are conditional feasibility measurements, not verified building compliance.
 
-Energy is the weighted sum of measurable normalized violations plus a separate validity penalty.
+CPU audit energy is the weighted sum of measurable normalized violations plus a separate validity penalty.
+GPU guidance uses that formula outside C036/C037/C041 and one joint bathroom placement penalty instead of their three severity terms.
+The latter ranks near misses without turning an unresolved search into a proven failure.
 Unknowns have no invented severity. Selection orders valid graphs first, then fewer unknown checks,
 then lower energy and seed. Within the best validity class, candidates may not introduce an unknown
 ID that was measurable in the first candidate. This prevents swapping an expensive failure for a new unknown.
@@ -363,7 +365,7 @@ constraint to measurably pass. Any structural defect or failed scored check make
 Without a confirmed failure, unresolved checks make it unknown; no applicable scored checks makes
 it not applicable. Neither counts as valid. Supporting C034/C079/C080 and individual inapplicable checks are excluded.
 The overall-valid rate divides confirmed valid samples by **all selected designs**.
-This covers nine assessment-derived checks under declared assumptions, not every constraint in the assessment.
+This covers eleven assessment-derived checks under declared assumptions, not every constraint in the assessment.
 
 Reports retain structural validity, per-check compliance, coverage, unknown fraction and assumptions
 as diagnostics. JSON uses `overall_valid_rate`, `overall_validity_counts` and `structural_valid_rate`;
@@ -432,7 +434,7 @@ The benefit depends on available CPU cores and GPU contention; this does not
 change the rollout or repair budgets. Stop the previous launcher before starting
 a replacement, and use a new output root.
 
-Settings are in [`configs/extensions_ventilation_v1.json`](configs/extensions_ventilation_v1.json):
+Settings are in [`configs/extensions_bathroom_v1.json`](configs/extensions_bathroom_v1.json):
 
 - **`hard_h_mc`:** independent ordinary root prefixes, four proposals, four
   unguided completions per proposal, decisions at 200/100/30 transitions remaining,
@@ -452,7 +454,7 @@ The faster hard-h default reduces rollouts per proposal from 16 to 4, trading
 estimate precision for speed and increasing the chance of an all-zero bank.
 Saved per-run `config.json` files remain authoritative for previous and new runs.
 
-Both methods use nine scored checks and three supporting definitions by default, the same
+Both methods use eleven scored checks and three supporting definitions by default, the same
 unconditional checkpoint, and the declared metric scale/height/occupancy. Hard-h
 uses the audited CPU checker for every rollout label. No new ablation sweep is
 included; repair results measure guidance **plus** final repair together.

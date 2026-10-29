@@ -1,0 +1,37 @@
+{
+  "name": "pdf_bathroom_extensions_v1",
+  "variant": "unconstrained_rplan",
+  "scenario": "scenario_bathroom_v1.json",
+  "constraints": "constraints_bathroom_v1.json",
+  "trials": 100,
+  "seed": 10000,
+  "inference_batch_size": 32,
+  "validity_weight": 100.0,
+  "output_root": "test_time/outputs/bathroom_extensions_001",
+  "hard_h_mc": {
+    "k": 4,
+    "rollouts": 4,
+    "anchor_remaining": [
+      200,
+      100,
+      30
+    ],
+    "terminal_k": 8,
+    "zero_policy": "fresh_base",
+    "max_nfe": 40000
+  },
+  "svdd_repair_aware": {
+    "k": 4,
+    "guided_steps": 200,
+    "repair": {
+      "max_displacement_m": 0.2,
+      "inner_evaluations": 16,
+      "final_evaluations": 128,
+      "max_wall_moves": 2,
+      "max_moved_junctions": 12,
+      "max_total_displacement_m": 2.4,
+      "final_enabled": true
+    }
+  },
+  "final_checker": "cpu_bathroom_audit_v1"
+}

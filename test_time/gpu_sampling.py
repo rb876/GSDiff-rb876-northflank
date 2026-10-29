@@ -18,7 +18,7 @@ STATUS_NAMES = ("pass", "fail", "unknown", "not_applicable")
 TRACE_FORMAT = "tensor_gpu_compact_v1"
 SCORE_FIELDS = ("energy", "reward", "status", "severity", "applicable", "measurable",
                 "structurally_valid", "unknown_count", "measurable_count", "applicable_count",
-                "assumption_based_count", "validity_penalty", "diagnostics")
+                "assumption_based_count", "validity_penalty", "diagnostics", "bathroom_guidance_penalty")
 
 
 def _evaluator(cpu_evaluator, tensor_evaluator):
@@ -140,6 +140,9 @@ def _evaluation_record(values, index, evaluator):
             evaluation[name] = int(values[name][index])
     if "validity_penalty" in values:
         evaluation["validity_penalty"] = _finite(values["validity_penalty"][index])
+    if "bathroom_guidance_penalty" in values:
+        evaluation["bathroom_guidance_penalty"] = _finite(values["bathroom_guidance_penalty"][index])
+        evaluation["assumption_note"] += " A joint placement surrogate replaces C036/C037/C041 severity terms during guidance."
     return evaluation
 
 

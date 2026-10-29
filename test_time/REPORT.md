@@ -4,11 +4,11 @@ The [technical report](../docs/technical_report.md) is the presentation document
 
 ## Default benchmark
 
-All nine scored constraints come from Appendix A of `Technical_assessment_TTC.pdf`:
+All eleven scored constraints come from Appendix A of `Technical_assessment_TTC.pdf`:
 
 | Family | Scored IDs | What is checked |
 |---|---|---|
-| Bedroom and bathroom accessibility | C033, C035, C036 | Bed/turning-space placement and bathroom turning space |
+| Bedroom and bathroom accessibility | C033, C035, C036, C037, C041 | Bed/turning-space placement and bathroom turning space |
 | Habitability | C076, C077, C078 | Main-room size and dwelling area/volume |
 | Ventilation | C085, C086, C090 | Normal kitchen/bathroom and reduced-mode total/kitchen extraction |
 
@@ -31,10 +31,10 @@ Best-of-11 approximately matches full SVDD by denoiser NFE. This does not match 
 
 ## Evaluation status
 
-Results for the nine-check profile are pending. Existing baseline designs and complete Best-of-N banks can be rescored; guided methods need trajectories using this reward. Current saved candidates are a development pilot; hold the scenario fixed and use shared fresh seeds for a final comparison if the pilot informs further choices.
+Results for the eleven-check profile are pending. Existing baseline designs and complete Best-of-N banks can be rescored; guided methods need trajectories using this reward. Current saved candidates are a development pilot; hold the scenario fixed and use shared fresh seeds for a final comparison if the pilot informs further choices.
 
 Report overall validity with confidence intervals, per-constraint and group outcomes, structural validity, unknown rates, severity, diversity and NFE/runtime separately. Figures and gallery examples use each run's saved registry and scenario.
 
-[Run and rescore commands](../docs/ventilation_profile.md) · [constraint definitions and reward formulas](../docs/constraints.md) · [implementation guide](README.md).
+[Run and rescore commands](../docs/bathroom_profile.md) · [constraint definitions and reward formulas](../docs/constraints.md) · [implementation guide](README.md).
 
 Earlier experiment reports remain under `experiments/` as historical records. Saved output files are preserved; results from different registries or scenarios are not pooled into this benchmark.

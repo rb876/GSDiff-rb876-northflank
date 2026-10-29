@@ -13,7 +13,7 @@ from .types import Scenario, overall_validity, read_json, write_json
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--config", type=Path, default=Path(__file__).parent / "configs/experiment_ventilation_v1.json")
+    parser.add_argument("--config", type=Path, default=Path(__file__).parent / "configs/experiment_bathroom_v1.json")
     parser.add_argument("--method", required=True, choices=["baseline", "best_of_n", "svdd_pm"])
     for name in ("trials", "seed", "n", "k", "guided_steps"):
         parser.add_argument("--" + name, type=int)
@@ -43,8 +43,8 @@ def main():
         parser.error("batch_size and inference_batch_size must be positive integers")
     if config["reward_backend"] not in {"cpu", "gpu"}:
         parser.error("reward_backend must be cpu or gpu")
-    if config["final_checker"] not in {"cpu_reference", "cpu_bedroom_audit_v2"}:
-        parser.error("final_checker must be cpu_reference or cpu_bedroom_audit_v2")
+    if config["final_checker"] not in {"cpu_reference", "cpu_bedroom_audit_v2", "cpu_bathroom_audit_v1"}:
+        parser.error("final_checker must be cpu_reference, cpu_bedroom_audit_v2 or cpu_bathroom_audit_v1")
     scenario = Scenario(**read_json(config_path.parent / config["scenario"]))
     from .constraints import load_specs
     from .policy import ConstraintEvaluator
@@ -59,7 +59,7 @@ def main():
     if selection["disabled_constraints"]:
         print("Not assessed: " + ", ".join(item["id"] for item in selection["disabled_constraints"]), flush=True)
     checker_options = {}
-    if config["final_checker"] == "cpu_bedroom_audit_v2":
+    if config["final_checker"] in {"cpu_bedroom_audit_v2", "cpu_bathroom_audit_v1"}:
         from .audit_geometry import refined_bedroom_search
         checker_options["bedroom_search_fn"] = refined_bedroom_search
     evaluator = ConstraintEvaluator(specs, validity_weight=config["validity_weight"], **checker_options)

@@ -140,7 +140,7 @@ def summarize_root(root):
 
 def _parser():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--config", type=Path, default=Path(__file__).parent / "configs/extensions_ventilation_v1.json")
+    parser.add_argument("--config", type=Path, default=Path(__file__).parent / "configs/extensions_bathroom_v1.json")
     parser.add_argument("--method", choices=METHODS)
     parser.add_argument("--workers", type=int, default=1,
                         help="Independent processes sharing the device; split the trial seeds (default: 1)")
@@ -201,8 +201,10 @@ def run(args):
         raise FileExistsError(f"Output already exists: {output}; choose a new directory")
     evaluator = ConstraintEvaluator(specs, validity_weight=config["validity_weight"],
                                     bedroom_search_fn=refined_bedroom_search)
+    final_checker = ("cpu_bathroom_audit_v1" if any(s.enabled and s.checker == "joint_bathroom" for s in specs)
+                     else "cpu_bedroom_audit_v2")
     policy_data = {"scenario": asdict(scenario), "constraints": [asdict(s) for s in specs],
-                   "validity_weight": config["validity_weight"], "checker": "cpu_bedroom_audit_v2"}
+                   "validity_weight": config["validity_weight"], "checker": final_checker}
     policy_hash = digest(policy_data)
     started_setup = time.perf_counter()
     adapter = GSDiffAdapter(repo=repo, node_checkpoint=args.node_checkpoint, edge_checkpoint=args.edge_checkpoint,
@@ -230,14 +232,14 @@ def run(args):
                 "format": "extension_attempt_ledger_v1", "constraint_selection": constraint_selection(specs),
                 "source_sha256": {str(p.relative_to(repo)): file_hash(p) for p in sorted((repo / "test_time").glob("*.py"))},
                 "guidance_backend": "unguided_GPU_rollouts_with_CPU_audited_outcomes" if args.method == "hard_h_mc" else "GPU_repair_proxy",
-                "final_evaluator": "cpu_bedroom_audit_v2", "exact_conditional": False,
+                "final_evaluator": final_checker, "exact_conditional": False,
                 "timing_scope": "generation and policy/repair work, excluding setup and artifact export",
                 "trial_batch_size": 1, "candidate_batching": "neural and repair candidates batched within each episode"}
     write_json(output / "config.json", snapshot)
     state = {"method": args.method, "status": "running", "planned_trials": config["trials"],
              "completed_trials": 0, "setup_seconds": setup_seconds, "parameters_unchanged": None}
     write_json(output / "run.json", state)
-    print(f"Run: {output}\nMethod: {args.method}; final checker=cpu_bedroom_audit_v2; "
+    print(f"Run: {output}\nMethod: {args.method}; final checker={final_checker}; "
           f"attempts={config['trials']}; inference_batch_size={config['inference_batch_size']}", flush=True)
     rows = []
     wall_start = time.perf_counter()

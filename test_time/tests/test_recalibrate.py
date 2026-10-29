@@ -12,8 +12,9 @@ from test_time.evaluate import comparison_group
 from test_time.gpu_constraints import TensorConstraintEvaluator
 from test_time.gpu_graph import extract_rooms
 from test_time.policy import ConstraintEvaluator
-from test_time.recalibrate import (CHECKER_VERSION, CONSTRAINT_PROTOCOL, _prepare_sources, file_hash, graph_tensors,
-                                  recalibrate, score_candidates, select_candidates)
+from test_time.recalibrate import (BATHROOM_CHECKER_VERSION, BATHROOM_FIELDS, CHECKER_VERSION,
+                                  CONSTRAINT_PROTOCOL, _prepare_sources, _replacement_scenario_fields,
+                                  file_hash, graph_tensors, recalibrate, score_candidates, select_candidates)
 from test_time.sampling import _candidate_seed
 from test_time.types import FloorplanSample, Room, Scenario, overall_validity, read_json, write_json
 
@@ -289,3 +290,90 @@ def test_ventilation_change_requires_relevant_explicit_registry_and_keeps_other_
     with pytest.raises(ValueError, match="scenario differs"):
         recalibrate(source, tmp_path / "rejected", scenario_path, **kwargs)
     assert not (tmp_path / "rejected").exists()
+
+
+def bathroom_pool(tmp_path):
+    source, scenario_path, scenario = fixture_pool(tmp_path)
+    configs = Path(__file__).resolve().parents[1] / "configs"
+    target = read_json(configs / "scenario_bathroom_v1.json")
+    write_json(scenario_path, {**asdict(scenario), **{name: target[name] for name in BATHROOM_FIELDS}})
+    # Isolate the coupled bathroom checks so selection is driven by their
+    # feasibility, not by the synthetic pool's missing bedrooms or kitchen.
+    specs = [spec for spec in load_specs(configs / "constraints_bathroom_v1.json")
+             if spec.id in {"C036", "C037", "C041"}]
+    registry = tmp_path / "bathroom_constraints.json"
+    write_json(registry, {"constraints": [asdict(spec) for spec in specs]})
+    path = source / "best_of_n/candidates.jsonl"
+    rows = read_rows(path)
+    sample = rows[1]["sample"]
+    sample["nodes"] = [[x * 1.6, y * 1.6, *rest] for x, y, *rest in sample["nodes"]]
+    for index, node in enumerate(sample["nodes"]):
+        sample["raw_nodes"][index][:2] = [(value - 256) / 256 for value in node[:2]]
+    sample["rooms"][0]["polygon"] = [[x * 1.6, y * 1.6] for x, y in sample["rooms"][0]["polygon"]]
+    old_specs = [spec for spec in load_specs(configs / "constraints_v2.json") if spec.id == "C036"]
+    evaluation = ConstraintEvaluator(old_specs).evaluate(FloorplanSample.from_dict(sample), Scenario(**sample["scenario"]))
+    rows[1].update(evaluation=asdict(evaluation), overall_validity=overall_validity(evaluation))
+    save_rows(path, rows)
+    return source, scenario_path, registry
+
+
+def test_bathroom_replay_uses_full_pool_and_records_shared_witness_audit(tmp_path):
+    source, scenario_path, registry = bathroom_pool(tmp_path)
+    before = {path.relative_to(source): path.read_bytes() for path in source.rglob("*") if path.is_file()}
+    output = tmp_path / "bathroom"
+    manifest = recalibrate(source, output, scenario_path, inference_batch_size=2, constraints_path=registry)
+    assert manifest["protocol"] == CONSTRAINT_PROTOCOL and manifest["model_inference_performed"] is False
+    assert set(manifest["allowed_bathroom_scenario_changes"]) == BATHROOM_FIELDS
+    assert "bathroom_geometry.py" in manifest["code_sha256"]
+    rows = read_rows(output / "best_of_n/candidates.jsonl")
+    assert len(rows) == 2 and [row["selected"] for row in rows] == [False, True]
+    selected = rows[1]
+    assert selected["evaluation_backend"] == BATHROOM_CHECKER_VERSION
+    assert selected["overall_validity"] == "valid"
+    assert {item["id"] for item in selected["evaluation"]["results"]} == {"C036", "C037", "C041"}
+    witnesses = [item["observed_values"]["witness"] for item in selected["evaluation"]["results"]]
+    assert witnesses[0] and all(witness == witnesses[0] for witness in witnesses)
+    assert rows[0]["evaluation_backend"] == "tensor_gpu"
+    config = read_json(output / "best_of_n/config.json")
+    assert config["final_checker"] == config["guidance"]["final_evaluator"] == BATHROOM_CHECKER_VERSION
+    assert config["scale_recalibration"]["scenario_changes"]["bathroom_layout"] == {
+        "from": None, "to": "combined_wc_basin_v1"}
+    original = read_json(source / "best_of_n/config.json")
+    assert config["scale_recalibration"]["original_guidance"] == original["guidance"]
+    fresh_settings = TensorConstraintEvaluator(load_specs(registry), max_positions=128).metadata
+    assert config["guidance"]["tensor_settings"] == fresh_settings
+    assert "bathroom_scenario" not in config["guidance"]["tensor_settings"]
+    fresh = {**config, "method": "svdd_pm", "guidance": {**config["guidance"], "tensor_settings": fresh_settings}}
+    fresh.pop("scale_recalibration")
+    baseline = read_json(output / "baseline/config.json")
+    assert comparison_group(config) == comparison_group(fresh) == comparison_group(baseline)
+    assert read_json(output / "best_of_n/run.json")["recalibration"]["new_denoiser_evaluations"] == 0
+    assert before == {path.relative_to(source): path.read_bytes() for path in source.rglob("*") if path.is_file()}
+
+
+@pytest.mark.parametrize("violation", ["no_registry", "unrelated_registry", "occupancy"])
+def test_bathroom_scenario_override_keeps_registry_and_operational_guards(tmp_path, violation):
+    source, scenario_path, registry = bathroom_pool(tmp_path)
+    kwargs = {"constraints_path": registry}
+    if violation == "no_registry":
+        kwargs = {}
+    elif violation == "unrelated_registry":
+        kwargs["constraints_path"] = Path(__file__).resolve().parents[1] / "configs/constraints_v2.json"
+    else:
+        scenario = read_json(scenario_path)
+        scenario["intended_occupants"] = 3
+        write_json(scenario_path, scenario)
+    with pytest.raises(ValueError, match="scenario differs"):
+        recalibrate(source, tmp_path / "rejected", scenario_path, **kwargs)
+    assert not (tmp_path / "rejected").exists()
+
+
+def test_bathroom_inputs_require_all_enabled_joint_checks_and_consumed_fields():
+    specs = [{"id": identifier, "enabled": True, "checker": "joint_bathroom",
+              "required_observations": ["bathroom_layout", "wc_width_m"]}
+             for identifier in ("C036", "C037", "C041")]
+    assert _replacement_scenario_fields(specs) == {"bathroom_layout", "wc_width_m"}
+    specs[-1]["enabled"] = False
+    assert _replacement_scenario_fields(specs) == set()
+    specs[-1].update(enabled=True, checker="bathroom_turning")
+    assert _replacement_scenario_fields(specs) == set()

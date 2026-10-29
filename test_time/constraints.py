@@ -28,6 +28,11 @@ VENTILATION_OBSERVATIONS = {
     "ventilation_mode", "kitchen_extraction_m3_h", "bathroom_extraction_m3_h",
     "reduced_total_extraction_m3_h", "reduced_kitchen_extraction_m3_h", "bathroom_ventilation_role",
 }
+BATHROOM_OBSERVATIONS = {
+    "bathroom_layout", "wc_width_m", "wc_depth_m", "basin_width_m", "basin_depth_m",
+    "basin_under_clearance", "bathroom_door_width_m", "bathroom_search_budget", "bathroom_circle_positions",
+}
+BATHROOM_IDS = ("C036", "C037", "C041")
 
 
 class CheckContext:
@@ -39,6 +44,7 @@ class CheckContext:
         self.area_policy = area_policy(self.specs.values(), scenario)
         self.rooms, self.geometry_error = [], None
         self._bedrooms = None
+        self._bathrooms = None
         self.bedroom_search_fn = bedroom_search if bedroom_search_fn is None else bedroom_search_fn
         scale = scenario.coordinate_scale_m_per_model_unit
         # Count-only checks can still use valid polygons when metric scale is absent.
@@ -69,6 +75,18 @@ class CheckContext:
                     self._bedrooms.append({"room_index": index, **search})
         return self._bedrooms
 
+    def bathrooms(self):
+        if self._bathrooms is None:
+            from .bathroom_geometry import cpu_search_bathroom
+            limits = {key: value for identifier in BATHROOM_IDS
+                      for key, value in self.specs[identifier].thresholds.items()}
+            self._bathrooms = [
+                {"room_index": index, **cpu_search_bathroom(polygon, self.scenario, limits)}
+                for index, (label, polygon) in enumerate(self.rooms)
+                if label in limits["bathroom_labels"]
+            ]
+        return self._bathrooms
+
     def habitable_room_area(self, label, polygon):
         policy = self.area_policy
         if policy["enabled"] and (policy["excluded_by_height"] or label not in policy["included_room_labels"]):
@@ -86,6 +104,8 @@ class CheckContext:
 
 
 def _result(spec, scenario, status, severity=None, observed=None, explanation="", missing_fields=None, extra_flags=()):
+    if spec.checker == "joint_bathroom":
+        observed = {"completion_model": "combined_wc_basin_v1", **(observed or {})}
     flags = list(dict.fromkeys([*spec.assumptions, *extra_flags]))
     if scenario.scale_provenance == "assumed":
         flags.append("assumed_metric_scale")
@@ -151,6 +171,28 @@ def bathroom_turning(context, spec):
         severity = min(deficit(check["radius_lower_bound_m"], radius) for check in checks)
         return "fail", severity, {"bathrooms": checks}, "All bathroom inradius upper bounds are below the required radius"
     return "unknown", None, {"bathrooms": checks}, "Circle feasibility is unresolved at the search tolerance"
+
+
+def joint_bathroom(context, spec):
+    """One completed room and one circle witness for all three bathroom checks."""
+    bathrooms = context.bathrooms()
+    observed = {"completion_model": context.scenario.bathroom_layout}
+    if not bathrooms:
+        return "fail", 1.0, observed, "No bathroom is available for the declared combined bathroom/WC layout"
+    chosen = min(bathrooms, key=lambda room: (
+        not all(room["status_by_id"][identifier] == "pass" for identifier in BATHROOM_IDS),
+        room["guidance_penalty"], room["room_index"]))
+    observed.update(chosen)
+    status = chosen["status_by_id"][spec.id]
+    if all(room["status_by_id"][spec.id] == "fail" for room in bathrooms):
+        observed["bathrooms"] = [{key: room[key] for key in ("room_index", "status_by_id", "severity_by_id", "necessary_bounds", "bounds")
+                                  if key in room} for room in bathrooms]
+        severity = min(room["severity_by_id"][spec.id] for room in bathrooms)
+        return "fail", severity, observed, "Every bathroom violates a necessary geometric bound for this check"
+    if status == "pass":
+        return "pass", 0.0, observed, "The shared fixture, door and turning-space completion witnesses this check"
+    return "unknown", None, observed, (
+        "No shared completion witnesses this check within the declared placement budget; infeasibility is not proven")
 
 
 def minimum_main_room(context, spec):
@@ -268,6 +310,7 @@ def area_definition(context, spec):
 CHECKERS = {
     "bedroom_turning": bedroom_turning, "bed_footprint": bed_footprint,
     "bedroom_circulation": bedroom_circulation, "bathroom_turning": bathroom_turning,
+    "joint_bathroom": joint_bathroom,
     "minimum_main_room": minimum_main_room, "minimum_surface": minimum_surface,
     "minimum_volume": minimum_volume,
     "kitchen_ventilation": kitchen_ventilation, "bathroom_ventilation": bathroom_ventilation,
@@ -296,6 +339,7 @@ V2_GROUPS = {
     "habitability": {"C076", "C077", "C078", "C079", "C080"},
 }
 VENTILATION_GROUPS = {**V2_GROUPS, "ventilation": {"C085", "C086", "C090"}}
+BATHROOM_GROUPS = {**VENTILATION_GROUPS, "bathroom_fixtures_turning": set(BATHROOM_IDS)}
 
 
 def load_specs(path=None):
@@ -334,6 +378,12 @@ def load_specs(path=None):
         if not isinstance(spec.thresholds, dict):
             raise ValueError(f"{spec.id}: thresholds must be an object")
         required = REQUIRED_THRESHOLDS.get(spec.checker, set())
+        if spec.checker == "joint_bathroom":
+            required = {"C036": {"diameter_m", "bathroom_labels"},
+                        "C037": {"transfer_width_m", "transfer_length_m"},
+                        "C041": {"door_overlap_m", "basin_overlap_m"}}.get(spec.id, set())
+            if spec.id not in BATHROOM_IDS:
+                raise ValueError("joint_bathroom is defined only for C036/C037/C041")
         if {"C079", "C080"}.issubset(spec.depends_on):
             required = required - {"included_room_labels", "excluded_room_labels"}
         if spec.id == "C080" and spec.checker == "area_definition":
@@ -358,9 +408,11 @@ def load_specs(path=None):
                 raise ValueError(f"{spec.id}: threshold {name} must be a positive finite number")
         if "max_positions" in spec.thresholds and type(spec.thresholds["max_positions"]) is not int:
             raise ValueError(f"{spec.id}: max_positions must be an integer")
-        known_observations = {"scale", "ceiling_height", "occupants", "room_polygons", "habitable_area_mode"} | VENTILATION_OBSERVATIONS
+        known_observations = {"scale", "ceiling_height", "occupants", "room_polygons", "habitable_area_mode"} | VENTILATION_OBSERVATIONS | BATHROOM_OBSERVATIONS
         if not isinstance(spec.required_observations, list) or not set(spec.required_observations) <= known_observations:
             raise ValueError(f"{spec.id}: unknown required observation")
+        if spec.checker == "joint_bathroom" and not (BATHROOM_OBSERVATIONS | {"scale", "room_polygons"}) <= set(spec.required_observations):
+            raise ValueError(f"{spec.id}: joint bathroom checks require scale, polygons and all declared fixture/search inputs")
         if not isinstance(spec.assumptions, list) or any(not isinstance(value, str) for value in spec.assumptions):
             raise ValueError(f"{spec.id}: assumptions must be a list of strings")
         if spec.severity_type not in {"normalized_deficit", "binary_feasibility", "definition"}:
@@ -380,11 +432,11 @@ def load_specs(path=None):
         included, excluded = limits["included_room_labels"], limits["excluded_room_labels"]
         if set(included) & set(excluded) or set(included) | set(excluded) != set(range(7)) or len(included) + len(excluded) != 7:
             raise ValueError("C080: included/excluded labels must partition GSDiff labels 0..6")
-    if data.get("version") in {2, 4}:
-        groups = {2: V2_GROUPS, 4: VENTILATION_GROUPS}[data["version"]]
+    if data.get("version") in {2, 4, 5}:
+        groups = {2: V2_GROUPS, 4: VENTILATION_GROUPS, 5: BATHROOM_GROUPS}[data["version"]]
         expected = set().union(*groups.values())
         if seen != expected:
-            count = {2: "nine", 4: "twelve"}[data["version"]]
+            count = {2: "nine", 4: "twelve", 5: "fourteen"}[data["version"]]
             raise ValueError(f"Constraint registry v{data['version']} must register exactly the {count} implemented IDs")
         for spec in specs:
             if spec.id not in groups.get(spec.group, set()):
@@ -395,6 +447,10 @@ def load_specs(path=None):
         absent = {"C033", "C034", "C035"} - seen
         if absent:
             raise ValueError(f"Bedroom checks need joint parameter definitions: {sorted(absent)}")
+    if any(spec.enabled and spec.checker == "joint_bathroom" for spec in specs):
+        if any(identifier not in by_id or not by_id[identifier].enabled or
+               by_id[identifier].checker != "joint_bathroom" for identifier in BATHROOM_IDS):
+            raise ValueError("Joint bathroom checks require C036/C037/C041 together")
     return specs
 
 
@@ -404,7 +460,7 @@ def check(sample, scenario, spec, context=None):
     observations = {"scale": scenario.coordinate_scale_m_per_model_unit,
                     "ceiling_height": scenario.ceiling_height_m, "occupants": scenario.intended_occupants,
                     "habitable_area_mode": None if scenario.habitable_area_mode == "unknown" else scenario.habitable_area_mode}
-    observations.update({name: getattr(scenario, name) for name in VENTILATION_OBSERVATIONS})
+    observations.update({name: getattr(scenario, name) for name in VENTILATION_OBSERVATIONS | BATHROOM_OBSERVATIONS})
     if spec.checker in {"bed_definition", "area_definition"}:
         if context is None:
             registry = Path(__file__).parent / "configs" / "constraints_v2.json"
@@ -415,9 +471,12 @@ def check(sample, scenario, spec, context=None):
         return _result(spec, scenario, status, severity, observed, explanation)
     missing = [name for name in spec.required_observations if name in observations and observations[name] is None]
     if missing:
-        return _result(spec, scenario, "unknown", explanation="Missing required observations: " + ", ".join(missing), missing_fields=missing)
+        observed = {"completion_model": "combined_wc_basin_v1"} if spec.checker == "joint_bathroom" else None
+        return _result(spec, scenario, "unknown", observed=observed,
+                       explanation="Missing required observations: " + ", ".join(missing), missing_fields=missing)
     if context is None:
-        registry = Path(__file__).parent / "configs" / "constraints_v2.json" if spec.depends_on else None
+        registry = (Path(__file__).parent / "configs" / "constraints_bathroom_v1.json" if spec.checker == "joint_bathroom"
+                    else Path(__file__).parent / "configs" / "constraints_v2.json" if spec.depends_on else None)
         specs = {value.id: value for value in load_specs(registry)}
         specs[spec.id] = spec
         context = CheckContext(sample, scenario, specs.values())

@@ -120,13 +120,15 @@ Finite proposals, clean-estimate rewards, coverage filtering and the greedy defa
 
 ## Constraints define the reward
 
-The default profile scores **nine constraints from Appendix A** of the [assessment](../Technical_assessment_TTC.pdf), using three supporting measurement definitions:
+The default profile evaluates **eleven constraints from Appendix A** of the [assessment](../Technical_assessment_TTC.pdf), using three supporting measurement definitions:
 
 | ID | Requirement |
 |---|---|
 | **C033** | A bedroom fits a bed and a separate **1.50 m diameter** turning circle. |
 | **C035** | Bed clearances: **0.90 m** on both long sides + **1.20 m** at one short side, or **1.20 m + 0.90 m**. Joint success with C033 requires the same bed placement. |
-| **C036** | An **empty bathroom** fits a **1.50 m diameter** turning circle. |
+| **C036** | A furnished bathroom fits a **1.50 m diameter** turning circle, sharing one fixture/door arrangement with C037/C041. |
+| **C037** | A WC has **0.80 × 1.30 m** lateral transfer space, outside the door swing. |
+| **C041** | **Bathroom-scoped:** the same turning circle overlaps the door swing by **≤0.25 m OR** the space beneath a basin by **≤0.15 m**; at most one overlap is used. |
 | **C076** | One living room/bedroom satisfies **(area ≥9 m² AND height ≥2.20 m) OR volume ≥20 m³**. |
 | **C077** | Habitable area ≥**28 m²** for two occupants. |
 | **C078** | Habitable volume ≥**66 m³** for two occupants. |
@@ -135,6 +137,8 @@ The default profile scores **nine constraints from Appendix A** of the [assessme
 | **C090** | Occupant-adjustable reduced ventilation meets **both total and kitchen** flow minima for the main-room count. |
 
 **Scenario:** paper/code-derived scale **0.03515625 m/drawing pixel**, two occupants, uniform 2.5 m ceilings, an axis-aligned 1.40 × 1.90 m hypothetical bed and zero-thickness walls. Main rooms are living-room and bedroom polygons; every bathroom label is explicitly mapped to the full-bathroom category.
+
+**Bathroom completion:** GSDiff provides neither fixtures nor doors. We therefore declare a combined bathroom/WC with a **0.40 × 0.70 m toilet**, **0.60 × 0.50 m basin** with clear space underneath, and **0.80 m inward-swinging door**. These dimensions and the combined-room programme are scenario assumptions, not PDF requirements. C041 is implemented for this bathroom circle only; bedroom door/fixture overlaps remain unverified. One shared search places these objects, the transfer rectangle and the turning circle together. Free transfer and turning spaces may overlap; solid fixtures obstruct them. A found layout establishes potential furnishing feasibility, not an observed fitted bathroom or an accessible route through the dwelling.
 
 The declared ventilation system is fixed across all methods:
 
@@ -147,7 +151,7 @@ The declared ventilation system is fixed across all methods:
 
 These are scenario capacities selected for a three-main-room dwelling; GSDiff generates the room count but does not predict these rates.
 
-The ventilation threshold tables come from **Appendix A, page 7**. The declared capacities represent a three-main-room system and are held constant across methods. Missing equipment mappings or flows remain unknown. C090 is applicable only in the declared occupant-adjustable mode and uses its supplied table only for 1–7 main rooms. The model does not establish installed airflow, duct routing or inlet/outlet placement. Supporting C034/C079/C080 define measurements without adding compliance points; doors, fixtures and navigable routes remain unobserved.
+The ventilation threshold tables come from **Appendix A, page 7**. The declared capacities represent a three-main-room system and are held constant across methods. Missing equipment mappings or flows remain unknown. C090 is applicable only in the declared occupant-adjustable mode and uses its supplied table only for 1–7 main rooms. The model does not establish installed airflow, duct routing or inlet/outlet placement. Supporting C034/C079/C080 define measurements without adding compliance points.
 
 **Scale calibration:** the [original RPLAN paper (§4)](https://wutomwu.github.io/publications/2019-DeepLayout/paper.pdf) describes an 18 m square encoded as 256 × 256 pixels. GSDiff's [normalization](../datasets/rplan-process4.py) uses $z=(x_{256}-128)/128$; our [decoder](../test_time/adapter.py) exports $x_{512}=\operatorname{trunc}(256z+256)$. Therefore,
 
@@ -166,11 +170,23 @@ E(G)=100\,\mathbf 1\{G\text{ structurally invalid}\}
 \qquad r(G)=-E(G).
 $$
 
-Bedroom feasibility uses binary penalties. Dimensional and airflow deficits use normalized shortfalls $d(q;b)=\max(0,(b-q)/b)$. C085/C086 use their required flow for the generated main-room count. C090 uses $\max\{d(q_T^r;b_T^r),d(q_K^r;b_K^r)\}$ so sufficient total flow cannot compensate for insufficient kitchen flow. All nine scored checks have weight one. **Unknowns add no numeric severity and never count as passes.** Overall validity requires valid structure and every applicable scored check to pass; zero energy alone is insufficient. The [constraint specification](constraints.md) gives exact formulas and assumptions.
+Bedroom feasibility uses binary penalties. Dimensional and airflow deficits use normalized shortfalls $d(q;b)=\max(0,(b-q)/b)$. C085/C086 use their required flow for the generated main-room count. C090 uses $\max\{d(q_T^r;b_T^r),d(q_K^r;b_K^r)\}$ so sufficient total flow cannot compensate for insufficient kitchen flow. All eleven final checks have weight one. **Unknowns add no numeric severity and never count as passes.** Overall validity requires valid structure and every applicable scored check to pass; zero energy alone is insufficient.
+
+**A shared bathroom search supplies a graded guidance score.** The same bounded bank of fixture/door placements and circle centres is used for every method. For a completion $a$, let $\ell(G,a)\geq0$ measure normalized containment, collision and permitted-overlap shortfalls. GPU guidance uses
+
+$$
+P_{\mathrm{bath}}(G)=\min_{a\in\mathcal A(G)}\ell(G,a),
+\qquad
+E_{\mathrm{GPU}}(G)=100\mathbf1\{\mathrm{invalid}\}
++\sum_{j\in\mathcal M(G)\setminus\{\mathrm{C036,C037,C041}\}}v_j(G)
++P_{\mathrm{bath}}(G).
+$$
+
+The joint term replaces the three bathroom severities during selection, avoiding counting the same geometric deficit three times. It gives near misses an ordering without labelling them proven failures. Final CPU reporting checks all three PDF rules separately; a finite search miss remains **unknown** unless a necessary geometric bound proves failure. The chosen shared arrangement is saved and drawn in the sample figures. [Constraint formulas](constraints.md) and the [bathroom protocol](bathroom_profile.md) specify the assumptions, overlap convention and search limitations.
 
 ## Evaluation and compute
 
-**Results for this nine-check profile are pending.** Baseline designs and the complete Best-of-11 candidate banks can be reused by rescoring them under the declared scenario. SVDD must use the same reward during generation. The table records planned denoiser budgets, not measured results:
+**Results for this eleven-check profile are pending.** Baseline designs and the complete Best-of-11 candidate banks can be reused by rescoring them under the declared scenario. SVDD must use the same reward during generation. The table records planned denoiser budgets, not measured results:
 
 | Method | Outputs | Planned NFE/output | Overall valid |
 |---|---:|---:|---|
@@ -179,23 +195,23 @@ Bedroom feasibility uses binary penalties. Dimensional and airflow deficits use 
 | SVDD, last 20% | 100 | 3,000 | Pending |
 | SVDD, full | 100 | 10,990 | Pending |
 
-**Pilot protocol:** 100 outputs per method with paired seeds `10000–10099`, shared frozen checkpoints, nine scored checks and the scenario above. Compare baseline, Best-of-11, SVDD over the last 20% and full-trajectory SVDD. Final selected outputs use the CPU placement audit; preserve failed and unresolved cases in the denominators. Report ventilation, accessibility and habitability group results alongside overall success.
+**Pilot protocol:** 100 outputs per method with paired seeds `10000–10099`, shared frozen checkpoints, eleven scored checks and the scenario above. Compare baseline, Best-of-11, SVDD over the last 20% and full-trajectory SVDD. Final selected outputs use the CPU placement audit; preserve failed and unresolved cases in the denominators. Report ventilation, accessibility and habitability group results alongside overall success. Keep search budgets identical across methods, and report bathroom unknowns separately from proven failures.
 
 Report overall validity with 95% Wilson intervals, per-constraint pass/fail/unknown rates, structural validity, measured severity and layout diversity. Record NFE and elapsed sampling/checking time separately. Sample-wise denoiser cost is $T+KG$ for SVDD and $NT$ for Best-of-N, where $G$ is the number of guided transitions; this does not match edge-model or checker cost.
 
-The completed evaluation will include one comparison table, per-constraint results and labelled success/failure examples at the corrected metric scale. [Reproduction instructions](../test_time/README.md), [sweep launcher](../test_time/launch_eval.sh) and [machine-readable constraints](../test_time/configs/constraints_ventilation_v1.json) provide the assessment's baseline comparison, compute accounting and reproducibility requirements. One scenario and seed batch limit generalization.
+The completed evaluation will include one comparison table, per-constraint results and labelled success/failure examples at the corrected metric scale. [Reproduction instructions](../test_time/README.md), [sweep launcher](../test_time/launch_eval.sh) and [machine-readable constraints](../test_time/configs/constraints_bathroom_v1.json) provide the assessment's baseline comparison, compute accounting and reproducibility requirements. One scenario and seed batch limit generalization; this profile does not guarantee a lower Best-of-N success rate or an SVDD advantage.
 
 ## Practical limits
 
-**GPU evaluation** batches room extraction and constraint searches, avoiding repeated CPU geometry work inside the guidance loop. Final metrics use the CPU reference checker; search outcomes and severities can differ between backends.
+**GPU evaluation** batches room extraction and constraint searches, avoiding repeated CPU geometry work inside the guidance loop. Bathroom completion uses tensor geometry; the final CPU audit independently verifies a saved positive placement witness. Final metrics use the CPU reference checker; search outcomes and severities can differ between backends.
 
-Finite searches may remain unknown, binary penalties provide weak incremental feedback, and greedy selection may reduce diversity. At the assumed height, C077 already implies C078. The fixed ventilation capacities also correlate C085 with C090, while the declared bathroom flow satisfies C086 across its table. These checks are not independent; room-count distributions reveal whether guidance mainly selects fewer rooms. These checks assess feasibility under the stated assumptions; baseline-relative diagnostics do not establish RPLAN fidelity.
+Finite searches may remain unknown, bedroom binary penalties provide weak incremental feedback, and greedy selection may reduce diversity. The bathroom search covers a limited family of placements; it cannot certify that no other furnishing arrangement exists. At the assumed height, C077 already implies C078. C036/C037/C041 share geometry, and the fixed ventilation capacities correlate C085 with C090; the declared bathroom flow satisfies C086 across its table. These checks are not independent. Report room counts and diversity alongside success; baseline-relative diagnostics do not establish RPLAN fidelity.
 
 [Technical notes](technical_notes.md) retain checkpoint details and exact process-weighting equations; their historical result tables are not part of this evaluation.
 
 ## Extensions: late hard-feasibility and repair-aware SVDD
 
-These two algorithmic extensions use the same frozen checkpoints, nine scored constraints and declared scenario. **Results are pending for both extensions.**
+These two algorithmic extensions use the same frozen checkpoints, eleven scored constraints and declared scenario. **Results are pending for both extensions.**
 
 ### Binary-rollout conditioning (`hard_h_mc`)
 
@@ -255,4 +271,6 @@ An empty eligible repair bank falls back to its unchanged graph. The chosen **or
 
 Final repair changes the output distribution and may still leave failed constraints. This combined intervention does not isolate guidance from final-repair effects; no ablation result, compute match or exact feasibility-conditioned distribution is claimed.
 
-The [launcher](../test_time/launch_extensions.sh) previews repair-aware SVDD first, then `hard_h_mc`; `--run` executes that order. Defaults are 100 attempts per method starting at seed 10000, with inference microbatches of **32**, saved under `test_time/outputs/ventilation_extensions_001/`. `--smoke` retains two attempts with two hard-h rollouts and two terminal completions. Saved per-run configurations define the actual budgets, including earlier runs with $L=16$. See [reproduction instructions](../test_time/README.md).
+The existing finite wall-proposal order favours enlarging the largest bedroom. Adding bathroom scoring does not make that proposal bank target bathroom bottlenecks, and cannot guarantee a useful bathroom repair.
+
+The [launcher](../test_time/launch_extensions.sh) previews repair-aware SVDD first, then `hard_h_mc`; `--run` executes that order. Defaults are 100 attempts per method starting at seed 10000, with inference microbatches of **32**, saved under `test_time/outputs/bathroom_extensions_001/`. `--smoke` retains two attempts with two hard-h rollouts and two terminal completions. Saved per-run configurations define the actual budgets, including earlier runs with $L=16$. See [reproduction instructions](../test_time/README.md).

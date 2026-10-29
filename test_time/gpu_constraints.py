@@ -9,6 +9,7 @@ import math
 import torch
 
 from .area import area_policy
+from .constraints import BATHROOM_IDS, BATHROOM_OBSERVATIONS
 
 PASS, FAIL, UNKNOWN, NOT_APPLICABLE = 0, 1, 2, 3
 EPS = 1e-8
@@ -214,6 +215,15 @@ class TensorConstraintEvaluator:
             "cpu_oracle_equivalence": False,
             "circle_failure_severity": "Normalized deficit of the proven bounding-box/area inradius upper bound",
         }
+        self.joint_bathroom = any(spec.checker == "joint_bathroom" for spec in self.specs)
+        if self.joint_bathroom:
+            if any(identifier not in self.ids or self.by_id[identifier].checker != "joint_bathroom"
+                   for identifier in BATHROOM_IDS):
+                raise ValueError("GPU joint bathroom checks require C036/C037/C041 together")
+            self.metadata.update(bathroom_completion="combined_wc_basin_v1",
+                                 bathroom_guidance="One joint placement penalty replaces the three bathroom severity terms",
+                                 bathroom_joint_weight=sum(self.by_id[key].weight for key in BATHROOM_IDS) / 3,
+                                 bathroom_final_audit="Same template bank on CPU with independent witness verification")
 
     @torch.no_grad()
     def evaluate(self, rooms, scenario):
@@ -256,14 +266,14 @@ class TensorConstraintEvaluator:
         geometry = {}
         bed_ids = {"C033", "C034", "C035"}
         need_beds = bool(bed_ids & set(self.ids)) and bed_ids <= self.by_id.keys()
-        need_bath = "C036" in self.ids
+        need_bath = "C036" in self.ids and not self.joint_bathroom
         bedroom_labels = self.by_id["C034"].thresholds["bedroom_labels"] if need_beds else []
-        bathroom_labels = self.by_id["C036"].thresholds["bathroom_labels"] if need_bath else []
+        bathroom_labels = self.by_id["C036"].thresholds["bathroom_labels"] if (need_bath or self.joint_bathroom) else []
         bed_rooms = room_mask & _labels_in(labels, bedroom_labels)
         bath_rooms = room_mask & _labels_in(labels, bathroom_labels)
         self.metadata.update(coarse_grid_m=scenario.geometry_grid_m, refine_grid_m=scenario.geometry_refine_m)
         if scale is not None and scenario.building_use == "residential" and scenario.accessible_dwelling and (need_beds or need_bath):
-            packed_batch, packed_room = torch.nonzero((bed_rooms | bath_rooms) & valid[:, None], as_tuple=True)
+            packed_batch, packed_room = torch.nonzero((bed_rooms | (bath_rooms & need_bath)) & valid[:, None], as_tuple=True)
             pstarts, pends = starts[packed_batch, packed_room], ends[packed_batch, packed_room]
             pmasks = edge_mask[packed_batch, packed_room]
             plow, phigh, parea = low[packed_batch, packed_room], high[packed_batch, packed_room], areas[packed_batch, packed_room]
@@ -295,6 +305,40 @@ class TensorConstraintEvaluator:
                 geometry["bed_width_m"] = width
                 geometry["bed_length_m"] = bed["length_m"]
 
+        joint_status = torch.full((batch, 3), UNKNOWN, device=device, dtype=torch.long)
+        joint_severity = torch.full((batch, 3), torch.nan, device=device, dtype=dtype)
+        joint_penalty = torch.zeros(batch, device=device, dtype=dtype)
+        if self.joint_bathroom:
+            self.metadata["bathroom_scenario"] = {name: getattr(scenario, name) for name in sorted(BATHROOM_OBSERVATIONS)}
+            available = scale is not None and all(getattr(scenario, name) is not None for name in BATHROOM_OBSERVATIONS)
+            if available and scenario.building_use == "residential" and scenario.accessible_dwelling:
+                from .bathroom_geometry import search_bathrooms
+                limits = {key: value for identifier in BATHROOM_IDS for key, value in self.by_id[identifier].thresholds.items()}
+                b, r = torch.nonzero(bath_rooms & valid[:, None], as_tuple=True)
+                found = search_bathrooms(starts[b, r], ends[b, r], edge_mask[b, r],
+                                         low[b, r], high[b, r], areas[b, r], scenario, limits)
+                room_status = torch.full((batch, room_slots, 3), UNKNOWN, device=device, dtype=torch.long)
+                room_severity = torch.full((batch, room_slots, 3), torch.nan, device=device, dtype=dtype)
+                room_penalty = torch.full((batch, room_slots), torch.inf, device=device, dtype=dtype)
+                room_status[b, r], room_severity[b, r] = found["status"], found["severity"]
+                room_penalty[b, r] = found["guidance_penalty"]
+                joint_pass = (room_status == PASS).all(-1) & bath_rooms
+                rank = room_penalty.masked_fill(joint_pass.any(-1)[:, None] & ~joint_pass, torch.inf)
+                choice = rank.argmin(-1)
+                row = torch.arange(batch, device=device)
+                chosen = room_status[row, choice]
+                all_failed = ((room_status == FAIL) | ~bath_rooms[..., None]).all(1)
+                # A failed bound in one room cannot rule out another room.
+                joint_status = torch.where(all_failed, FAIL, torch.where(chosen == FAIL, UNKNOWN, chosen))
+                proven_severity = room_severity.masked_fill(~bath_rooms[..., None], torch.inf).amin(1)
+                joint_severity = torch.where(joint_status == PASS, 0,
+                                            torch.where(all_failed, proven_severity, torch.nan))
+                no_bath = ~bath_rooms.any(-1)
+                joint_severity = torch.where(no_bath[:, None], 1, joint_severity)
+                joint_penalty = torch.where(no_bath, 1, room_penalty[row, choice])
+                joint_penalty = torch.where(valid, joint_penalty, 0)
+                geometry["bathroom_room_index"] = choice
+
         def area_for(allowed):
             return torch.where(room_mask & _labels_in(labels, allowed), areas, 0).sum(-1)
 
@@ -323,6 +367,7 @@ class TensorConstraintEvaluator:
                          "reduced_total_extraction_m3_h": scenario.reduced_total_extraction_m3_h,
                          "reduced_kitchen_extraction_m3_h": scenario.reduced_kitchen_extraction_m3_h,
                          "bathroom_ventilation_role": scenario.bathroom_ventilation_role}
+            available.update({name: getattr(scenario, name) for name in BATHROOM_OBSERVATIONS})
             if any(name in available and available[name] is None for name in spec.required_observations):
                 continue
             if (spec.checker in {"minimum_main_room", "minimum_surface", "minimum_volume"}
@@ -330,7 +375,10 @@ class TensorConstraintEvaluator:
                 continue
             limits = spec.thresholds
             measured = torch.zeros(batch, device=device, dtype=dtype)
-            if spec.checker in {"bedroom_turning", "bed_footprint", "bedroom_circulation"}:
+            if spec.checker == "joint_bathroom":
+                index = BATHROOM_IDS.index(spec.id)
+                current, measured = joint_status[:, index], joint_severity[:, index]
+            elif spec.checker in {"bedroom_turning", "bed_footprint", "bedroom_circulation"}:
                 if "bed" not in geometry:
                     continue
                 bed_area = geometry["bed_width_m"] * geometry["bed_length_m"]
@@ -413,7 +461,13 @@ class TensorConstraintEvaluator:
         applicable = status != NOT_APPLICABLE
         measurable = (status == PASS) | (status == FAIL)
         counted = applicable & count_flags[None]
-        regulatory = (torch.where(measurable, severity, 0) * weights[None]).sum(-1)
+        guide_weights = weights.clone()
+        if self.joint_bathroom:
+            for identifier in BATHROOM_IDS:
+                guide_weights[self.ids.index(identifier)] = 0
+        regulatory = (torch.where(measurable, severity, 0) * guide_weights[None]).sum(-1)
+        if self.joint_bathroom:
+            regulatory = regulatory + joint_penalty * self.metadata["bathroom_joint_weight"]
         energy = regulatory + self.validity_weight * (~valid).to(dtype)
         result = {"energy": energy, "reward": -energy, "status": status, "severity": severity,
                 "applicable": applicable, "measurable": measurable, "structurally_valid": valid,
@@ -422,6 +476,8 @@ class TensorConstraintEvaluator:
                 "assumption_based_count": (counted & assume_flags[None]).sum(-1),
                 "validity_penalty": (~valid).to(dtype), "diagnostics": rooms["diagnostics"],
                 "room_areas_m2": areas}
+        if self.joint_bathroom:
+            result["bathroom_guidance_penalty"] = joint_penalty
         if area_rules["enabled"]:
             result.update(habitable_room_areas_m2=habitable_areas,
                           habitable_area_m2=torch.where(room_mask, habitable_areas, 0).sum(-1))

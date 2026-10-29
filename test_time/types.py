@@ -30,6 +30,15 @@ class Scenario:
     reduced_total_extraction_m3_h: float | None = None
     reduced_kitchen_extraction_m3_h: float | None = None
     bathroom_ventilation_role: str | None = None
+    bathroom_layout: str | None = None
+    wc_width_m: float | None = None
+    wc_depth_m: float | None = None
+    basin_width_m: float | None = None
+    basin_depth_m: float | None = None
+    basin_under_clearance: bool | None = None
+    bathroom_door_width_m: float | None = None
+    bathroom_search_budget: int = 432
+    bathroom_circle_positions: int = 49
 
     def __post_init__(self):
         if self.habitable_area_mode not in {"zero_thickness_proxy", "unknown"}:
@@ -59,6 +68,18 @@ class Scenario:
             if value is not None and (isinstance(value, bool) or not isinstance(value, (int, float))
                                       or not math.isfinite(value) or value < 0):
                 raise ValueError(f"{name} must be a nonnegative finite number or null")
+        if self.bathroom_layout not in {None, "combined_wc_basin_v1"}:
+            raise ValueError("bathroom_layout must be combined_wc_basin_v1 or null")
+        if self.basin_under_clearance is not None and type(self.basin_under_clearance) is not bool:
+            raise ValueError("basin_under_clearance must be boolean or null")
+        for name in ("wc_width_m", "wc_depth_m", "basin_width_m", "basin_depth_m", "bathroom_door_width_m"):
+            value = getattr(self, name)
+            if value is not None and (isinstance(value, bool) or not isinstance(value, (int, float))
+                                      or not math.isfinite(value) or value <= 0):
+                raise ValueError(f"{name} must be positive and finite or null")
+        for name in ("bathroom_search_budget", "bathroom_circle_positions"):
+            if type(getattr(self, name)) is not int or getattr(self, name) < 1:
+                raise ValueError(f"{name} must be a positive integer")
 
 
 @dataclass

@@ -25,8 +25,8 @@ seed="${EVAL_SEED:-10000}"
 inference_batch_size="${INFERENCE_BATCH_SIZE:-32}"
 workers="${WORKERS:-1}"
 device="${DEVICE:-cuda:0}"
-config="${EXTENSION_CONFIG:-test_time/configs/extensions_ventilation_v1.json}"
-output_root="${EVAL_OUTPUT:-test_time/outputs/ventilation_extensions_001}"
+config="${EXTENSION_CONFIG:-test_time/configs/extensions_bathroom_v1.json}"
+output_root="${EVAL_OUTPUT:-test_time/outputs/bathroom_extensions_001}"
 read -r -a methods <<< "${METHODS:-svdd_repair_aware hard_h_mc}"
 if [[ "$smoke" == true ]]; then
   trials=2

@@ -106,14 +106,14 @@ def test_constraint_listing_needs_no_models_and_preserves_legacy_profile(monkeyp
     selected = json.loads(capsys.readouterr().out)
     expected = {"C033", "C035", "C036", "C076", "C077", "C078"}
     if not legacy:
-        expected |= {"C085", "C086", "C090"}
+        expected |= {"C037", "C041", "C085", "C086", "C090"}
     assert set(selected["active_scored_ids"]) == expected
-    assert selected["constraint_counts"]["registered"] == (7 if legacy else 12)
+    assert selected["constraint_counts"]["registered"] == (7 if legacy else 14)
     assert selected["disabled_constraints"] == []
 
 
 @pytest.mark.parametrize("method", ["baseline", "best_of_n", "svdd_pm"])
-@pytest.mark.parametrize("final_checker", ["cpu_reference", "cpu_bedroom_audit_v2"])
+@pytest.mark.parametrize("final_checker", ["cpu_reference", "cpu_bedroom_audit_v2", "cpu_bathroom_audit_v1"])
 def test_default_gpu_dispatch_metadata_and_final_cpu_results(monkeypatch, tmp_path, capsys, method, final_checker):
     from test_time import gpu_constraints, gpu_sampling, policy
     from test_time.audit_geometry import refined_bedroom_search
@@ -155,7 +155,7 @@ def test_default_gpu_dispatch_metadata_and_final_cpu_results(monkeypatch, tmp_pa
 
     def sample_batch(model, evaluator, scenario, seeds, inference_batch_size, **settings):
         assert isinstance(evaluator, CpuReference)
-        assert evaluator.bedroom_search_fn is (refined_bedroom_search if final_checker == "cpu_bedroom_audit_v2" else None)
+        assert evaluator.bedroom_search_fn is (refined_bedroom_search if final_checker != "cpu_reference" else None)
         assert inference_batch_size == 3
         if method == "baseline":
             assert "tensor_evaluator" not in settings
@@ -196,6 +196,8 @@ def test_default_gpu_dispatch_metadata_and_final_cpu_results(monkeypatch, tmp_pa
                                     "--n", "2", "--k", "2", "--guided_steps", "2", "--output_dir", str(output)]
     if final_checker == "cpu_reference":
         arguments += ["--config", str(run.Path(run.__file__).parent / "configs/experiment_v2.json")]
+    elif final_checker == "cpu_bedroom_audit_v2":
+        arguments += ["--config", str(run.Path(run.__file__).parent / "configs/experiment_ventilation_v1.json")]
     monkeypatch.setattr(sys, "argv", arguments)
     run.main()
 

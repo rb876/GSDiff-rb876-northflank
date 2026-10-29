@@ -1,7 +1,7 @@
 # GSDiff constraints: what we check and what we assume
 
-The default profile evaluates **nine constraints from Appendix A of the assessment**, using **three supporting measurement rules**.
-All twelve registry entries are implemented. The nine checks determine reward and validity; supporting rules define measurements and add no separate reward or pass/fail result. The scored IDs are C033, C035, C036, C076, C077, C078, C085, C086 and C090.
+The default profile evaluates **eleven constraints from Appendix A of the assessment**, using **three supporting measurement rules**.
+All fourteen registry entries are implemented. The eleven checks determine validity; supporting rules define measurements and add no separate reward or pass/fail result. The scored IDs are C033, C035, C036, C037, C041, C076, C077, C078, C085, C086 and C090.
 
 GSDiff generates walls and room labels. It does not generate furniture, toilets, doors, ventilation equipment or airflow; metric dimensions are derived from the documented coordinate scale.
 Our results therefore describe **geometric feasibility under the assumptions below**, rather than verified building compliance.
@@ -14,13 +14,14 @@ Our results therefore describe **geometric feasibility under the assumptions bel
 | Occupants | Two people | Used to choose bed dimensions and minimum dwelling area/volume. |
 | Ceiling height | 2.5 metres everywhere | Height is supplied by the scenario; the model generates only a floorplan. |
 | Wall thickness | Zero-thickness area estimate | We do not subtract real wall footprints because the model does not provide them. |
-| Furniture and fixtures | Only the hypothetical bed used by the bedroom search | Other furniture, bathroom fittings and door swings are not obstacles in the current checks. |
+| Bedroom furniture | One hypothetical bed | Other bedroom furniture and door swings remain unobserved. |
+| Bathroom completion | Combined bathroom/WC; 0.40 × 0.70 m WC, 0.60 × 0.50 m basin with clear space underneath, 0.80 m inward door | Explicit scenario assumptions, not PDF fixture dimensions. One arrangement is shared by C036/C037/C041. |
 | Ventilation system | Normal kitchen 105 and bathroom 30 m³/h per room; reduced total 75 and kitchen 45 m³/h per kitchen | Declared three-main-room system specification, fixed across candidates. These are scenario inputs, not GSDiff predictions. |
 | Ventilation mapping/mode | All kitchen labels use the same declared equipment; all bathroom labels are full bathrooms; occupant-adjustable reduced mode | The graph does not identify equipment or distinguish an “other shower room” role. |
 
-Ventilation capacities and the operating mode are declared in the [scenario](../test_time/configs/scenario_ventilation_v1.json), fixed before candidate generation and shared across methods. **The threshold tables are from the PDF; the available airflow values are experimental scenario assumptions, not observations or predictions of an installed system.** Changing these inputs can change whether a plan passes; every run saves them. Main rooms are distinct living-room and bedroom polygons (labels 0 and 1).
+Ventilation capacities and the operating mode are declared in the [scenario](../test_time/configs/scenario_bathroom_v1.json), fixed before candidate generation and shared across methods. **The threshold tables are from the PDF; the available airflow values are experimental scenario assumptions, not observations or predictions of an installed system.** Changing these inputs can change whether a plan passes; every run saves them. Main rooms are distinct living-room and bedroom polygons (labels 0 and 1).
 
-## Six assessment-derived scored checks
+## Eight geometry checks from the assessment
 
 ### C033 — Space to turn a wheelchair in a bedroom
 
@@ -41,13 +42,31 @@ Ventilation capacities and the operating mode are declared in the [scenario](../
 
 **Assumptions:** The clearance region is empty apart from the bed. This does not check access through a doorway or obstacles elsewhere in the dwelling.
 
-### C036 — Turning space in an empty bathroom
+### C036 — Turning space in a furnished bathroom
 
-**Constraint:** At least one bathroom must contain a **1.50 m diameter** turning circle.
+**Constraint:** At least one bathroom contains a **1.50 m diameter** turning circle.
 
-**Implementation:** Search circle centres and check their distance from the room boundary. A fitting circle establishes a pass. A geometric bound can establish that the room is too small; an inconclusive search remains unknown.
+**Implementation:** Search one combined bathroom/WC arrangement containing a toilet, basin, inward door, lateral WC transfer rectangle and turning circle. The circle lies inside the room and clear of the toilet; C041 evaluates its permitted basin/door overlaps. C036, C037 and C041 use **the same selected arrangement**, never independently convenient placements.
 
-**Assumptions:** The bathroom is treated as empty. A toilet, washbasin, shower or door swing could obstruct a circle that currently fits. A pass means **empty-room feasibility**, not that a furnished bathroom is accessible.
+**Assumptions:** Toilet, basin and door objects are hypothetical. Their dimensions and a combined WC/bathroom programme are declared above. A found arrangement is evidence of potential furnishing feasibility; it does not establish that these objects were generated or installed.
+
+### C037 — Lateral WC transfer space
+
+**Constraint:** At least one toilet has **0.80 × 1.30 m** lateral transfer space **outside the door swing**.
+
+**Implementation:** Place the rectangle along either side of the declared toilet, completely inside the room and clear of solid fixtures and the door's 90° sweep. The transfer zone may overlap the wheelchair turning circle: both represent free space.
+
+**Assumptions:** A bathroom label is explicitly given a WC in this scenario; GSDiff does not identify toilets. Door placement is hypothesized on the room boundary. No accessible route to the door, handle clearance or approach-space compliance is inferred.
+
+### C041 — Limited overlap of the bathroom turning space
+
+**Constraint:** The **1.50 m** turning circle may overlap a door swing by **at most 0.25 m**, or the unobstructed space beneath a basin by **at most 0.15 m**. **Only one overlap** is used.
+
+**Implementation:** Evaluate the circle from the same arrangement as C036/C037. Check the two overlap depths against their limits and reject simultaneous positive overlaps. The exact depth convention and candidate bank are documented in the [bathroom protocol](bathroom_profile.md); the PDF provides the limits, while their geometric formalization is explicit in the implementation.
+
+**Scope and assumptions:** This is the bathroom-scoped subset of C041. Other turning spaces, including bedroom door/fixture overlaps, are not verified by this check. Clear space beneath the basin is supplied by the scenario. No shower or bathtub footprint, plumbing, mounting height or route accessibility is certified.
+
+**Shared search and interpretation:** A bounded tensor search selects one arrangement jointly, using the same budget for every method. A positive result stores a geometric witness; CPU reporting independently audits it. A necessary geometric bound can establish failure. Exhausting the finite bank without a witness leaves the result **unknown**, since other arrangements may exist. A separate continuous search penalty helps rank near misses during GPU selection without changing that validity status.
 
 ### C076 — Minimum size of a main room
 
@@ -162,7 +181,7 @@ Source for all three tables: [Technical assessment, Appendix A, page 7](../Techn
 - **Unknown:** An active check lacks required information, or its bounded search is inconclusive. It does not count as passing.
 - **Not applicable:** The check does not apply to the scenario. Supporting definitions also use this stored status because they are not independent checks.
 
-Overall validity requires a structurally valid graph and **every applicable one of the nine scored checks to pass**. Any failure makes the design invalid. With no failure but an unknown active check, overall validity is unknown. If no scored checks apply, the result is not applicable, not valid. Plots and tables report the ventilation group separately from bedroom accessibility, bathroom turning and habitability.
+Overall validity requires a structurally valid graph and **every applicable one of the eleven scored checks to pass**. Any failure makes the design invalid. With no failure but an unknown active check, overall validity is unknown. If no scored checks apply, the result is not applicable, not valid. Plots and tables report the ventilation group separately from bedroom accessibility, joint bathroom feasibility and habitability.
 
 Energy adds the weighted measurable violations and a separate structural-invalidity penalty. Deficit-based checks give no additional reward once their threshold is reached. Unknowns receive no invented severity; candidate selection also protects measurement coverage so that hiding a known violation behind missing information is not treated as a straightforward improvement.
 
@@ -175,7 +194,7 @@ These formulas describe the current code. They are written as LaTeX math blocks 
 Each scored constraint produces a nonnegative **violation severity**. A satisfied check has severity zero. We minimize total energy, or equivalently maximize its negative:
 
 $$
-\mathcal{J}=\{\mathrm{C033},\mathrm{C035},\mathrm{C036},\mathrm{C076},\mathrm{C077},\mathrm{C078},
+\mathcal{J}=\{\mathrm{C033},\mathrm{C035},\mathrm{C036},\mathrm{C037},\mathrm{C041},\mathrm{C076},\mathrm{C077},\mathrm{C078},
 \mathrm{C085},\mathrm{C086},\mathrm{C090}\},
 $$
 
@@ -232,42 +251,35 @@ For C033, the witness contains the required bed and a separate 1.50 m turning ci
 
 This means a proven failure that becomes “less bad” still contributes 1 until its status changes; these checks do not currently reward incremental clearance improvements.
 
-### C036 — bathroom turning-circle shortfall
+### C036/C037/C041 — joint bathroom feasibility and GPU guidance
 
-The required radius is:
+Let $\mathcal A_b$ be the configured finite bank of fixture/door/circle arrangements for bathroom $b$. Every arrangement contains the same WC, basin, door sector, transfer rectangle and turning circle across all three checks. Let $\ell(b,a)\geq0$ combine normalized containment, collision and overlap shortfalls for candidate $a$.
 
-$$
-\rho_{\min}=\frac{1.50}{2}=0.75\ \mathrm{m}.
-$$
-
-For each bathroom $b$, GPU scoring computes an upper bound on the radius of any circle that could fit:
+The guidance term is the best shared candidate penalty:
 
 $$
-U_b=
-\min\left(
-\frac{\min(w_b,h_b)}{2},
-\sqrt{\frac{A_b}{\pi}}
-\right).
+P_{\mathrm{bath}}(x)=\min_{b\in\mathcal R_{\mathrm{bath}},\ a\in\mathcal A_b}\ell(b,a).
 $$
 
-Here $w_b,h_b$ are the axis-aligned bounding-box dimensions, and $A_b$ is the physical bathroom polygon area. This is a bound, not a measured fitting-circle radius. If every bathroom has $U_b<0.75$, failure is established and the GPU severity is:
+All methods use this same term. During **GPU selection**, it replaces the three bathroom severities, rather than adding three copies of a shared deficit:
 
 $$
-v_{\mathrm{C036}}^{\mathrm{GPU}}(x)
-=d\left(\max_b U_b;\,0.75\right).
+E_{\mathrm{GPU}}(x)=100\mathbf1\{x\text{ structurally invalid}\}
++\sum_{j\in\mathcal M(x)\setminus\{\mathrm{C036,C037,C041}\}}\lambda_jv_j(x)
++P_{\mathrm{bath}}(x).
 $$
 
-A witnessed fitting circle gives severity zero. If the bounds permit a fit but the finite search finds none, the result is unknown. With no bathroom, the severity is 1.
+This penalty is a **search surrogate**, not a compliance probability or proof of impossibility. Unknown checks still have undefined regulatory severity. The surrogate can rank their near misses, while coverage filtering continues to protect measurable checks. A zero penalty is accepted as success only when the geometric witness tests pass.
 
-**CPU reporting uses a different failure estimate.** Its polygon search finds a radius $L_b$, stored as the radius lower bound. After its upper-bound test establishes failure in every bathroom, the reported severity is:
+For final CPU reporting, the energy formula above still sums measured severities for all eleven IDs. Final pass/fail/unknown statuses come from the shared witness audit and necessary geometric bounds; the search surrogate is stored separately. CPU final energy and GPU selection energy therefore need not agree.
+
+The required turning radius is $r=0.75$ m. In any room of area $A_b$ and bounding dimensions $w_b,h_b$, a necessary bound is
 
 $$
-v_{\mathrm{C036}}^{\mathrm{CPU}}(x)
-=\min_b d(L_b;0.75)
-=d\left(\max_b L_b;\,0.75\right).
+U_b=\min\left(\frac{\min(w_b,h_b)}2,\sqrt{\frac{A_b}{\pi}}\right).
 $$
 
-The CPU failure test uses $L_b+\varepsilon_b<0.75$, where $\varepsilon_b$ is the recorded search tolerance. CPU and GPU penalties can therefore differ even when both report failure.
+If every bathroom has $U_b<r$, no turning circle can fit. Larger rooms are **not** automatically feasible: fixtures, transfer space and permitted overlaps must also fit jointly. A missing required bathroom is a failure; a truncated search is not.
 
 ### C076 — main-room area/height OR volume
 
@@ -372,14 +384,14 @@ SVDD then continues the selected **noisy** diffusion state, not its clean predic
 
 ## GPU guidance and final CPU validation
 
-During generation, room extraction, constraint geometry and proposal selection use tensors on the GPU. The placement search uses configured **0.25 m and 0.05 m grids**, at most **20,000 bed positions per room**, and up to **32 retained directional circle witnesses**. A missed placement is not proof of impossibility.
+During generation, room extraction, constraint geometry and proposal selection use tensors on the GPU. The placement search uses configured **0.25 m and 0.05 m grids**, at most **20,000 bed positions per room**, and up to **32 retained directional circle witnesses** for bedrooms. Bathroom completion has its own **432-template × 49-circle-centre bank**, saved in the scenario and shared by every method. A missed placement is not proof of impossibility.
 
-Every final design is checked with the CPU reference implementation. The CPU and GPU placement searches can differ; **reported final validity uses the CPU result**. The three ventilation checks use the same room-count tables, scenario inputs and severity formulas on both backends. They add no CPU geometry calls inside GPU guidance.
+Every final design is checked with the CPU reference implementation. For bathrooms, it repeats the same bounded candidate protocol and independently checks positive witnesses with Shapely; it does not quietly increase the placement budget. The CPU and GPU placement searches can differ; **reported final validity uses the CPU result**. The three ventilation checks use the same room-count tables, scenario inputs and severity formulas on both backends. They add no CPU geometry calls inside GPU guidance.
 
 ## Files and inspection
 
-- [Constraint registry](../test_time/configs/constraints_ventilation_v1.json): nine Appendix A checks and three measurement rules.
-- [Scenario](../test_time/configs/scenario_ventilation_v1.json): declared ventilation mode/capacities, paper/code-derived scale, occupancy, height and area model.
+- [Constraint registry](../test_time/configs/constraints_bathroom_v1.json): eleven Appendix A checks and three measurement rules.
+- [Scenario](../test_time/configs/scenario_bathroom_v1.json): declared bathroom objects, placement budget, ventilation mode/capacities, paper/code-derived scale, occupancy, height and area model.
 - [Documentation snapshot](constraints.json): the same selection in a convenient JSON file.
 - [CPU checks](../test_time/constraints.py), [GPU checks](../test_time/gpu_constraints.py), and [shared area rules](../test_time/area.py).
 
@@ -389,4 +401,4 @@ List the current selection without loading models or generating designs:
 python -m test_time.run --method baseline --list-constraints
 ```
 
-The default profile contains only the nine scored Appendix A checks listed above. Historical configurations remain available for reproducing their saved outputs, but their metrics must not be mixed with this profile. Baseline can be rechecked and the full Best-of-N bank reselected; guidance needs new runs under the same saved ventilation scenario. Freeze the scenario before the final comparison on fresh seeds.
+The default profile contains only the eleven scored Appendix A checks listed above. Historical configurations remain available for reproducing their saved outputs, but their metrics must not be mixed with this profile. Baseline can be rechecked and the full Best-of-N bank reselected; guidance needs new runs under the same saved bathroom and ventilation scenario. Freeze the scenario before the final comparison on fresh seeds.

@@ -68,9 +68,16 @@ def save_sample(sample, evaluation, output_prefix):
     scale = scenario.get("coordinate_scale_m_per_model_unit")
     scale_ok = isinstance(scale, (int, float)) and math.isfinite(scale) and scale > 0
     provenance = scenario.get("scale_provenance", "missing")
+    bathroom_checks = [check for check in scored if check["id"] in {"C036", "C037", "C041"}]
+    bathroom_observed = next((check.get("observed_values", {}) for check in bathroom_checks
+                              if check.get("observed_values", {}).get("witness")), {})
+    bathroom_witness = bathroom_observed.get("witness") if scale_ok else None
+    bathroom_verified = (len(bathroom_checks) == 3 and all(check["status"] == "pass" for check in bathroom_checks))
     supporting_text = ("Supporting definitions: " + ", ".join(supporting) + ". These supply parameters; they are not scored checks."
                        if supporting else "")
     footer = ["Room types are the model's saved semantic labels. Metric dimensions use the declared scale; other furniture and door swings are unobserved."]
+    if bathroom_witness:
+        footer.append("Bathroom objects are hypothetical scenario placements, not GSDiff predictions. The inset shows one shared proposal for C036/C037/C041; it does not establish a route through the dwelling.")
     if supporting_text:
         footer.append(supporting_text)
     footer.append("These geometry checks assess the stated assumptions, not verified building compliance. Full measurements remain in the evaluation JSON.")
@@ -78,6 +85,9 @@ def save_sample(sample, evaluation, output_prefix):
     diagnostics = list(dict.fromkeys(evaluation.get("diagnostics", []) + sample.get("diagnostics", [])))
     diagnostic_lines = wrap("Structure: " + "; ".join(diagnostics), 540, "small") if diagnostics else []
     left_bottom = 740 + 29 * math.ceil(len(labels) / 2) + 18 * len(diagnostic_lines)
+    bathroom_top = left_bottom + 24
+    if bathroom_witness:
+        left_bottom = bathroom_top + 450
     right_bottom = 140 + sum(card[-1] + 10 for card in cards)
     content_bottom = max(left_bottom, right_bottom, 830)
     width, height = 1440, content_bottom + 32 + 19 * len(footer_lines) + 24
@@ -179,6 +189,63 @@ def save_sample(sample, evaluation, output_prefix):
         text(x + 21, y, f"R{index + 1} {label}{area}", font="small")
     for index, line in enumerate(diagnostic_lines):
         text(32, 740 + 29 * math.ceil(len(labels) / 2) + 18 * index, line, "#b42318", "small")
+
+    if bathroom_witness:
+        room_index = bathroom_observed.get("room_index")
+        room = room_shapes.get(room_index)
+        points = [[x * scale, y * scale] for x, y in room.exterior.coords] if room is not None else []
+        shapes = [("door_swing_polygon_m", "Door swing", "#e67e22", None),
+                  ("transfer_polygon_m", "WC transfer", "#16834d", None),
+                  ("wc_polygon_m", "WC", "#374151", "#e7eaee"),
+                  ("basin_polygon_m", "Basin", "#8b5aa6", "#eee6f5")]
+        points += [point for key, _, _, _ in shapes for point in bathroom_witness.get(key, [])]
+        circle_center, circle_radius = bathroom_witness.get("circle_center_m"), bathroom_witness.get("circle_radius_m")
+        if circle_center is not None and isinstance(circle_radius, (int, float)) and circle_radius > 0:
+            points += [[circle_center[0] - circle_radius, circle_center[1] - circle_radius],
+                       [circle_center[0] + circle_radius, circle_center[1] + circle_radius]]
+        points = [p for p in points if len(p) == 2 and all(math.isfinite(v) for v in p)]
+        if points:
+            x0, x1 = min(p[0] for p in points), max(p[0] for p in points)
+            y0, y1 = min(p[1] for p in points), max(p[1] for p in points)
+            zoom = min(490 / max(x1 - x0, 0.1), 295 / max(y1 - y0, 0.1))
+            zx = 67 + (490 - (x1 - x0) * zoom) / 2
+            zy = bathroom_top + 61 + (295 - (y1 - y0) * zoom) / 2
+
+            def bath_xy(point):
+                return zx + (point[0] - x0) * zoom, zy + (point[1] - y0) * zoom
+
+            title = "Verified bathroom arrangement" if bathroom_verified else "Unverified bathroom proposal"
+            text(32, bathroom_top, title, "#167343" if bathroom_verified else "#946200", "heading")
+            name = labels.get(room_index, "Bathroom")
+            text(32, bathroom_top + 25, name + " · assumed fixtures · shared C036/C037/C041 layout", font="small")
+            rect(32, bathroom_top + 49, 560, 320, "#fbfcfd", "#dce2e7", 6)
+            if room is not None:
+                boundary = [bath_xy((x * scale, y * scale)) for x, y in room.exterior.coords]
+                draw.polygon(boundary, fill="#f3f6f6", outline="#5f797b")
+                vertices = " ".join(f"{x:.3f},{y:.3f}" for x, y in boundary)
+                svg.append(f'<polygon points="{vertices}" fill="#f3f6f6" stroke="#5f797b" stroke-width="2"/>')
+            for key, name, color, fill in shapes:
+                polygon = bathroom_witness.get(key, [])
+                if len(polygon) < 3:
+                    continue
+                outline = [bath_xy(point) for point in polygon]
+                draw.polygon(outline, fill=fill, outline=color, width=2)
+                vertices = " ".join(f"{x:.3f},{y:.3f}" for x, y in outline)
+                svg.append(f'<polygon data-bathroom-object="{key}" points="{vertices}" fill="{fill or "none"}" '
+                           f'stroke="{color}" stroke-width="2"><title>{name}</title></polygon>')
+            center, radius = bathroom_witness.get("circle_center_m"), bathroom_witness.get("circle_radius_m")
+            if center is not None and isinstance(radius, (int, float)) and radius > 0:
+                cx, cy = bath_xy(center)
+                rr = radius * zoom
+                draw.ellipse((cx - rr, cy - rr, cx + rr, cy + rr), outline="#2765b0", width=3)
+                svg.append(f'<circle data-bathroom-object="turning_circle" cx="{cx:.3f}" cy="{cy:.3f}" r="{rr:.3f}" '
+                           'fill="none" stroke="#2765b0" stroke-width="3"><title>Turning circle</title></circle>')
+            legend = [("WC", "#374151"), ("Basin", "#8b5aa6"), ("Transfer", "#16834d"),
+                      ("Door swing", "#e67e22"), ("Turning circle", "#2765b0")]
+            for index, (name, color) in enumerate(legend):
+                x, y = 32 + (index % 3) * 186, bathroom_top + 386 + 25 * (index // 3)
+                rect(x, y + 3, 13, 13, "#ffffff", color)
+                text(x + 20, y, name, color, "small")
 
     y = 140
     for check, title, requirement, reason, card_height in cards:

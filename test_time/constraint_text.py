@@ -8,7 +8,8 @@ from .evaluate import ROOM_NAMES
 
 
 NAMES = {"C033": "Bedroom turning space", "C035": "Clearance around the bed",
-         "C036": "Bathroom turning space", "C076": "Minimum main-room size",
+         "C036": "Bathroom turning space", "C037": "WC lateral transfer space",
+         "C041": "Bathroom turning-space overlaps", "C076": "Minimum main-room size",
          "C077": "Habitable floor area", "C078": "Habitable volume",
          "C085": "Kitchen extraction", "C086": "Bathroom extraction",
          "C090": "Reduced-mode extraction"}
@@ -81,7 +82,18 @@ def _requirement(identifier, limits, observed):
         return "Fit the required clearances around the same bed used for bedroom turning space."
     if identifier == "C036":
         size = f"{_number(diameter)} m diameter" if _numeric(diameter) else "required"
+        if observed.get("completion_model") or observed.get("witness") or "transfer_width_m" in limits:
+            return f"A furnished bathroom must fit the {size} turning circle, using the same fixture and door layout as C037/C041."
         return f"At least one empty bathroom must fit the {size} turning circle; fixtures and door swings are excluded."
+    if identifier == "C037":
+        width, length = limits.get("transfer_width_m"), limits.get("transfer_length_m")
+        dimensions = _dimensions([width, length]) if all(_numeric(v) for v in (width, length)) else "required"
+        return f"Provide a {dimensions} lateral transfer rectangle beside the WC, clear of fixtures and outside the door swing."
+    if identifier == "C041":
+        door, basin = limits.get("door_overlap_m"), limits.get("basin_overlap_m")
+        bounds = (f"door swing ≤ {_number(door)} m OR under-basin overlap ≤ {_number(basin)} m"
+                  if all(_numeric(v) for v in (door, basin)) else "the saved door-swing or under-basin overlap limit")
+        return f"The same turning circle must respect {bounds}; only one overlap is permitted."
     if identifier == "C076":
         if all(_numeric(limits.get(key)) for key in ("area_m2", "height_m", "volume_m3")):
             return (f"One living room or bedroom: (area ≥ {_number(limits['area_m2'])} m² AND "
@@ -119,6 +131,14 @@ def _unknown(check):
     if "Unreliable extracted geometry" in explanation:
         details = explanation.split(":", 1)[-1].strip()
         return f"Cannot decide because room geometry is unreliable: {details}."
+    if check.get("id") in {"C036", "C037", "C041"} and (
+            check.get("observed_values", {}).get("completion_model") or
+            check.get("id") in {"C037", "C041"}):
+        if check.get("id") in check.get("observed_values", {}).get("audit_rejected_ids", []):
+            return ("The proposed placement did not pass the independent CPU geometry audit. "
+                    "This check remains unresolved; no valid placement or impossibility was established.")
+        return ("No verified shared bathroom arrangement was found within the saved template budget. "
+                "Other fixture or door placements may work; this is unresolved, not a proven failure.")
     if "shared bed" in explanation or "shared bed-and-turning" in explanation:
         return "Bed clearances fit, but the search did not find one bed position that also leaves the required turning circle. This is unresolved, not a proven failure."
     if "tolerance" in explanation:
@@ -162,6 +182,34 @@ def _bed_failure(observed, labels, part, limits):
     if envelopes:
         reasons.append("Required envelope: " + " or ".join(_dimensions(size) for size in envelopes) + ", allowing either orientation")
     return "; ".join(reasons) + "."
+
+
+def _bathroom_failure(observed, labels, identifier, limits):
+    reasons = []
+    for room in observed.get("bathrooms") or [observed]:
+        bounds = room.get("necessary_bounds") or room.get("bounds") or {}
+        name = labels.get(room.get("room_index"), "A bathroom")
+        area = bounds.get("room_area_m2")
+        if identifier in {"C036", "C041"}:
+            radius, required = bounds.get("circle_radius_upper_bound_m"), limits.get("diameter_m")
+            if _numeric(radius) and _numeric(required) and 2 * radius < required:
+                actual, minimum = _pair(2 * radius, required)
+                reasons.append(f"{name}: circle diameter cannot exceed {actual} m, below {minimum} m required")
+                continue
+            minimum = bounds.get("minimum_circle_wc_area_m2")
+            objects = "a separate WC and turning circle"
+        else:
+            if bounds.get("transfer_envelope_fits") is False:
+                actual, required = bounds.get("bbox_dimensions_m"), bounds.get("transfer_envelope_dimensions_m")
+                if actual and required:
+                    reasons.append(f"{name}: bounding size {_dimensions(actual, 8)} cannot fit the {_dimensions(required)} WC + transfer envelope in either orientation")
+                    continue
+            minimum = bounds.get("minimum_transfer_fixtures_door_area_m2")
+            objects = "the non-overlapping WC, basin, transfer zone and door sweep"
+        if _numeric(area) and _numeric(minimum) and area < minimum:
+            actual, required = _pair(area, minimum)
+            reasons.append(f"{name}: {actual} m² < {required} m² required for {objects}")
+    return "; ".join(reasons) + "." if reasons else None
 
 
 def constraint_description(check, sample):
@@ -220,6 +268,28 @@ def constraint_description(check, sample):
                 description["reason"] = f"{name} fits {bed}, its clearances and the turning circle in the same arrangement."
             else:
                 description["reason"] = f"{name} has a verified bed-and-clearance arrangement."
+        else:
+            description["reason"] = fallback
+    elif identifier in {"C036", "C037", "C041"} and (
+            observed.get("completion_model") or observed.get("witness") or identifier != "C036"):
+        witness = observed.get("witness") or {}
+        if status == "fail":
+            description["reason"] = _bathroom_failure(observed, labels, identifier, limits) or fallback
+        elif status == "pass" and witness:
+            name = labels.get(observed.get("room_index"), "A bathroom")
+            if identifier == "C036":
+                radius = witness.get("circle_radius_m")
+                circle = f"a {_number(2 * radius)} m diameter circle" if _numeric(radius) else "the required circle"
+                description["reason"] = f"{name} contains {circle} clear of the WC, within the saved shared arrangement. C041 checks permitted basin/door overlaps."
+            elif identifier == "C037":
+                description["reason"] = f"{name}: the saved rectangle lies beside the WC, inside the room, clear of solid fixtures and outside the door swing."
+            else:
+                door, basin = witness.get("door_overlap_m"), witness.get("basin_overlap_m")
+                if all(_numeric(value) for value in (door, basin)):
+                    description["reason"] = (f"{name}: door overlap {_number(door, 4)} m; under-basin overlap {_number(basin, 4)} m. "
+                        "The saved circle meets both limits and uses at most one overlap.")
+                else:
+                    description["reason"] = fallback
         else:
             description["reason"] = fallback
     elif identifier == "C036":

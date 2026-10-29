@@ -1,0 +1,18 @@
+{
+  "name": "pdf_bathroom_experiment_v1",
+  "variant": "unconstrained_rplan",
+  "scenario": "scenario_bathroom_v1.json",
+  "constraints": "constraints_bathroom_v1.json",
+  "trials": 1,
+  "batch_size": 4,
+  "inference_batch_size": 10,
+  "reward_backend": "gpu",
+  "final_checker": "cpu_bathroom_audit_v1",
+  "seed": 42,
+  "n": 4,
+  "k": 10,
+  "guided_steps": 999,
+  "temperature": 0.0,
+  "validity_weight": 100.0,
+  "output_root": "test_time/outputs/bathroom_samples"
+}

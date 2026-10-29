@@ -1,12 +1,12 @@
 {
-  "description": "Nine implemented Appendix A checks plus three supporting measurement rules. Ventilation capacities are declared scenario inputs, not model predictions. Documentation snapshot; runtime configuration remains in the source files.",
+  "description": "Eleven implemented Appendix A checks plus three supporting rules. Fixtures, door layout and ventilation capacities are explicit scenario assumptions. Runtime configuration remains in the source files.",
   "source_files": {
-    "constraints": "test_time/configs/constraints_ventilation_v1.json",
-    "scenario": "test_time/configs/scenario_ventilation_v1.json",
-    "experiment": "test_time/configs/experiment_ventilation_v1.json"
+    "constraints": "test_time/configs/constraints_bathroom_v1.json",
+    "scenario": "test_time/configs/scenario_bathroom_v1.json",
+    "experiment": "test_time/configs/experiment_bathroom_v1.json"
   },
-  "version": 4,
-  "profile": "pdf_ventilation_v1",
+  "version": 5,
+  "profile": "pdf_bathroom_v1",
   "coordinate_unit": "drawing_pixel",
   "groups": {
     "bedroom_accessibility": [
@@ -15,7 +15,9 @@
       "C035"
     ],
     "bathroom_fixtures_turning": [
-      "C036"
+      "C036",
+      "C037",
+      "C041"
     ],
     "habitability": [
       "C076",
@@ -139,14 +141,14 @@
       ]
     },
     {
-      "enabled": true,
-      "counts_toward_compliance": true,
-      "source_id": "Technical_assessment_TTC.pdf:AppendixA:C036",
-      "weight": 1.0,
-      "severity_type": "normalized_deficit",
       "id": "C036",
-      "checker": "bathroom_turning",
-      "definition": "An empty bathroom polygon contains a diameter-1.50 m turning circle.",
+      "checker": "joint_bathroom",
+      "definition": "At least one combined bathroom/WC accommodates a diameter-1.50 m turning circle in the same fixture and door completion used by C037/C041.",
+      "group": "bathroom_fixtures_turning",
+      "role": "check",
+      "tier": "placement_feasibility",
+      "claim_level": "potential_layout",
+      "depends_on": [],
       "applicability": "accessible_residential",
       "thresholds": {
         "diameter_m": 1.5,
@@ -156,17 +158,115 @@
       },
       "required_observations": [
         "scale",
-        "room_polygons"
+        "room_polygons",
+        "bathroom_layout",
+        "wc_width_m",
+        "wc_depth_m",
+        "basin_width_m",
+        "basin_depth_m",
+        "basin_under_clearance",
+        "bathroom_door_width_m",
+        "bathroom_search_budget",
+        "bathroom_circle_positions"
       ],
+      "weight": 1.0,
+      "severity_type": "normalized_deficit",
       "assumptions": [
-        "empty_room_feasibility_proxy",
-        "unobserved_fixtures_and_door_swings"
+        "declared_combined_bathroom_wc_not_generated_fixtures",
+        "scenario_fixture_dimensions_not_pdf_thresholds",
+        "wall_attached_finite_template_bank",
+        "one_shared_completion_for_C036_C037_C041",
+        "hypothetical_boundary_door_not_verified_circulation",
+        "finite_search_miss_is_unknown",
+        "C041_overlap_depth_uses_documented_geometric_convention"
       ],
+      "source_id": "Technical_assessment_TTC.pdf:AppendixA:C036",
+      "counts_toward_compliance": true,
+      "enabled": true
+    },
+    {
+      "id": "C037",
+      "checker": "joint_bathroom",
+      "definition": "A toilet in the shared bathroom completion has a lateral transfer space at least 0.80 x 1.30 m, outside the door swing.",
       "group": "bathroom_fixtures_turning",
       "role": "check",
       "tier": "placement_feasibility",
       "claim_level": "potential_layout",
-      "depends_on": []
+      "depends_on": [],
+      "applicability": "accessible_residential",
+      "thresholds": {
+        "transfer_width_m": 0.8,
+        "transfer_length_m": 1.3
+      },
+      "required_observations": [
+        "scale",
+        "room_polygons",
+        "bathroom_layout",
+        "wc_width_m",
+        "wc_depth_m",
+        "basin_width_m",
+        "basin_depth_m",
+        "basin_under_clearance",
+        "bathroom_door_width_m",
+        "bathroom_search_budget",
+        "bathroom_circle_positions"
+      ],
+      "weight": 1.0,
+      "severity_type": "normalized_deficit",
+      "assumptions": [
+        "declared_combined_bathroom_wc_not_generated_fixtures",
+        "scenario_fixture_dimensions_not_pdf_thresholds",
+        "wall_attached_finite_template_bank",
+        "one_shared_completion_for_C036_C037_C041",
+        "hypothetical_boundary_door_not_verified_circulation",
+        "finite_search_miss_is_unknown",
+        "C041_overlap_depth_uses_documented_geometric_convention"
+      ],
+      "source_id": "Technical_assessment_TTC.pdf:AppendixA:C037",
+      "counts_toward_compliance": true,
+      "enabled": true
+    },
+    {
+      "id": "C041",
+      "checker": "joint_bathroom",
+      "definition": "The same diameter-1.50 m bathroom turning circle overlaps a door swing by at most 0.25 m OR extends under the basin by at most 0.15 m; only one overlap is used. This profile checks the completed bathroom only.",
+      "group": "bathroom_fixtures_turning",
+      "role": "check",
+      "tier": "placement_feasibility",
+      "claim_level": "potential_layout",
+      "depends_on": [],
+      "applicability": "accessible_residential",
+      "thresholds": {
+        "door_overlap_m": 0.25,
+        "basin_overlap_m": 0.15
+      },
+      "required_observations": [
+        "scale",
+        "room_polygons",
+        "bathroom_layout",
+        "wc_width_m",
+        "wc_depth_m",
+        "basin_width_m",
+        "basin_depth_m",
+        "basin_under_clearance",
+        "bathroom_door_width_m",
+        "bathroom_search_budget",
+        "bathroom_circle_positions"
+      ],
+      "weight": 1.0,
+      "severity_type": "normalized_deficit",
+      "assumptions": [
+        "declared_combined_bathroom_wc_not_generated_fixtures",
+        "scenario_fixture_dimensions_not_pdf_thresholds",
+        "wall_attached_finite_template_bank",
+        "one_shared_completion_for_C036_C037_C041",
+        "hypothetical_boundary_door_not_verified_circulation",
+        "finite_search_miss_is_unknown",
+        "C041_overlap_depth_uses_documented_geometric_convention"
+      ],
+      "source_id": "Technical_assessment_TTC.pdf:AppendixA:C041",
+      "counts_toward_compliance": true,
+      "enabled": true
     },
     {
       "enabled": true,
@@ -488,7 +588,6 @@
       "Paper/code-derived calibration: RPLAN uses an 18 m square rasterized to 256 pixels (Wu et al., 2019, section 4; https://wutomwu.github.io/publications/2019-DeepLayout/paper.pdf). GSDiff normalizes native coordinates as (x-128)/128 and decodes onto a 512-pixel drawing canvas, giving 18/512 = 0.03515625 metres per drawing pixel. This is not a field measurement or independent verification of the checkpoint's raw training data.",
       "Uniform ceiling height of 2.5 metres is a scenario input, not generated geometry.",
       "Bedroom checks place one standard bed; other furniture and door swings are unobserved.",
-      "Bathroom checks use empty-room geometry; fixtures and door swings are unobserved.",
       "Habitable area is estimated from room polygon unions with zero-thickness walls and no headroom map.",
       "C079/C080 support the area estimator only; no independent compliance success is awarded.",
       "Uniform declared headroom below 1.80 m excludes all habitable area; exactly 1.80 m is included. Unrepresented area exclusions remain unverified.",
@@ -496,7 +595,10 @@
       "Living-room and bedroom polygons count as main rooms. All label-4 rooms are treated as full bathrooms, with the same declared normal flow; other shower-room roles cannot be resolved by these labels.",
       "The installation permits occupant-adjustable reduced ventilation. Normal and reduced operating rates are distinct; C090 checks both total and kitchen reduced-flow requirements.",
       "Missing service-room mappings or an aggregate reduced flow below the sum of declared kitchen reduced flows remain unknown. Vent positions, air inlets, ducts and physical airflow are not verified.",
-      "System capacities remain fixed across all methods and candidates; they are not adjusted to make an individual layout pass."
+      "System capacities remain fixed across all methods and candidates; they are not adjusted to make an individual layout pass.",
+      "User-approved combined bathroom/WC scenario: a 0.40 x 0.70 m toilet, a 0.60 x 0.50 m basin with unobstructed space underneath, and a 0.80 m inward-swinging door. These fixture dimensions are modelling assumptions, not Appendix A requirements.",
+      "C036/C037/C041 share one searched room, fixture arrangement, lateral transfer space and turning-circle witness. Fixture and door objects are hypothetical completions of label-4 room polygons; no route from the rest of the dwelling is verified.",
+      "The identical finite wall-attached template and circle budget applies to all methods. Search exhaustion is unknown unless a necessary geometric bound proves failure. Door/basin overlap depths use the documented geometry convention; no shower, plumbing or fixture-height compliance is claimed."
     ],
     "geometry_grid_m": 0.25,
     "geometry_refine_m": 0.05,
@@ -506,33 +608,15 @@
     "bathroom_extraction_m3_h": 30.0,
     "reduced_total_extraction_m3_h": 75.0,
     "reduced_kitchen_extraction_m3_h": 45.0,
-    "bathroom_ventilation_role": "bathroom"
-  },
-  "active_scored_ids": [
-    "C033",
-    "C035",
-    "C036",
-    "C076",
-    "C077",
-    "C078",
-    "C085",
-    "C086",
-    "C090"
-  ],
-  "active_supporting_ids": [
-    "C034",
-    "C079",
-    "C080"
-  ],
-  "disabled_constraints": [],
-  "constraint_counts": {
-    "registered": 12,
-    "scored": 9,
-    "supporting": 3,
-    "active": 12,
-    "active_scored": 9,
-    "active_supporting": 3,
-    "disabled": 0
-  },
-  "overall_validity": "Requires structural validity and every applicable one of the nine scored PDF constraints to measurably pass. Unknown checks do not pass. Supporting measurement rules add no independent pass."
+    "bathroom_ventilation_role": "bathroom",
+    "bathroom_layout": "combined_wc_basin_v1",
+    "wc_width_m": 0.4,
+    "wc_depth_m": 0.7,
+    "basin_width_m": 0.6,
+    "basin_depth_m": 0.5,
+    "basin_under_clearance": true,
+    "bathroom_door_width_m": 0.8,
+    "bathroom_search_budget": 432,
+    "bathroom_circle_positions": 49
+  }
 }

@@ -1,0 +1,574 @@
+{
+  "version": 5,
+  "profile": "pdf_bathroom_v1",
+  "coordinate_unit": "drawing_pixel",
+  "groups": {
+    "bedroom_accessibility": [
+      "C033",
+      "C034",
+      "C035"
+    ],
+    "bathroom_fixtures_turning": [
+      "C036",
+      "C037",
+      "C041"
+    ],
+    "habitability": [
+      "C076",
+      "C077",
+      "C078",
+      "C079",
+      "C080"
+    ],
+    "ventilation": [
+      "C085",
+      "C086",
+      "C090"
+    ]
+  },
+  "constraints": [
+    {
+      "enabled": true,
+      "counts_toward_compliance": true,
+      "source_id": "Technical_assessment_TTC.pdf:AppendixA:C033",
+      "weight": 1.0,
+      "severity_type": "binary_feasibility",
+      "id": "C033",
+      "checker": "bedroom_turning",
+      "definition": "A bedroom accommodates the required bed and a disjoint diameter-1.50 m turning circle.",
+      "applicability": "accessible_residential",
+      "thresholds": {
+        "diameter_m": 1.5,
+        "max_positions": 20000
+      },
+      "required_observations": [
+        "scale",
+        "occupants",
+        "room_polygons"
+      ],
+      "assumptions": [
+        "geometric_feasibility_proxy",
+        "unobserved_other_furniture_and_door_swings",
+        "axis_aligned_bed_search",
+        "finite_search_misses_are_unknown"
+      ],
+      "group": "bedroom_accessibility",
+      "role": "check",
+      "tier": "placement_feasibility",
+      "claim_level": "potential_layout",
+      "depends_on": [
+        "C034"
+      ]
+    },
+    {
+      "enabled": true,
+      "counts_toward_compliance": false,
+      "source_id": "Technical_assessment_TTC.pdf:AppendixA:C034",
+      "weight": 0.0,
+      "severity_type": "definition",
+      "id": "C034",
+      "checker": "bed_definition",
+      "definition": "Bed footprint parameters: 0.90 x 1.90 m for a one-person dwelling, 1.40 x 1.90 m otherwise. Supplies C033/C035; not an independent compliance check.",
+      "applicability": "accessible_residential",
+      "thresholds": {
+        "single_width_m": 0.9,
+        "multiple_width_m": 1.4,
+        "length_m": 1.9,
+        "bedroom_labels": [
+          1
+        ]
+      },
+      "required_observations": [],
+      "assumptions": [
+        "geometric_feasibility_proxy",
+        "unobserved_other_furniture_and_door_swings",
+        "axis_aligned_bed_search",
+        "finite_search_misses_are_unknown"
+      ],
+      "group": "bedroom_accessibility",
+      "role": "supporting_rule",
+      "tier": "supporting_definition",
+      "claim_level": "assumption_based",
+      "depends_on": []
+    },
+    {
+      "enabled": true,
+      "counts_toward_compliance": true,
+      "source_id": "Technical_assessment_TTC.pdf:AppendixA:C035",
+      "weight": 1.0,
+      "severity_type": "binary_feasibility",
+      "id": "C035",
+      "checker": "bedroom_circulation",
+      "definition": "Bedroom circulation fits around the same bed used by C033: 0.90 m both long sides and 1.20 m free short side, or 1.20 m and 0.90 m.",
+      "applicability": "accessible_residential",
+      "thresholds": {
+        "clearance_options_m": [
+          [
+            0.9,
+            1.2
+          ],
+          [
+            1.2,
+            0.9
+          ]
+        ]
+      },
+      "required_observations": [
+        "scale",
+        "occupants",
+        "room_polygons"
+      ],
+      "assumptions": [
+        "geometric_feasibility_proxy",
+        "unobserved_other_furniture_and_door_swings",
+        "axis_aligned_bed_search",
+        "finite_search_misses_are_unknown",
+        "simultaneous_pass_requires_shared_bed_witness"
+      ],
+      "group": "bedroom_accessibility",
+      "role": "check",
+      "tier": "placement_feasibility",
+      "claim_level": "potential_layout",
+      "depends_on": [
+        "C034",
+        "C033"
+      ]
+    },
+    {
+      "id": "C036",
+      "checker": "joint_bathroom",
+      "definition": "At least one combined bathroom/WC accommodates a diameter-1.50 m turning circle in the same fixture and door completion used by C037/C041.",
+      "group": "bathroom_fixtures_turning",
+      "role": "check",
+      "tier": "placement_feasibility",
+      "claim_level": "potential_layout",
+      "depends_on": [],
+      "applicability": "accessible_residential",
+      "thresholds": {
+        "diameter_m": 1.5,
+        "bathroom_labels": [
+          4
+        ]
+      },
+      "required_observations": [
+        "scale",
+        "room_polygons",
+        "bathroom_layout",
+        "wc_width_m",
+        "wc_depth_m",
+        "basin_width_m",
+        "basin_depth_m",
+        "basin_under_clearance",
+        "bathroom_door_width_m",
+        "bathroom_search_budget",
+        "bathroom_circle_positions"
+      ],
+      "weight": 1.0,
+      "severity_type": "normalized_deficit",
+      "assumptions": [
+        "declared_combined_bathroom_wc_not_generated_fixtures",
+        "scenario_fixture_dimensions_not_pdf_thresholds",
+        "wall_attached_finite_template_bank",
+        "one_shared_completion_for_C036_C037_C041",
+        "hypothetical_boundary_door_not_verified_circulation",
+        "finite_search_miss_is_unknown",
+        "C041_overlap_depth_uses_documented_geometric_convention"
+      ],
+      "source_id": "Technical_assessment_TTC.pdf:AppendixA:C036",
+      "counts_toward_compliance": true,
+      "enabled": true
+    },
+    {
+      "id": "C037",
+      "checker": "joint_bathroom",
+      "definition": "A toilet in the shared bathroom completion has a lateral transfer space at least 0.80 x 1.30 m, outside the door swing.",
+      "group": "bathroom_fixtures_turning",
+      "role": "check",
+      "tier": "placement_feasibility",
+      "claim_level": "potential_layout",
+      "depends_on": [],
+      "applicability": "accessible_residential",
+      "thresholds": {
+        "transfer_width_m": 0.8,
+        "transfer_length_m": 1.3
+      },
+      "required_observations": [
+        "scale",
+        "room_polygons",
+        "bathroom_layout",
+        "wc_width_m",
+        "wc_depth_m",
+        "basin_width_m",
+        "basin_depth_m",
+        "basin_under_clearance",
+        "bathroom_door_width_m",
+        "bathroom_search_budget",
+        "bathroom_circle_positions"
+      ],
+      "weight": 1.0,
+      "severity_type": "normalized_deficit",
+      "assumptions": [
+        "declared_combined_bathroom_wc_not_generated_fixtures",
+        "scenario_fixture_dimensions_not_pdf_thresholds",
+        "wall_attached_finite_template_bank",
+        "one_shared_completion_for_C036_C037_C041",
+        "hypothetical_boundary_door_not_verified_circulation",
+        "finite_search_miss_is_unknown",
+        "C041_overlap_depth_uses_documented_geometric_convention"
+      ],
+      "source_id": "Technical_assessment_TTC.pdf:AppendixA:C037",
+      "counts_toward_compliance": true,
+      "enabled": true
+    },
+    {
+      "id": "C041",
+      "checker": "joint_bathroom",
+      "definition": "The same diameter-1.50 m bathroom turning circle overlaps a door swing by at most 0.25 m OR extends under the basin by at most 0.15 m; only one overlap is used. This profile checks the completed bathroom only.",
+      "group": "bathroom_fixtures_turning",
+      "role": "check",
+      "tier": "placement_feasibility",
+      "claim_level": "potential_layout",
+      "depends_on": [],
+      "applicability": "accessible_residential",
+      "thresholds": {
+        "door_overlap_m": 0.25,
+        "basin_overlap_m": 0.15
+      },
+      "required_observations": [
+        "scale",
+        "room_polygons",
+        "bathroom_layout",
+        "wc_width_m",
+        "wc_depth_m",
+        "basin_width_m",
+        "basin_depth_m",
+        "basin_under_clearance",
+        "bathroom_door_width_m",
+        "bathroom_search_budget",
+        "bathroom_circle_positions"
+      ],
+      "weight": 1.0,
+      "severity_type": "normalized_deficit",
+      "assumptions": [
+        "declared_combined_bathroom_wc_not_generated_fixtures",
+        "scenario_fixture_dimensions_not_pdf_thresholds",
+        "wall_attached_finite_template_bank",
+        "one_shared_completion_for_C036_C037_C041",
+        "hypothetical_boundary_door_not_verified_circulation",
+        "finite_search_miss_is_unknown",
+        "C041_overlap_depth_uses_documented_geometric_convention"
+      ],
+      "source_id": "Technical_assessment_TTC.pdf:AppendixA:C041",
+      "counts_toward_compliance": true,
+      "enabled": true
+    },
+    {
+      "enabled": true,
+      "counts_toward_compliance": true,
+      "source_id": "Technical_assessment_TTC.pdf:AppendixA:C076",
+      "weight": 1.0,
+      "severity_type": "normalized_deficit",
+      "id": "C076",
+      "checker": "minimum_main_room",
+      "definition": "At least one living room or bedroom has (area >= 9 m2 AND height >= 2.20 m) OR volume >= 20 m3.",
+      "applicability": "residential",
+      "thresholds": {
+        "area_m2": 9.0,
+        "height_m": 2.2,
+        "volume_m3": 20.0,
+        "main_room_labels": [
+          0,
+          1
+        ]
+      },
+      "required_observations": [
+        "scale",
+        "ceiling_height",
+        "room_polygons",
+        "habitable_area_mode"
+      ],
+      "assumptions": [
+        "habitable_area_uses_C079_C080",
+        "zero_thickness_wall_area_proxy",
+        "uniform_scenario_headroom"
+      ],
+      "group": "habitability",
+      "role": "check",
+      "tier": "graph_plus_scenario",
+      "claim_level": "assumption_based",
+      "depends_on": [
+        "C079",
+        "C080"
+      ]
+    },
+    {
+      "enabled": true,
+      "counts_toward_compliance": true,
+      "source_id": "Technical_assessment_TTC.pdf:AppendixA:C077",
+      "weight": 1.0,
+      "severity_type": "normalized_deficit",
+      "id": "C077",
+      "checker": "minimum_surface",
+      "definition": "Estimated habitable area >= 14 m2 per first four occupants + 10 m2 per additional occupant.",
+      "applicability": "residential",
+      "thresholds": {
+        "first_four_m2": 14.0,
+        "additional_m2": 10.0
+      },
+      "required_observations": [
+        "scale",
+        "occupants",
+        "room_polygons",
+        "ceiling_height",
+        "habitable_area_mode"
+      ],
+      "assumptions": [
+        "habitable_area_uses_C079_C080",
+        "zero_thickness_wall_area_proxy",
+        "uniform_scenario_headroom"
+      ],
+      "group": "habitability",
+      "role": "check",
+      "tier": "graph_plus_scenario",
+      "claim_level": "assumption_based",
+      "depends_on": [
+        "C079",
+        "C080"
+      ]
+    },
+    {
+      "enabled": true,
+      "counts_toward_compliance": true,
+      "source_id": "Technical_assessment_TTC.pdf:AppendixA:C078",
+      "weight": 1.0,
+      "severity_type": "normalized_deficit",
+      "id": "C078",
+      "checker": "minimum_volume",
+      "definition": "Estimated habitable volume >= 33 m3 per first four occupants + 23 m3 per additional occupant.",
+      "applicability": "residential",
+      "thresholds": {
+        "first_four_m3": 33.0,
+        "additional_m3": 23.0
+      },
+      "required_observations": [
+        "scale",
+        "occupants",
+        "ceiling_height",
+        "room_polygons",
+        "habitable_area_mode"
+      ],
+      "assumptions": [
+        "habitable_area_uses_C079_C080",
+        "zero_thickness_wall_area_proxy",
+        "uniform_scenario_headroom"
+      ],
+      "group": "habitability",
+      "role": "check",
+      "tier": "graph_plus_scenario",
+      "claim_level": "assumption_based",
+      "depends_on": [
+        "C079",
+        "C080"
+      ]
+    },
+    {
+      "id": "C079",
+      "checker": "area_definition",
+      "definition": "Habitable floor area excludes walls, partitions, stairs, stairwells, shafts, and door or window embrasures. The zero_thickness_proxy mode performs no real wall-footprint subtraction: generated walls have no thickness and these unrepresented exclusions are unverified.",
+      "group": "habitability",
+      "role": "supporting_rule",
+      "tier": "supporting_definition",
+      "claim_level": "assumption_based",
+      "depends_on": [],
+      "applicability": "residential",
+      "thresholds": {},
+      "required_observations": [],
+      "weight": 0.0,
+      "severity_type": "definition",
+      "assumptions": [
+        "supporting_area_definition_not_independent_compliance"
+      ],
+      "source_id": "Technical_assessment_TTC.pdf:AppendixA:C079",
+      "counts_toward_compliance": false,
+      "enabled": true
+    },
+    {
+      "id": "C080",
+      "checker": "area_definition",
+      "definition": "Habitable floor area excludes unfinished attics, cellars, basements, storage rooms, garages, terraces, loggias, balconies, exterior drying areas, verandas, common premises, dependencies, and areas below 1.80 m height. GSDiff labels exclude storage (2), balcony (5), outside (6); other unrepresented categories remain unverified. Uniform declared height below 1.80 m excludes the whole area; exactly 1.80 m is included.",
+      "group": "habitability",
+      "role": "supporting_rule",
+      "tier": "supporting_definition",
+      "claim_level": "assumption_based",
+      "depends_on": [],
+      "applicability": "residential",
+      "thresholds": {
+        "included_room_labels": [
+          0,
+          1,
+          3,
+          4
+        ],
+        "excluded_room_labels": [
+          2,
+          5,
+          6
+        ],
+        "min_headroom_m": 1.8
+      },
+      "required_observations": [],
+      "weight": 0.0,
+      "severity_type": "definition",
+      "assumptions": [
+        "supporting_area_definition_not_independent_compliance"
+      ],
+      "source_id": "Technical_assessment_TTC.pdf:AppendixA:C080",
+      "counts_toward_compliance": false,
+      "enabled": true
+    },
+    {
+      "id": "C085",
+      "checker": "kitchen_ventilation",
+      "definition": "Kitchen extraction reaches the Appendix A minimum for the number of main rooms. Rates for 1, 2, 3, 4, 5+ main rooms are 75, 90, 105, 120, 135 m3/h.",
+      "group": "ventilation",
+      "role": "check",
+      "tier": "graph_plus_scenario",
+      "claim_level": "assumption_based",
+      "depends_on": [],
+      "applicability": "residential",
+      "thresholds": {
+        "main_room_labels": [
+          0,
+          1
+        ],
+        "kitchen_labels": [
+          3
+        ],
+        "flows_m3_h": [
+          75.0,
+          90.0,
+          105.0,
+          120.0,
+          135.0
+        ]
+      },
+      "required_observations": [
+        "room_polygons",
+        "kitchen_extraction_m3_h"
+      ],
+      "weight": 1.0,
+      "severity_type": "normalized_deficit",
+      "assumptions": [
+        "declared_ventilation_system_not_generated_or_measured",
+        "main_rooms_are_living_and_bedroom_polygons",
+        "no_airflow_network_or_inlet_verification",
+        "uniform_declared_flow_for_each_kitchen"
+      ],
+      "source_id": "Technical_assessment_TTC.pdf:AppendixA:C085",
+      "counts_toward_compliance": true,
+      "enabled": true
+    },
+    {
+      "id": "C086",
+      "checker": "bathroom_ventilation",
+      "definition": "Bathroom extraction reaches the Appendix A minimum for the number of main rooms. Rates for 1, 2, 3, 4, 5+ main rooms are 15, 15, 30, 30, 30 m3/h. The scenario identifies label-4 rooms as bathrooms, not other shower rooms.",
+      "group": "ventilation",
+      "role": "check",
+      "tier": "graph_plus_scenario",
+      "claim_level": "assumption_based",
+      "depends_on": [],
+      "applicability": "residential",
+      "thresholds": {
+        "main_room_labels": [
+          0,
+          1
+        ],
+        "bathroom_labels": [
+          4
+        ],
+        "flows_m3_h": [
+          15.0,
+          15.0,
+          30.0,
+          30.0,
+          30.0
+        ]
+      },
+      "required_observations": [
+        "room_polygons",
+        "bathroom_extraction_m3_h",
+        "bathroom_ventilation_role"
+      ],
+      "weight": 1.0,
+      "severity_type": "normalized_deficit",
+      "assumptions": [
+        "declared_ventilation_system_not_generated_or_measured",
+        "main_rooms_are_living_and_bedroom_polygons",
+        "no_airflow_network_or_inlet_verification",
+        "label_4_rooms_are_full_bathrooms_with_uniform_declared_flow",
+        "other_shower_room_roles_unresolved"
+      ],
+      "source_id": "Technical_assessment_TTC.pdf:AppendixA:C086",
+      "counts_toward_compliance": true,
+      "enabled": true
+    },
+    {
+      "id": "C090",
+      "checker": "reduced_ventilation",
+      "definition": "Occupant-adjustable reduced ventilation meets both total and kitchen extraction minima. For 1 to 7 main rooms, total minima are 35, 60, 75, 90, 105, 120, 135 m3/h and kitchen minima are 20, 30, 45, 45, 45, 45, 45 m3/h. No extrapolation outside 1 to 7 rooms.",
+      "group": "ventilation",
+      "role": "check",
+      "tier": "graph_plus_scenario",
+      "claim_level": "assumption_based",
+      "depends_on": [],
+      "applicability": "occupant_adjustable_residential",
+      "thresholds": {
+        "main_room_labels": [
+          0,
+          1
+        ],
+        "kitchen_labels": [
+          3
+        ],
+        "total_flows_m3_h": [
+          35.0,
+          60.0,
+          75.0,
+          90.0,
+          105.0,
+          120.0,
+          135.0
+        ],
+        "kitchen_flows_m3_h": [
+          20.0,
+          30.0,
+          45.0,
+          45.0,
+          45.0,
+          45.0,
+          45.0
+        ]
+      },
+      "required_observations": [
+        "room_polygons",
+        "ventilation_mode",
+        "reduced_total_extraction_m3_h",
+        "reduced_kitchen_extraction_m3_h"
+      ],
+      "weight": 1.0,
+      "severity_type": "normalized_deficit",
+      "assumptions": [
+        "declared_ventilation_system_not_generated_or_measured",
+        "main_rooms_are_living_and_bedroom_polygons",
+        "no_airflow_network_or_inlet_verification",
+        "uniform_declared_flow_for_each_kitchen",
+        "reduced_total_is_dwelling_aggregate",
+        "inconsistent_service_flow_mapping_is_unknown",
+        "table_only_covers_1_to_7_main_rooms"
+      ],
+      "source_id": "Technical_assessment_TTC.pdf:AppendixA:C090",
+      "counts_toward_compliance": true,
+      "enabled": true
+    }
+  ]
+}

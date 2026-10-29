@@ -29,6 +29,7 @@ from .types import ConstraintSpec, FloorplanSample, Scenario, overall_validity, 
 
 
 CHECKER_VERSION = "cpu_bedroom_audit_v2"
+BATHROOM_CHECKER_VERSION = "cpu_bathroom_audit_v1"
 PROTOCOL = "scale_recalibration_v1"
 CONSTRAINT_PROTOCOL = "constraint_recalibration_v1"
 SOURCE_FILES = ("config.json", "run.json", "candidates.jsonl")
@@ -37,6 +38,31 @@ VENTILATION_FIELDS = {"ventilation_mode", "kitchen_extraction_m3_h", "bathroom_e
                       "reduced_total_extraction_m3_h", "reduced_kitchen_extraction_m3_h",
                       "bathroom_ventilation_role"}
 VENTILATION_IDS = {"C085", "C086", "C090"}
+BATHROOM_IDS = {"C036", "C037", "C041"}
+BATHROOM_FIELDS = {"bathroom_layout", "wc_width_m", "wc_depth_m", "basin_width_m",
+                   "basin_depth_m", "basin_under_clearance", "bathroom_door_width_m",
+                   "bathroom_search_budget", "bathroom_circle_positions"}
+
+
+def _has_joint_bathroom(constraints):
+    return BATHROOM_IDS <= {spec["id"] for spec in constraints
+                            if spec.get("enabled", True) and spec["checker"] == "joint_bathroom"
+                            and "bathroom_layout" in spec["required_observations"]}
+
+
+def _replacement_scenario_fields(constraints):
+    """Only inputs consumed by explicitly supplied checks may change on replay."""
+    allowed = {field for spec in constraints or []
+               if spec["id"] in VENTILATION_IDS and spec["enabled"]
+               for field in spec["required_observations"] if field in VENTILATION_FIELDS}
+    if constraints and _has_joint_bathroom(constraints):
+        allowed.update(field for spec in constraints if spec["id"] in BATHROOM_IDS and spec["enabled"]
+                       for field in spec["required_observations"] if field in BATHROOM_FIELDS)
+    return allowed
+
+
+def _final_checker(constraints):
+    return BATHROOM_CHECKER_VERSION if _has_joint_bathroom(constraints) else CHECKER_VERSION
 
 
 def file_hash(path):
@@ -52,13 +78,13 @@ def _checkpoint_identity(adapter):
 
 
 def _compatible_scenario(old, new, allowed_scenario_fields=()):
-    # Unguided trajectories can be reused for explicitly added ventilation
+    # Unguided trajectories can be reused for explicitly declared scenario
     # checks. Other operational assumptions remain protected from silent changes.
     before, after = asdict(Scenario(**old)), asdict(Scenario(**new))
     allowed = SCALE_FIELDS | set(allowed_scenario_fields)
     changed = [key for key in before if key not in allowed and before[key] != after[key]]
     if changed:
-        raise ValueError("Only scale/provenance/documentation and ventilation inputs required by an explicit "
+        raise ValueError("Only scale/provenance/documentation and inputs required by an explicit "
                          f"replacement registry may change; scenario differs in {changed}")
 
 
@@ -212,9 +238,7 @@ def recalibrate(experiment_dir, output_dir, scenario_path, device="cpu", inferen
     torch.device(device)  # Fail invalid device syntax before creating output.
     constraints = ([asdict(spec) for spec in load_specs(constraints_path)]
                    if constraints_path is not None else None)
-    allowed_scenario_fields = {field for spec in constraints or []
-                               if spec["id"] in VENTILATION_IDS and spec["enabled"]
-                               for field in spec["required_observations"] if field in VENTILATION_FIELDS}
+    allowed_scenario_fields = _replacement_scenario_fields(constraints)
     records, skipped = _prepare_sources(root, asdict(scenario), allowed_scenario_fields)
     override = ({"file": str(Path(constraints_path).resolve()), "sha256": file_hash(constraints_path),
                  "ids": [spec["id"] for spec in constraints]}
@@ -225,24 +249,31 @@ def recalibrate(experiment_dir, output_dir, scenario_path, device="cpu", inferen
         record["effective_config"] = deepcopy(record["config"])
         if constraints is not None:
             record["effective_config"]["constraints"] = constraints
-        if record["method"] == "best_of_n":
+        if record["effective_config"].get("reward_backend") == "gpu":
             _tensor_evaluator(record["config"])
-            _tensor_evaluator(record["effective_config"])
+            effective_evaluator = _tensor_evaluator(record["effective_config"])
+            # Match a fresh run's initial scorer snapshot. Evaluation later adds
+            # per-scenario/runtime metadata; those belong to candidate records.
+            record["effective_config"].setdefault("guidance", {})["tensor_settings"] = deepcopy(effective_evaluator.metadata)
     started = time.perf_counter()
     code_files = ("recalibrate.py", "gpu_constraints.py", "gpu_graph.py", "gpu_sampling.py",
                   "audit_geometry.py", "constraints.py", "policy.py", "geometry.py", "types.py", "area.py")
+    if any(_has_joint_bathroom(record["effective_config"]["constraints"]) for record in records):
+        code_files += ("bathroom_geometry.py",)
     manifest = {"protocol": protocol, "status": "running", "created_at": datetime.now(timezone.utc).isoformat(),
                 "source_experiment": str(root), "scenario": asdict(scenario),
                 "scenario_file": str(Path(scenario_path).resolve()), "scenario_sha256": file_hash(scenario_path),
                 "constraints_override": override,
-                "allowed_ventilation_scenario_changes": sorted(allowed_scenario_fields),
+                "allowed_ventilation_scenario_changes": sorted(allowed_scenario_fields & VENTILATION_FIELDS),
+                "allowed_bathroom_scenario_changes": sorted(allowed_scenario_fields & BATHROOM_FIELDS),
+                "allowed_scenario_changes": sorted(allowed_scenario_fields),
                 "code_sha256": {name: file_hash(Path(__file__).parent / name) for name in code_files},
                 "device": str(device), "inference_batch_size": inference_batch_size,
                 "model_inference_performed": False, "skipped_runs": skipped, "methods": [],
                 "steps": ["Validate complete original pools and source identities",
                           "Replay all Best-of-N raw graphs with tensor rewards under the requested scenario and constraints",
                           "Reselect with original structural/unknown-ID/energy/seed rule",
-                          "Audit selected baseline and Best-of-N outputs with cpu_bedroom_audit_v2"],
+                          "Audit selected baseline and Best-of-N outputs with the recorded CPU checker"],
                 "runtime_scope": "Recalibration is separate from historical generation; no new generation runtime measured"}
     output.mkdir(parents=True)
     write_json(output / "calibration.json", manifest)
@@ -254,6 +285,7 @@ def recalibrate(experiment_dir, output_dir, scenario_path, device="cpu", inferen
             destination.mkdir(parents=True)
             run_started = time.perf_counter()
             method, trials, n = record["method"], config["trials"], record["n"]
+            checker_version = _final_checker(config["constraints"])
             selected_indices = set(range(len(rows)))
             tensor_records, selection, tensor_seconds = {}, None, 0.0
             if method == "best_of_n":
@@ -279,7 +311,7 @@ def recalibrate(experiment_dir, output_dir, scenario_path, device="cpu", inferen
                     row["original_artifacts"] = row.pop("artifacts")
                 row["sample"]["scenario"] = asdict(scenario)
                 metadata = row["sample"]["metadata"]
-                metadata.update(scale_recalibration=protocol, final_evaluation_backend=CHECKER_VERSION if row["selected"] else None)
+                metadata.update(scale_recalibration=protocol, final_evaluation_backend=checker_version if row["selected"] else None)
                 if tensor_records:
                     row["selection_evaluation"] = tensor_records[index]
                     metadata.update(guidance_evaluation=tensor_records[index], guidance_device=str(device),
@@ -290,7 +322,7 @@ def recalibrate(experiment_dir, output_dir, scenario_path, device="cpu", inferen
                     row["evaluation"] = asdict(cpu.evaluate(FloorplanSample.from_dict(row["sample"]), scenario))
                     audit_seconds = time.perf_counter() - audit_started
                     cpu_seconds += audit_seconds
-                    row["evaluation_backend"] = CHECKER_VERSION
+                    row["evaluation_backend"] = checker_version
                 else:
                     row["evaluation"] = tensor_records[index]
                     row["evaluation_backend"] = "tensor_gpu"
@@ -300,8 +332,9 @@ def recalibrate(experiment_dir, output_dir, scenario_path, device="cpu", inferen
                 revised.append(row)
             changed = sum(not rows[index]["selected"] for index in selected_indices)
             metadata = {"protocol": protocol, "source_run_dir": str(source), "source_hashes": record["hashes"],
-                        "checker_version": CHECKER_VERSION, "scenario": asdict(scenario),
+                        "checker_version": checker_version, "scenario": asdict(scenario),
                         "original_scenario": record["config"]["scenario"],
+                        "original_guidance": deepcopy(record["config"].get("guidance", {})),
                         "scenario_changes": {key: {"from": old, "to": asdict(scenario)[key]}
                                              for key, old in asdict(Scenario(**record["config"]["scenario"])).items()
                                              if old != asdict(scenario)[key]},
@@ -310,8 +343,8 @@ def recalibrate(experiment_dir, output_dir, scenario_path, device="cpu", inferen
                         "original_constraints": record["config"]["constraints"],
                         "reselection": method == "best_of_n", "generation_unchanged": True,
                         "saved_candidates": len(rows), "selected_outputs": trials, "changed_winners": changed,
-                        "selected_evaluation_backend": CHECKER_VERSION,
-                        "population_evaluation_backend": "mixed_tensor_cpu" if method == "best_of_n" else CHECKER_VERSION,
+                        "selected_evaluation_backend": checker_version,
+                        "population_evaluation_backend": "mixed_tensor_cpu" if method == "best_of_n" else checker_version,
                         "selected_evaluation_scope": "Authoritative refined CPU audit of selected outputs",
                         "all_candidate_evaluation_scope": "Selected CPU audits plus rejected tensor proxy scores; do not report as homogeneous CPU validity"
                             if method == "best_of_n" else "Authoritative refined CPU audit of all baseline outputs",
@@ -324,10 +357,10 @@ def recalibrate(experiment_dir, output_dir, scenario_path, device="cpu", inferen
                      "fallback": bool(selection["fallback"][trial])} for trial in range(trials)])
             revised_config = deepcopy(config)
             revised_config.pop("evaluation_audit", None)
-            revised_config.update(scenario=asdict(scenario), final_checker=CHECKER_VERSION,
+            revised_config.update(scenario=asdict(scenario), final_checker=checker_version,
                                   scale_recalibration=metadata, runtime_scope=manifest["runtime_scope"],
                                   output_root=str(output))
-            revised_config.setdefault("guidance", {})["final_evaluator"] = CHECKER_VERSION
+            revised_config.setdefault("guidance", {})["final_evaluator"] = checker_version
             write_json(destination / "config.json", revised_config)
             with (destination / "candidates.jsonl").open("w") as stream:
                 for row in revised:
