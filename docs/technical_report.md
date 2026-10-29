@@ -1,12 +1,12 @@
-# Constraint-guided floorplan generation with SVDD
+# Constraint-Guided Floorplan Generation with SVDD
 
-We adapt **Soft Value-Based Decoding (SVDD)** to guide a frozen GSDiff model using geometric constraints. At each guided step, we compare possible denoising moves through their predicted floorplans and continue the most promising eligible branch. The experiment tests whether this improves feasibility over ordinary sampling and Best-of-N at comparable denoiser cost.
+We adapt **Soft Value-Based Decoding (SVDD)** to guide a frozen GSDiff model using geometric constraints.
 
-## GSDiff: generating the geometry of a floorplan
+## Background - GSDiff: Generating the Geometry of a Floorplan
 
-Hu et al.'s **GSDiff: Synthesizing Vector Floorplans via Geometry-enhanced Structural Graph Generation** represents a floorplan through shared wall junctions and wall segments. Its central contribution is to generate this vector structure directly, with room semantics attached to the graph. [Paper](https://arxiv.org/abs/2408.16258)
+Hu et al.'s [**GSDiff**](https://arxiv.org/abs/2408.16258) generates floorplans as graphs: nodes mark wall junctions, and edges represent the wall segments connecting them. The graph also carries **room-type labels**, such as living room, bedroom, kitchen or bathroom. These labels are what we mean by *room semantics*: they describe the intended use of each space. In our experiments, they tell us which constraints to check in each room—for example, bed clearances in bedrooms and turning space in bathrooms.
 
-### Two pretrained components, one generator
+### Two Pretrained Components, One Generator
 
 For a graph $G=(V,E)$, generation factorizes as
 
@@ -24,27 +24,24 @@ flowchart LR
     C --> D["Room extraction<br/>Labelled polygons"]
 ```
 
-### What makes it geometry-enhanced?
+### Our Use of the Model
 
-The paper introduces a **mixed-base alignment loss** to penalize junction misalignment, and **interpolation self-supervision** to improve edge prediction using random intermediate points. These training objectives encourage geometric consistency. The paper also supports topology conditioning through a room-adjacency graph and boundary conditioning through a prescribed exterior contour. [Method, Figures 1–3](https://arxiv.org/pdf/2408.16258)
+We use the **unconditional RPLAN checkpoints** to test whether inference-time guidance can improve satisfaction of the selected regulatory checks without a prescribed room-adjacency graph or building footprint. All methods use the same frozen networks and output representation; no model weights are updated.
 
-### Our use of the model
+- **Where guidance acts:** we choose which node-sampling proposals to continue by scoring their decoded floorplans, where room dimensions and clearances can be checked.
+- **Why SVDD:** some checks provide binary feedback. For example, [C035's bed-clearance check](constraints.md#c033-and-c035--binary-placement-penalties) contributes **0** to the reward for a verified pass and **−1** for a proven failure; unresolved cases remain unknown. This discontinuous feedback provides no useful gradient towards a better layout. SVDD compares scores directly, without requiring gradients through these checks, edge prediction or room extraction.
+- **When to guide:** early floorplan predictions can be unreliable. We therefore compare guidance throughout denoising with guidance restricted to the **last 10% of steps** (100 guided steps).
+- **Other model choices:** GSDiff also releases [topology-constrained and boundary-constrained checkpoints](https://github.com/SizheHu/GSDiff#params-place-in-the-outputs-folder). These could support future experiments where room adjacencies or the building footprint are specified in advance.
 
-GSDiff also provides pretrained **topology-constrained** and **boundary-constrained** variants. [Released checkpoints](https://github.com/SizheHu/GSDiff#params-place-in-the-outputs-folder) These could be combined with our inference-time guidance framework by conditioning on a prescribed room-adjacency graph or external building footprint, respectively. They represent complementary settings when room programmes or building boundaries are specified in advance.
+## SVDD-PM: Search within the Denoising Trajectory
 
-We deliberately select the **unconditional RPLAN** checkpoints to isolate the ability of inference-time guidance to satisfy the selected regulatory checks without additional architectural conditioning. Every comparison shares the same frozen networks and output representation; the original training losses are not optimized during our experiments.
+We choose **SVDD-PM** because it can guide generation using a reward that is **not assumed to be differentiable**. Our checks involve discrete graph decoding, binary decisions and finite placement searches. SVDD needs only their scalar scores, allowing us to guide the frozen model without backpropagating through the reward or geometry checker.
 
-The resulting polygons provide areas and regions for placement checks. Our output schema has no explicit doors, fixtures or ceiling heights. Metric conversion follows the documented RPLAN/GSDiff coordinate conventions below; we evaluate the observable geometric subset rather than infer missing building attributes.
+At each guided step, SVDD draws several proposals from the current noisy state and scores their predicted clean floorplans. It then selects one noisy proposal to continue denoising. Each output therefore follows one active trajectory, with the reward informing which branch survives at each guided step.
 
-This architecture determines where guidance must act: **we change node-sampling decisions, but score decoded graphs**. Edge prediction and room extraction introduce discrete decisions, making derivative-free SVDD suitable. Instability in early decoded predictions motivates comparing full-trajectory guidance with late guidance. The method must still establish structural validity and constraint satisfaction through final evaluation.
+We benchmark against **Best-of-N**, which generates $N$ independent, complete designs and applies the same selection rule afterward. This comparison tests whether using the reward during denoising improves constraint satisfaction over selecting from a larger pool of finished designs. Denoiser budgets are accounted for in the evaluation below.
 
-## SVDD-PM: search within the denoising trajectory
-
-**Best-of-N** spends its budget on independent, complete designs and ranks them afterward. **SVDD** repeatedly branches from the current noisy state, using intermediate scores to decide where to continue. Each output retains one active trajectory; the other proposals are discarded at every guided step.
-
-**Reward assumption:** we require only reward evaluations; **differentiability is not assumed**. Discrete graph decoding, thresholded checks and finite placement searches make the scoring pipeline non-differentiable in general. SVDD selects proposals using scalar scores, without backpropagating through the reward or geometry checker. This motivates our choice of derivative-free guidance; GPU execution accelerates the evaluations without changing this assumption.
-
-### The energy-tilted target
+### The Energy-Tilted Target
 
 Our experiment uses **energy-based SVDD-PM**. Let $E(G)$ be the constraint energy defined below and $r(G)=-E(G)$. The [SVDD formulation](https://arxiv.org/html/2408.08252v3) motivates the target
 
@@ -64,7 +61,7 @@ $$
 
 Larger $\beta$ strengthens the preference for low energy. Finite $\beta$ still permits violations.
 
-### From final energy to a guided transition
+### From Final Energy to a Guided Transition
 
 Energy is defined on completed graphs, whereas diffusion operates on noisy nodes. The missing link is the expected terminal weight:
 
@@ -83,9 +80,9 @@ K_t^\beta(z'\mid z)
 H_t^\beta(z)=\int K_t(u\mid z)H_{t-1}^\beta(u)\,du.
 $$
 
-The ratio favors states with better expected terminal weights; the recursion makes it normalized wherever $H_t^\beta(z)>0$. These are ideal conditional transitions. Exact sampling of the full tilted process also requires consistent initial-noise and final-edge weighting, detailed in the [technical notes](technical_notes.md#exact-tilting-of-the-two-stage-generator).
+The ratio favors states with better expected terminal weights; the recursion makes it normalized wherever $H_t^\beta(z)>0$. These are ideal conditional transitions. Exact sampling of the full tilted process also requires consistent initial-noise and final-edge weighting.
 
-### The posterior-mean approximation
+### The Posterior-Mean Approximation
 
 A noisy node state cannot directly support room-area or clearance checks. For each proposal $z$, we predict clean nodes, discretize their semantics, predict edges and extract rooms:
 
@@ -98,9 +95,23 @@ $$
 
 Thus $\widehat v_t(z)=\beta^{-1}\log\widehat H_t^\beta(z)=-E_{\mathrm{GPU}}(\widehat G_t(z))$. Here $D_\phi$ completes the graph. **One clean prediction and graph decode replace the expectation over future completions.** This needs neither rollouts, reward gradients nor a trained value network. The score is not expected terminal reward; early predictions can be unreliable, and GPU geometry is a proxy for the final CPU checker.
 
-### Algorithm: one guided step
+### Relation to the Paper's Algorithm
 
-Given noisy nodes $z_t$ and $K=10$:
+We follow the propose–score–select loop in [SVDD Algorithm 1](https://arxiv.org/html/2408.08252v3), with the following implementation choices:
+
+| Component | Our Implementation |
+|---|---|
+| Soft-value estimate | SVDD-PM: score the predicted clean floorplan with $\widehat v=-E_{\mathrm{GPU}}(\widehat G)$. |
+| Selection | The paper samples with weights $\exp(\widehat v/\alpha)$. Our temperature $\tau$ corresponds to $\alpha$: positive values use categorical sampling; the default $\tau=0$ uses a greedy maximum. |
+| Eligible candidates | Additional guards check structure, measurable scores and unknown-constraint coverage before selection. |
+| Guidance window | Apply selection only within the chosen window; take ordinary DDPM transitions elsewhere. |
+| State carried forward | Keep the selected **noisy proposal**; its clean prediction is used only for scoring. |
+
+### Algorithm: One Guided Step
+
+**$K$ is the number of candidate denoising moves proposed at each guided step**, denoted $M$ in the paper's Algorithm 1. Our standard SVDD setting uses **$K=10$**: draw ten alternatives, score them and keep one. The other nine are discarded, so each trajectory still produces one final floorplan. Best-of-N instead generates $N$ complete floorplans before selecting one. The transition kernel $K_t$ above is a separate mathematical object.
+
+Given noisy nodes $z_t$:
 
 1. **Propose.** Compute the parent clean prediction once. Reuse it to draw $K$ noisy next states from the unchanged DDPM transition, each with independent Gaussian noise: $z_{t-1}^{(k)}\sim p_{\mathrm{pre}}(\cdot\mid z_t)$.
 2. **Predict and score.** For each proposal, predict its clean nodes at timestep $t-1$, complete the graph and compute $\widehat v_{t-1}(z_{t-1}^{(k)})$. Sibling proposals share edge-decoder randomness to reduce comparison noise.
@@ -116,24 +127,34 @@ $$
 
 5. **Continue.** Our default $\tau=0$ chooses the highest-scoring eligible proposal. Retain its **noisy state**, discard the other branches and resume denoising. If none is scorable, retain proposal zero.
 
-The clean graph supplies the score; the noisy proposal supplies the next diffusion state. Replacing it with the clean estimate would skip the intended remaining denoising process.
+**Noisy State and Clean Prediction.** Two representations are used at each guided step:
 
-**Guidance window.** Full SVDD applies this loop at code steps `999,…,1`; late SVDD applies it at `200,…,1`. Outside the window, take one ordinary DDPM transition. Both still execute all 1,000 steps, including deterministic, unguided step `0`, before final graph decoding and CPU evaluation.
+- The **noisy state** is the current, partially denoised set of junction coordinates and room-type attributes. It still contains noise and needs further denoising.
+- The **clean prediction** is the model's estimate of the final node values from that noisy state. We decode this estimate into a floorplan to evaluate the constraints. It is a prediction, so it may differ from the layout eventually generated.
+
+SVDD uses the predicted floorplans to rank proposals, then continues denoising from the selected **noisy state**.
+
+**Guidance Window.** Generation starts from Gaussian noise and performs 1,000 denoising updates. The code's timestep counts down from `999` near the noisy beginning to `0` at the final update; smaller timesteps correspond to lower scheduled noise levels.
+
+- **Full SVDD:** compare candidate moves throughout the stochastic denoising steps (`999` to `1`).
+- **Late SVDD:** first follow ordinary denoising, then compare candidate moves only in the last-10% window (`100` to `1`).
+
+Both methods finish with the same deterministic update at step `0`, followed by final graph decoding and CPU evaluation. The guidance window controls **when candidate moves are compared**; both methods still complete all 1,000 denoising updates.
 
 Finite proposals, clean-estimate rewards, coverage filtering and the greedy default make our implementation **approximate inference-time optimization**. Temperature zero uses a deterministic argmax; it does not exactly sample the feasibility-conditioned model.
 
-## Constraints define the reward
+## Constraints Define the Reward
 
 The default profile evaluates **eleven constraints from Appendix A** of the [assessment](../Technical_assessment_TTC.pdf), grouped below. **Every method uses all four groups**; `bathroom_001` names the experiment, not a bathroom-only evaluation. Three supporting rules define measurements without adding separate reward terms or compliance points.
 
-### Bedroom — bed placement and clearance
+### Bedroom — Bed Placement and Clearance
 
 | ID | Requirement |
 |---|---|
 | **C033** | A bedroom fits a bed and a separate **1.50 m diameter** turning circle. |
 | **C035** | Bed clearances: **0.90 m** on both long sides + **1.20 m** at one short side, or **1.20 m + 0.90 m**. Joint success with C033 requires the same bed placement. |
 
-### Bathroom — one shared furnishing arrangement
+### Bathroom — One Shared Furnishing Arrangement
 
 | ID | Requirement |
 |---|---|
@@ -141,7 +162,7 @@ The default profile evaluates **eleven constraints from Appendix A** of the [ass
 | **C037** | A WC has **0.80 × 1.30 m** lateral transfer space, outside the door swing. |
 | **C041** | **Bathroom-scoped:** the same turning circle overlaps the door swing by **≤0.25 m OR** the space beneath a basin by **≤0.15 m**; at most one overlap is used. |
 
-### Habitability — room size and dwelling capacity
+### Habitability — Room Size and Dwelling Capacity
 
 | ID | Requirement |
 |---|---|
@@ -149,7 +170,7 @@ The default profile evaluates **eleven constraints from Appendix A** of the [ass
 | **C077** | Habitable area ≥**28 m²** for two occupants. |
 | **C078** | Habitable volume ≥**66 m³** for two occupants. |
 
-### Ventilation — capacity for the generated room count
+### Ventilation — Capacity for the Generated Room Count
 
 | ID | Requirement |
 |---|---|
@@ -157,9 +178,11 @@ The default profile evaluates **eleven constraints from Appendix A** of the [ass
 | **C086** | Normal bathroom extraction meets the PDF's main-room-count table. |
 | **C090** | Occupant-adjustable reduced ventilation meets **both total and kitchen** flow minima for the main-room count. |
 
-**Supporting rules (not scored):** C034 defines the hypothetical bed dimensions; C079/C080 define habitable-area measurement and exclusions. They supply inputs to the checks above and are excluded from success-rate denominators.
+**Measurement Definitions:** C034 specifies the bed dimensions used by the bedroom checks. C079/C080 define how habitable area is measured and which spaces are excluded, under our stated modelling assumptions. These definitions support the eleven scored checks; they add no separate reward terms or pass/fail results. Overall success rate remains the number of successful designs divided by the total number of designs.
 
-### Shared scenario and assumptions
+### Shared Scenario and Assumptions
+
+GSDiff generates wall geometry and room-type labels, but the selected checks also need information the model does not provide: occupant count, ceiling height, furniture, fixtures and ventilation capacity. For example, a two-dimensional floorplan alone cannot tell us a room's volume or whether an installed ventilation system is sufficient. We therefore derive the metric scale from the dataset and code conventions, and explicitly specify the remaining inputs. **The same scenario is used for every method**, so the comparison measures how well each method solves the same task. A pass establishes feasibility under these declared conditions; it does not verify the equipment or dimensions of a real building.
 
 **Scenario:** paper/code-derived scale **0.03515625 m/drawing pixel**, two occupants, uniform 2.5 m ceilings, an axis-aligned 1.40 × 1.90 m hypothetical bed and zero-thickness walls. Main rooms are living-room and bedroom polygons; every bathroom label is explicitly mapped to the full-bathroom category.
 
@@ -187,7 +210,7 @@ $$
 
 This conversion is derived from the dataset and code conventions, rather than a physical measurement of each generated building. Generation rewards and final checks use the same conversion.
 
-### From checks to a scalar reward
+### From Checks to a Scalar Reward
 
 For applicable, measurable checks $\mathcal M(G)$, equal-weight scalarization gives
 
@@ -211,41 +234,50 @@ $$
 
 The joint term replaces the three bathroom severities during selection, avoiding counting the same geometric deficit three times. It gives near misses an ordering without labelling them proven failures. Final CPU reporting checks all three PDF rules separately; a finite search miss remains **unknown** unless a necessary geometric bound proves failure. The chosen shared arrangement is saved and drawn in the sample figures. [Constraint formulas](constraints.md) and the [bathroom protocol](bathroom_profile.md) specify the assumptions, overlap convention and search limitations.
 
-## Evaluation and compute
+## Evaluation and Compute
 
 **Results for this eleven-check profile are pending.** Baseline designs and the complete Best-of-11 candidate banks can be reused by rescoring them under the declared scenario. SVDD must use the same reward during generation. The table records planned denoiser budgets, not measured results:
 
 | Method | Outputs | Planned NFE/output | Overall valid |
 |---|---:|---:|---|
 | Baseline | 100 | 1,000 | Pending |
-| Best-of-3 | 100 | 3,000 | Pending |
-| SVDD, last 20% | 100 | 3,000 | Pending |
+| Best-of-2 | 100 | 2,000 | Pending |
+| SVDD, last 10% | 100 | 2,000 | Pending |
 | Best-of-11 | 100 | 11,000 | Pending |
 | SVDD, full | 100 | 10,990 | Pending |
 
-**Two budget comparisons:** Best-of-3 matches late SVDD at **3,000 NFE/output**; Best-of-11 approximately matches full SVDD at **11,000 versus 10,990**. Construct Best-of-3 from candidate indices **0, 1 and 2** in every saved Best-of-11 trial, fixed before inspecting scores. Reapply the same selection rule to their saved GPU scores, then CPU-audit the selected design. Retain all 100 trials and keep the Best-of-11 results. These are nested, paired controls rather than independent candidate banks.
+**Two budget comparisons:** Best-of-2 matches late SVDD at **2,000 NFE/output**; Best-of-11 approximately matches full SVDD at **11,000 versus 10,990**. To construct Best-of-2, retain candidate indices **0 and 1** in every saved Best-of-11 trial, fixed before inspecting scores. Reapply the same selection rule to their saved GPU scores, then CPU-audit the selected design. Retain all 100 trials and keep the Best-of-11 results. These are nested, paired controls rather than independent candidate banks. Existing Best-of-3 results retain their **3,000-NFE** budget and are not relabelled as Best-of-2.
 
 **Pilot protocol:** 100 outputs per method with paired seeds `10000–10099`, shared frozen checkpoints, eleven scored checks and the scenario above. Final selected outputs use the CPU placement audit; preserve failed and unresolved cases in the denominators. Report **bedroom, bathroom, habitability and ventilation** results alongside overall success. These groups organize the analysis; overall validity still requires all applicable scored checks to pass. Keep search budgets identical across methods, and report bathroom unknowns separately from proven failures.
 
-Report overall validity with 95% Wilson intervals, per-constraint pass/fail/unknown rates, structural validity, measured severity and layout diversity. Record NFE and elapsed sampling/checking time separately. Sample-wise denoiser cost is $T+KG$ for SVDD and $NT$ for Best-of-N, where $G$ is the number of guided transitions; this does not match edge-model or checker cost.
+Report overall validity with 95% Wilson intervals, per-constraint pass/fail/unknown rates, structural validity, measured severity and layout diversity. Record NFE and elapsed sampling/checking time separately. Sample-wise denoiser cost is $T+KG$ for SVDD and $NT$ for Best-of-N, where $G$ is the number of guided transitions. For late SVDD, $1{,}000+10\times100=2{,}000$ NFE per output; this does not match edge-model or checker cost.
 
-Best-of-3's **3,000 NFE** is the equivalent generation cost of its retained prefix. Reselection performs no new model inference; the source bank already cost 11,000 NFE/output. Its standalone runtime and batched forward-call counts are unmeasured, so no speedup is inferred from this reuse.
+Best-of-2's **2,000 NFE** is the equivalent generation cost of its retained prefix. Reselection performs no new model inference; the source bank already cost 11,000 NFE/output. Its standalone runtime and batched forward-call counts are unmeasured, so no speedup is inferred from this reuse.
+
+The 10% protocol requires explicit run settings: the checked-in launch defaults still use 200 steps. Saved run configurations must confirm the guidance window and NFE before results are entered here.
 
 The completed evaluation will include one comparison table, per-constraint results and labelled success/failure examples at the corrected metric scale. [Reproduction instructions](../test_time/README.md), [sweep launcher](../test_time/launch_eval.sh) and [machine-readable constraints](../test_time/configs/constraints_bathroom_v1.json) provide the assessment's baseline comparison, compute accounting and reproducibility requirements. One scenario and seed batch limit generalization; this profile does not guarantee a lower Best-of-N success rate or an SVDD advantage.
 
-## Practical limits
+## Practical Limits
 
-**GPU evaluation** batches room extraction and constraint searches, avoiding repeated CPU geometry work inside the guidance loop. Bathroom completion uses tensor geometry; the final CPU audit independently verifies a saved positive placement witness. Final metrics use the CPU reference checker; search outcomes and severities can differ between backends.
+**Why We Use a CPU Checker.** Guidance needs fast scores for many candidate floorplans, while reporting needs a consistent decision about whether each constraint passes. We therefore separate the two:
+
+- **GPU guidance:** batched geometry searches and proxy penalties rank candidate moves during denoising. A low penalty can indicate a promising layout without establishing that every check passes.
+- **CPU evaluation:** the reference checker evaluates completed layouts using Shapely polygon operations and placement searches. For example, it verifies that a proposed bathroom arrangement fits inside the room and satisfies the fixture, door-swing and clearance rules. It repeats the same bathroom candidate bank and independently checks positive placements; bedroom evaluation also uses the refined placement search.
+
+Using the same reference checker for every method makes final success rates comparable and helps detect disagreements with the guidance scores. **The CPU is an implementation choice:** our reference geometry routines run there. Non-differentiable rewards can run on a GPU, and a validated GPU implementation could perform this audit too. In standard SVDD, the CPU check runs after generation; hard-feasibility MC also uses it for rollout outcomes, and final repair uses it to assess edits. These extra checks contribute to the extensions' runtime.
 
 Finite searches may remain unknown, bedroom binary penalties provide weak incremental feedback, and greedy selection may reduce diversity. The bathroom search covers a limited family of placements; it cannot certify that no other furnishing arrangement exists. At the assumed height, C077 already implies C078. C036/C037/C041 share geometry, and the fixed ventilation capacities correlate C085 with C090; the declared bathroom flow satisfies C086 across its table. These checks are not independent. Report room counts and diversity alongside success; baseline-relative diagnostics do not establish RPLAN fidelity.
 
 [Technical notes](technical_notes.md) retain checkpoint details and exact process-weighting equations; their historical result tables are not part of this evaluation.
 
-## Extensions: late hard-feasibility and repair-aware SVDD
+## Extensions: Late Hard-Feasibility and Repair-Aware SVDD
 
-These two algorithmic extensions use the same frozen checkpoints, eleven scored constraints and declared scenario. **Results are pending for both extensions.**
+These extensions test two ways to improve the information used for branch selection: **the chance of eventual success** and **the feasibility attainable through small repairs**. Both use the same frozen checkpoints, eleven scored constraints and declared scenario, without reward gradients. Decisions are concentrated in the **last 10% of denoising**, within the final 100 transitions, where proposals have less noisy geometry. **Results are pending for both extensions.**
 
-### Binary-rollout conditioning (`hard_h_mc`)
+### Hard-Feasibility MC: Predicting Eventual Success (`hard_h_mc`)
+
+SVDD-PM judges each proposal through a single predicted clean graph. A low violation score at that point need not imply that continued denoising will satisfy every constraint. This extension completes several unguided rollouts from each proposal and favours branches with more CPU-audited successes. It tests whether estimating final joint feasibility provides better branch selection than the immediate clean-estimate score.
 
 Let $C(G)=1$ only when structure and every applicable scored check pass. Unknowns are nonsuccesses. The desired distribution and continuation probability are
 
@@ -269,15 +301,19 @@ $$
 \qquad \Pr(I=k\mid\text{bank})=\frac{\widehat h_k}{\sum_j\widehat h_j}.
 $$
 
-Continuous severity never enters this stochastic selection. The faster default reduces $L$ from 16 to 4, giving noisier estimates and more all-zero banks. Anchors retain **200, 100 and 30 remaining transitions**. Independent initial noises and ordinary prefixes form the first bank, approximating $p_b^F$. Each completion includes GSDiff's actual edge decoder: random interpolation followed by edge-logit argmax and graph extraction.
+Continuous severity never enters this stochastic selection. For the 10% protocol, decision anchors must lie within the **final 100 transitions**; their exact positions are recorded in each run configuration. Independent initial noises and ordinary prefixes form the first bank, approximating $p_b^F$. Each completion includes GSDiff's actual edge decoder: random interpolation followed by edge-logit argmax and graph extraction.
 
-Neural continuations are batched on GPU; completed-rollout feasibility uses the CPU audit. An all-zero bank triggers a recorded fresh ordinary block: zero observed successes do not prove impossibility. The final bank contains eight completions; selection is uniform among verified successes, otherwise the attempt fails. Finite proposal/rollout/terminal banks, fallbacks and a **40,000-NFE attempt cap** make this approximate conditioning. Success rates include failed attempts; retaining only successful episodes can further bias the distribution.
+**Main trade-off:** completed rollouts and CPU audits are expensive, and four rollouts per proposal give a coarse success estimate. If every rollout fails, the binary scores cannot distinguish promising near misses from poor layouts. Neural continuations are batched on GPU; an all-zero bank triggers a recorded fresh ordinary block. Zero observed successes do not prove impossibility.
+
+The final bank contains eight completions; selection is uniform among verified successes, otherwise the attempt fails. Finite proposal/rollout/terminal banks, fallbacks and a **40,000-NFE attempt cap** make this approximate conditioning. Success rates include failed attempts; retaining only successful episodes can further bias the distribution.
 
 **Naming and target:** `hard_h_mc` estimates binary continuation probabilities online. The paper's [SVDD-MC (§4.3)](https://arxiv.org/html/2408.08252v5#S4.SS3) instead learns a value estimator by regression. The notes' limit $p_\beta\to p_F$ as $\beta\to\infty$ requires $E=0$ exactly on the feasible set. Our unknown checks carry no numeric severity, so $E=0$ alone does **not** establish feasibility; the explicit pass predicate is essential.
 
-### Bounded repair lookahead (`svdd_repair_aware`)
+### Repair-Aware SVDD: Identifying Layouts That Small Edits Can Improve (`svdd_repair_aware`)
 
-At steps **200…1**, four noisy proposals are scored through bounded repairs of their predicted clean graphs. This is the **coordinate-only, greedy feasibility-first variant**. Among eligible found repairs $G'$, minimize the following tuple lexicographically:
+Two predicted layouts can have the same violation score while differing substantially in how easily they can be corrected. This extension searches for small wall adjustments before ranking each proposal, testing whether bounded repairability identifies more promising denoising branches. The best layout found supplies the score; the original noisy proposal continues diffusion. A separate final repair then attempts to improve the completed floorplan. Both stages use explicit edit proposals and score comparisons, without reward gradients.
+
+At steps **100…1**, four noisy proposals are scored through bounded repairs of their predicted clean graphs. We rank outcomes by feasibility first, then fewer unknowns, lower energy and finally smaller displacement. Among eligible found repairs $G'$, this means minimizing the following tuple lexicographically:
 
 $$
 \mathcal L_G(G')=\left(1-C_{\mathrm{GPU}}(G'),\ U_{\mathrm{GPU}}(G'),\ E_{\mathrm{GPU}}(G'),\ D(G',G)\right),
@@ -301,22 +337,20 @@ An empty eligible repair bank falls back to its unchanged graph. The chosen **or
 
 **Difference from the proposed weighted formulation:** the notes minimize $E+\lambda\|\Delta V\|^2$ (optionally with edge edits), then sample with weights $\exp(-\beta R)$. Our lexicographic rule uses fixed edges and summed displacement as its last tie-breaker; it is not that weighted objective's zero-temperature limit. The finite search supplies a repair witness, without global optimality. If every candidate retains the same feasibility, unknown count and energy—common with binary C035—the unchanged graph wins with zero displacement.
 
-Final repair changes the output distribution and may still leave failed constraints. This combined intervention does not isolate guidance from final-repair effects; no ablation result, compute match or exact feasibility-conditioned distribution is claimed.
-
-The existing finite wall-proposal order favours enlarging the largest bedroom. Adding bathroom scoring does not make that proposal bank target bathroom bottlenecks, and cannot guarantee a useful bathroom repair.
+**Main trade-off:** the score measures what the finite edit search can find. Its proposal order favours enlarging the largest bedroom and does not specifically target the coupled bathroom checks. Small coordinate changes may be insufficient, and the search does not establish the minimum repair needed. Final repair can still leave failed constraints and changes the output distribution. Results therefore describe the combined guidance-and-final-repair procedure; they do not isolate either stage or establish a compute match or exact feasibility-conditioned sampling.
 
 The [launcher](../test_time/launch_extensions.sh) previews repair-aware SVDD first, then `hard_h_mc`; `--run` executes that order. Defaults are 100 attempts per method starting at seed 10000, with inference microbatches of **32**, saved under `test_time/outputs/bathroom_extensions_001/`. `--smoke` retains two attempts with two hard-h rollouts and two terminal completions. Saved per-run configurations define the actual budgets, including earlier runs with $L=16$. See [reproduction instructions](../test_time/README.md).
 
-## Future directions
+## Future Directions
 
-### Feynman–Kac steering: population search
+### Feynman–Kac Steering: Population Search
 
 Given more time, we would also investigate [**Feynman–Kac steering** (Singhal et al., ICML 2025)](https://proceedings.mlr.press/v267/singhal25b.html) as an alternative to SVDD, maintaining and resampling a population of diffusion trajectories using constraint-based potentials. This could improve exploration and reduce the risk of prematurely discarding promising floorplans.
 
-### ParetoFlow: multi-objective exploration
+### ParetoFlow: Multi-Objective Exploration
 
 [ParetoFlow (Yuan et al., ICLR 2025)](https://arxiv.org/abs/2412.03718) explores a Pareto front using multiple objective weightings and exchanges candidates between neighbouring searches. Inspired by this, we could retain alternative compromises between the four constraint groups during search. Final acceptance would still require every applicable check to pass. ParetoFlow uses flow matching and gradients of learned objective predictors; applying its ideas to our frozen DDPM and discrete graph checks would require adaptation.
 
-### MARTINI: learned reward composition
+### MARTINI: Learned Reward Composition
 
-[MARTINI: Steered Not Stirred (Sargood et al., 2026)](https://arxiv.org/abs/2610.25502) learns to combine cheap surrogate rewards from limited reference scores or rankings. We could use a separate CPU-audited calibration set to learn how GPU proxy scores predict audited feasibility, then use that scalar reward within SVDD or Feynman–Kac steering. The composition would be fitted offline; inference would use its scores without requiring gradients through the geometry checks. This changes reward construction rather than the sampling algorithm. Final CPU checks would remain authoritative, and unresolved audits would remain unknown.
+[MARTINI: Steered Not Stirred (Sargood et al., 2026)](https://arxiv.org/abs/2610.25502) learns to combine cheap surrogate rewards from limited reference scores or rankings. We could use a separate CPU-audited calibration set to learn how GPU proxy scores predict audited feasibility, then use that scalar reward within SVDD or Feynman–Kac steering. The composition would be fitted offline; inference would use its scores without requiring gradients through the geometry checks. This changes reward construction rather than the sampling algorithm.
