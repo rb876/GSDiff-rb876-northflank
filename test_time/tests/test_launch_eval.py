@@ -54,17 +54,17 @@ def test_old_fixed_n_is_rejected_instead_of_silently_breaking_matching(tmp_path)
     assert "Unset BEST_N" in result.stderr
 
 
-def test_design_defaults_and_svdd_subset_preserve_seed_budget(tmp_path):
+def test_ventilation_defaults_and_svdd_subset_preserve_seed_budget(tmp_path):
     result = preview(tmp_path, VARIANTS="svdd_pm_last20 svdd_pm_full", EVAL_OUTPUT="")
     assert result.returncode == 0, result.stderr
     commands = generation_commands(result.stdout)
     assert [Path(command[command.index("--output_dir") + 1]).name for command in commands] == [
         "svdd_pm_last20", "svdd_pm_full"]
     for command in commands:
-        assert command[command.index("--config") + 1] == "test_time/configs/experiment_design_v1.json"
+        assert command[command.index("--config") + 1] == "test_time/configs/experiment_ventilation_v1.json"
         assert command[command.index("--trials") + 1] == "100"
         assert command[command.index("--seed") + 1] == "10000"
-        assert command[command.index("--output_dir") + 1].startswith("test_time/outputs/design_sweep_001/")
+        assert command[command.index("--output_dir") + 1].startswith("test_time/outputs/ventilation_sweep_001/")
 
 
 def test_explicit_config_and_variant_order_are_preserved(tmp_path):

@@ -106,9 +106,9 @@ def test_constraint_listing_needs_no_models_and_preserves_legacy_profile(monkeyp
     selected = json.loads(capsys.readouterr().out)
     expected = {"C033", "C035", "C036", "C076", "C077", "C078"}
     if not legacy:
-        expected |= {"D001", "D002", "D003", "D004"}
+        expected |= {"C085", "C086", "C090"}
     assert set(selected["active_scored_ids"]) == expected
-    assert selected["constraint_counts"]["registered"] == (7 if legacy else 13)
+    assert selected["constraint_counts"]["registered"] == (7 if legacy else 12)
     assert selected["disabled_constraints"] == []
 
 

@@ -1,8 +1,8 @@
 {
-  "name": "compact_three_bedroom_design_v1",
+  "name": "pdf_ventilation_v1",
   "variant": "unconstrained_rplan",
-  "scenario": "scenario_rplan18.json",
-  "constraints": "constraints_design_v1.json",
+  "scenario": "scenario_ventilation_v1.json",
+  "constraints": "constraints_ventilation_v1.json",
   "trials": 1,
   "batch_size": 4,
   "inference_batch_size": 10,
@@ -14,5 +14,5 @@
   "guided_steps": 999,
   "temperature": 0.0,
   "validity_weight": 100.0,
-  "output_root": "test_time/outputs/design_samples"
+  "output_root": "test_time/outputs/ventilation_samples"
 }

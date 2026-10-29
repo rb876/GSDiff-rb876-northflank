@@ -2,7 +2,7 @@
 
 [Concise report](technical_report.md)
 
-Implementation details and assumptions supporting the presentation report. The [concise report](technical_report.md) contains the completed CPU-audited sweep results.
+Implementation notes and historical experiment records. The [current report](technical_report.md) describes the nine-check PDF profile; its results remain pending. Historical numbers below belong to their recorded earlier scenarios and must not be used as current results.
 
 ## 1. Model and experimental setting
 
@@ -195,7 +195,7 @@ Best-of-11 approximately matches **full SVDD denoiser work**, within 0.091%. Thi
 
 The primary metric is overall-valid rate over **all selected outputs**, with 95% Wilson intervals. The analysis reports per-constraint pass/fail/unknown/N/A counts, a histogram of checks passed per design, measurement coverage and mean measured severity. Constraint success uses all applicable checks in its denominator; measurable-only compliance is reported separately. Unknowns never count as passes.
 
-The [main technical report](technical_report.md) contains the comparison and conclusions. The [full audited analysis](../test_time/outputs/sweep_002_cpu_audit_v2/analysis/REPORT.md) supplies detailed metrics, failure explanations and annotated examples. Its `cpu_bedroom_audit_v2` checker re-evaluated the original 400 selected designs without changing generation, GPU rewards or candidate selection; copied generation timings exclude the separate offline audit.
+The [archived report](technical_report_assumed_scale_archive.md) contains the historical comparison and conclusions; the [main technical report](technical_report.md) describes the current PDF-only evaluation. The [full audited analysis](../test_time/outputs/sweep_002_cpu_audit_v2/analysis/REPORT.md) supplies detailed metrics, failure explanations and annotated examples. Its `cpu_bedroom_audit_v2` checker re-evaluated the original 400 selected designs without changing generation, GPU rewards or candidate selection; copied generation timings exclude the separate offline audit.
 
 Diversity uses canonical graph uniqueness and semantic-mask distances. Distribution diagnostics compare room-type frequencies and geometric/count distributions with baseline. They use structurally valid layouts with usable geometry and report eligible counts. Without RPLAN reference data, they do not establish dataset fidelity. Runtime is amortized generation time, excluding model loading and image export. Exact definitions are in [`analysis.md`](analysis.md).
 

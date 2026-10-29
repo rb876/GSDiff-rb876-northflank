@@ -23,7 +23,7 @@ source /workspace/venvs/gsdiff/bin/activate
 python -m pytest -q test_time/tests
 ```
 
-The corrected six-check config files are already included; no manual JSON editing is needed. This runbook explicitly selects the original six-check profile. For the expanded ten-check design profile, use [the new commands](design_profile.md). Use this virtual environment for every command below.
+The corrected six-check config files are already included; no manual JSON editing is needed. This runbook explicitly selects the original six-check profile. For the current nine-check PDF profile, use [the ventilation commands](ventilation_profile.md). Use this virtual environment for every command below.
 
 ## 2. Reuse baseline and reselect Best-of-11
 

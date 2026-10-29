@@ -103,16 +103,17 @@ def test_analysis_exports_all_selected_samples_without_changing_inputs(tmp_path)
     assert {path.name: path.read_bytes() for path in directory.iterdir()} == original
 
 
-def test_design_profile_plots_all_ten_checks_and_separates_custom_requirements(tmp_path, monkeypatch):
+def test_ventilation_profile_plots_nine_pdf_checks_and_groups(tmp_path, monkeypatch):
     pytest.importorskip("matplotlib")
     from test_time import analysis_plots
 
-    registry = read_json(Path(__file__).parents[1] / "configs/constraints_design_v1.json")
+    configs = Path(__file__).parents[1] / "configs"
+    registry = read_json(configs / "constraints_ventilation_v1.json")
     checks = [result(spec["id"], "pass" if spec["counts_toward_compliance"] else "not_applicable",
                      auxiliary=not spec["counts_toward_compliance"]) for spec in registry["constraints"]]
-    directory = saved_run(tmp_path / "baseline", [candidate(0, checks)])
+    directory = saved_run(tmp_path / "baseline", [candidate(0, checks)], scale=18 / 512)
     config = read_json(directory / "config.json")
-    config["constraints"] = registry["constraints"]
+    config.update(constraints=registry["constraints"], scenario=read_json(configs / "scenario_ventilation_v1.json"))
     write_json(directory / "config.json", config)
     captured = {}
     finish = analysis_plots._finish
@@ -120,31 +121,21 @@ def test_design_profile_plots_all_ten_checks_and_separates_custom_requirements(t
     def capture(fig, output, name):
         if name == "constraint_outcomes":
             captured["ids"] = [tick.get_text() for tick in fig.axes[0].get_yticklabels()]
-            captured["height"] = fig.get_figheight()
         elif name == "passed_constraints":
             captured["counts"] = fig.axes[0].get_xticks().tolist()
         return finish(fig, output, name)
 
     monkeypatch.setattr(analysis_plots, "_finish", capture)
-    result_summary = analyze(tmp_path)
-    assert len(captured["ids"]) == 10
-    assert all(f"D00{index} · design" in captured["ids"] for index in range(1, 5))
-    assert not any(identifier in captured["ids"] for identifier in ("C034", "C079", "C080"))
-    assert captured["height"] >= 4
-    assert captured["counts"][-1] == 10
-    output = Path(result_summary["output_dir"])
-    methods = read_json(output / "analysis.json")["methods"]
-    assert methods[0]["metrics"]["scored_constraints"] == 10
-    assert methods[0]["metrics"]["supporting_rules"] == 3
+    output = Path(analyze(tmp_path)["output_dir"])
+    assert len(captured["ids"]) == 9 and captured["counts"][-1] == 9
+    assert all(f"{identifier} · vent." in captured["ids"] for identifier in ("C085", "C086", "C090"))
+    assert {identifier.split(" · ")[0] for identifier in captured["ids"]} == {
+        spec["id"] for spec in registry["constraints"] if spec["counts_toward_compliance"]}
     html = (output / "index.html").read_text()
-    assert 'value="D004"' in html and 'value="C034"' not in html
-    assert "Design brief:" in html
+    assert 'value="C090"' in html and 'value="C034"' not in html
     import csv
     with (output / "tables/groups.csv").open() as stream:
         groups = list(csv.DictReader(stream))
-    custom = next(group for group in groups if group["group"] == "design_brief")
-    assert json.loads(custom["active_scored_ids"]) == ["D001", "D002", "D003", "D004"]
-    report = (output / "REPORT.md").read_text()
-    assert "## Constraint groups" in report
-    assert "Design-brief checks are custom requirements" in report
-    assert "| design_brief | D001, D002, D003, D004 |" in report
+    ventilation = next(group for group in groups if group["group"] == "ventilation")
+    assert json.loads(ventilation["active_scored_ids"]) == ["C085", "C086", "C090"]
+    assert "| ventilation | C085, C086, C090 |" in (output / "REPORT.md").read_text()

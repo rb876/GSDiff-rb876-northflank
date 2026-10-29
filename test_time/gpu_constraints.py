@@ -307,18 +307,26 @@ class TensorConstraintEvaluator:
             if spec.checker in {"area_definition", "bed_definition"}:
                 status[:, column] = NOT_APPLICABLE
                 continue
-            applicable = scenario.building_use == "residential" and (spec.applicability == "residential" or scenario.accessible_dwelling)
+            applicable = scenario.building_use == "residential" and (
+                spec.applicability == "residential" or
+                (spec.applicability == "accessible_residential" and scenario.accessible_dwelling) or
+                (spec.applicability == "occupant_adjustable_residential" and
+                 scenario.ventilation_mode in {None, "occupant_adjustable"}))
             if not applicable:
                 status[:, column] = NOT_APPLICABLE
                 continue
             available = {"scale": scale, "occupants": scenario.intended_occupants, "ceiling_height": scenario.ceiling_height_m,
-                         "habitable_area_mode": None if scenario.habitable_area_mode == "unknown" else scenario.habitable_area_mode}
+                         "habitable_area_mode": None if scenario.habitable_area_mode == "unknown" else scenario.habitable_area_mode,
+                         "ventilation_mode": scenario.ventilation_mode,
+                         "kitchen_extraction_m3_h": scenario.kitchen_extraction_m3_h,
+                         "bathroom_extraction_m3_h": scenario.bathroom_extraction_m3_h,
+                         "reduced_total_extraction_m3_h": scenario.reduced_total_extraction_m3_h,
+                         "reduced_kitchen_extraction_m3_h": scenario.reduced_kitchen_extraction_m3_h,
+                         "bathroom_ventilation_role": scenario.bathroom_ventilation_role}
             if any(name in available and available[name] is None for name in spec.required_observations):
                 continue
-            if (spec.checker in {"minimum_main_room", "minimum_surface", "minimum_volume", "maximum_surface"}
+            if (spec.checker in {"minimum_main_room", "minimum_surface", "minimum_volume"}
                     and area_rules["enabled"] and not area_rules["available"]):
-                continue
-            if spec.checker == "maximum_surface" and not area_rules["enabled"]:
                 continue
             limits = spec.thresholds
             measured = torch.zeros(batch, device=device, dtype=dtype)
@@ -371,25 +379,31 @@ class TensorConstraintEvaluator:
                     observed = observed * scenario.ceiling_height_m
                 measured = ((minimum - observed) / minimum).clamp_min(0)
                 current = torch.where(measured <= EPS, PASS, FAIL)
-            elif spec.checker == "minimum_bedroom_count":
-                target = room_mask & _labels_in(labels, limits["bedroom_labels"])
-                measured = ((limits["minimum_count"] - target.sum(-1)).to(dtype) / limits["minimum_count"]).clamp_min(0)
+            elif spec.checker in {"kitchen_ventilation", "bathroom_ventilation"}:
+                kind = "kitchen" if spec.checker == "kitchen_ventilation" else "bathroom"
+                if kind == "bathroom" and scenario.bathroom_ventilation_role != "bathroom":
+                    continue
+                main_count = (room_mask & _labels_in(labels, limits["main_room_labels"])).sum(-1)
+                service_present = (room_mask & _labels_in(labels, limits[f"{kind}_labels"])).any(-1)
+                thresholds = areas.new_tensor(limits["flows_m3_h"])
+                required = thresholds[main_count.clamp(1, 5) - 1]
+                flow = getattr(scenario, f"{kind}_extraction_m3_h")
+                measured = ((required - flow) / required).clamp_min(0)
                 current = torch.where(measured <= EPS, PASS, FAIL)
-            elif spec.checker == "minimum_each_bedroom_area":
-                target = room_mask & _labels_in(labels, limits["bedroom_labels"])
-                deficits = ((limits["area_m2"] - areas) / limits["area_m2"]).clamp_min(0)
-                measured = deficits.masked_fill(~target, 0).amax(-1)
-                measured = torch.where(target.any(-1), measured, 1.0)
+                current = torch.where((main_count >= 1) & service_present, current, UNKNOWN)
+            elif spec.checker == "reduced_ventilation":
+                main_count = (room_mask & _labels_in(labels, limits["main_room_labels"])).sum(-1)
+                kitchen_count = (room_mask & _labels_in(labels, limits["kitchen_labels"])).sum(-1)
+                table_index = main_count.clamp(1, 7) - 1
+                total_required = areas.new_tensor(limits["total_flows_m3_h"])[table_index]
+                kitchen_required = areas.new_tensor(limits["kitchen_flows_m3_h"])[table_index]
+                total, kitchen = scenario.reduced_total_extraction_m3_h, scenario.reduced_kitchen_extraction_m3_h
+                measured = torch.maximum(((total_required - total) / total_required).clamp_min(0),
+                                         ((kitchen_required - kitchen) / kitchen_required).clamp_min(0))
                 current = torch.where(measured <= EPS, PASS, FAIL)
-            elif spec.checker == "minimum_living_area":
-                target = room_mask & _labels_in(labels, limits["living_room_labels"])
-                largest = areas.masked_fill(~target, 0).amax(-1)
-                measured = ((limits["area_m2"] - largest) / limits["area_m2"]).clamp_min(0)
-                current = torch.where(measured <= EPS, PASS, FAIL)
-            elif spec.checker == "maximum_surface":
-                observed = torch.where(room_mask, habitable_areas, 0).sum(-1)
-                measured = ((observed - limits["maximum_area_m2"]) / limits["maximum_area_m2"]).clamp_min(0)
-                current = torch.where(measured <= EPS, PASS, FAIL)
+                mapped = ((main_count >= 1) & (main_count <= 7) & (kitchen_count > 0) &
+                          (total + EPS >= kitchen_count * kitchen))
+                current = torch.where(mapped, current, UNKNOWN)
             else:
                 raise ValueError(f"Unsupported GPU checker: {spec.checker}")
             current = torch.where(valid, current, UNKNOWN)

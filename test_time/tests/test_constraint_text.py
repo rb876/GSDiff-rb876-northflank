@@ -103,108 +103,53 @@ def test_missing_legacy_measurements_use_text_without_inventing_values():
     assert "not an independent pass/fail" in constraint_description(support, SAMPLE)["reason"]
 
 
-def test_design_count_and_worst_bedroom_have_readable_reasons():
-    count = constraint_description(saved("D001", "fail", {"bedroom_count": 2, "required_count": 3},
-                                       {"minimum_count": 3}), SAMPLE)
-    assert count["name"] == "Bedroom count"
-    assert count["requirement"] == "Design brief: at least 3 bedrooms."
-    assert "Found 2 bedrooms; below the minimum of 3" in count["reason"]
-    area = constraint_description(saved("D002", "fail", {"bedroom_count": 2,
-        "minimum_bedroom_area_m2": 9.9999, "required_area_m2": 10, "worst_room_index": 3},
-        {"area_m2": 10}), SAMPLE)
-    assert "every bedroom" in area["requirement"]
-    assert "Bedroom 2: 9.9999 m²; below 10 m²" in area["reason"]
-    assert "cannot compensate" in area["reason"]
-    passed = constraint_description(saved("D002", "pass", {"bedroom_count": 2,
-        "minimum_bedroom_area_m2": 11, "required_area_m2": 10, "worst_room_index": 1}), SAMPLE)
-    assert "Every bedroom meets the minimum" in passed["reason"]
+def test_ventilation_describes_saved_flow_and_main_room_count():
+    kitchen = constraint_description(saved("C085", "fail", {
+        "main_room_count": 4, "room_count": 1,
+        "observed_flow_m3_h": 105, "required_flow_m3_h": 120}), SAMPLE)
+    assert "normal extraction ≥ 120 m³/h for 4 main rooms" in kitchen["requirement"]
+    assert "105 m³/h; below the 120 m³/h minimum" in kitchen["reason"]
+    assert "scenario input, not a model prediction" in kitchen["reason"]
+    bathroom = constraint_description(saved("C086", "pass", {
+        "main_room_count": 3, "room_count": 2,
+        "observed_flow_m3_h": 30, "required_flow_m3_h": 30}), SAMPLE)
+    assert "2 bathroom(s)" in bathroom["reason"]
+    assert "meets the 30 m³/h minimum" in bathroom["reason"]
 
 
-def test_design_living_room_and_budget_respect_saved_thresholds():
-    living = constraint_description(saved("D003", "pass", {"living_rooms": [{"room_index": 0, "area_m2": 20}],
-        "largest_living_room_area_m2": 20, "required_area_m2": 19.5, "room_index": 0},
-        {"area_m2": 19.5}), SAMPLE)
-    assert "19.5 m²" in living["requirement"]
-    assert "Living 1: 20 m²; meets the 19.5 m² minimum" in living["reason"]
-    assert "not added together" in living["reason"]
-    budget = constraint_description(saved("D004", "fail", {"estimated_habitable_area_m2": 90.0001,
-        "maximum_area_m2": 90}, {"maximum_area_m2": 90}), SAMPLE)
-    assert "≤ 90 m²" in budget["requirement"]
-    assert "90.0001 m²; exceeds the 90 m² budget" in budget["reason"]
-    passed = constraint_description(saved("D004", "pass", {"estimated_habitable_area_m2": 85,
-        "maximum_area_m2": 90}), SAMPLE)
-    assert "is within" in passed["reason"]
+def test_reduced_ventilation_shows_both_requirements_and_missing_inputs():
+    reduced = constraint_description(saved("C090", "fail", {
+        "main_room_count": 4, "observed_total_flow_m3_h": 75,
+        "required_total_flow_m3_h": 90, "observed_kitchen_flow_m3_h": 45,
+        "required_kitchen_flow_m3_h": 45}), SAMPLE)
+    assert "total extraction ≥ 90 m³/h AND each kitchen ≥ 45 m³/h" in reduced["requirement"]
+    assert "75 m³/h (below 90)" in reduced["reason"]
+    assert "45 m³/h (meets 45)" in reduced["reason"]
+    missing = saved("C090", "unknown")
+    missing["missing_fields"] = ["ventilation_mode", "reduced_total_extraction_m3_h"]
+    assert "missing ventilation operating mode, declared reduced total extraction" in constraint_description(missing, SAMPLE)["reason"]
 
 
-def test_design_missing_rooms_fail_and_missing_measurements_stay_unresolved():
-    bed = constraint_description(saved("D002", "fail", {"bedroom_count": 0}), SAMPLE)
-    living = constraint_description(saved("D003", "fail", {"living_rooms": []}), SAMPLE)
-    assert "No bedroom is present" in bed["reason"]
-    assert "No living room is present" in living["reason"]
-    unknown = saved("D004", "unknown", thresholds={"maximum_area_m2": 100})
-    unknown["missing_fields"] = ["scale"]
-    assert "missing drawing-to-metre scale" in constraint_description(unknown, SAMPLE)["reason"]
-    legacy = saved("D002", "fail", explanation="Saved design requirement failed")
-    assert constraint_description(legacy, SAMPLE)["reason"] == legacy["explanation"]
-
-
-def test_real_design_checks_flow_into_measured_gallery_reasons(tmp_path):
-    from dataclasses import asdict
+def test_real_cpu_ventilation_measurements_flow_into_descriptions():
     from pathlib import Path
-
-    from test_time.analysis_gallery import build_gallery
-    from test_time.constraints import load_specs
-    from test_time.policy import ConstraintEvaluator
+    from test_time.constraints import CheckContext, check, load_specs
     from test_time.types import Scenario, read_json
 
     configs = Path(__file__).parents[1] / "configs"
-    scenario = Scenario(**read_json(configs / "scenario_rplan18.json"))
-    specs = [spec for spec in load_specs(configs / "constraints_design_v1.json")
-             if spec.id.startswith("D") or spec.id in {"C079", "C080"}]
-    # A real tiled 10m x 6m synthetic plan: living=16, bedrooms=8/12,
-    # bathroom=4 and kitchen=20 m². Shared wall junctions are explicit.
-    metric_rooms = [
-        (0, [(0, 0), (4, 0), (4, 4), (0, 4)]),
-        (1, [(4, 0), (6, 0), (6, 4), (4, 4)]),
-        (1, [(6, 0), (9, 0), (9, 4), (6, 4)]),
-        (4, [(9, 0), (10, 0), (10, 4), (9, 4)]),
-        (3, [(0, 4), (4, 4), (6, 4), (9, 4), (10, 4), (10, 6), (0, 6)]),
-    ]
-    sample = FloorplanSample(scenario=asdict(scenario), metadata={"trial_seed": 10000})
-    vertex_ids, edges = {}, set()
-    for label, polygon in metric_rooms:
-        drawing = [[x / scenario.coordinate_scale_m_per_model_unit,
-                    y / scenario.coordinate_scale_m_per_model_unit] for x, y in polygon]
-        indices = []
-        for point in drawing:
-            key = tuple(point)
-            if key not in vertex_ids:
-                vertex_ids[key] = len(sample.nodes)
-                sample.nodes.append(point)
-            indices.append(vertex_ids[key])
-        edges.update(tuple(sorted(edge)) for edge in zip(indices, indices[1:] + indices[:1]))
-        sample.rooms.append(Room(label, drawing + [drawing[0]]))
-    sample.edges = [list(edge) for edge in sorted(edges)]
-    evaluation = ConstraintEvaluator(specs).evaluate(sample, scenario)
-    assert evaluation.structurally_valid
-    checks = {value.id: value for value in evaluation.results if value.id.startswith("D")}
-    descriptions = {key: constraint_description(value, sample) for key, value in checks.items()}
+    scenario = Scenario(**read_json(configs / "scenario_ventilation_v1.json"))
+    specs = load_specs(configs / "constraints_ventilation_v1.json")
+    # One living room, three bedrooms, one kitchen and one bathroom: four main rooms.
+    sample = FloorplanSample(rooms=[Room(label, [[x, 0], [x + 1, 0], [x + 1, 1], [x, 1]])
+                                   for x, label in enumerate((0, 1, 1, 1, 3, 4))])
+    context = CheckContext(sample, scenario, specs)
+    checks = {spec.id: check(sample, scenario, spec, context) for spec in specs
+              if spec.id in {"C085", "C086", "C090"}}
+    descriptions = {identifier: constraint_description(value, sample) for identifier, value in checks.items()}
     assert {key: value.status for key, value in checks.items()} == {
-        "D001": "fail", "D002": "fail", "D003": "fail", "D004": "pass"}
-    assert "Found 2 bedrooms; below the minimum of 3" in descriptions["D001"]["reason"]
-    assert "Bedroom 1: 8 m²; below 10 m²" in descriptions["D002"]["reason"]
-    assert "Living 1: 16 m²; below the 18 m² minimum" in descriptions["D003"]["reason"]
-    assert "60 m²; is within the 100 m² budget" in descriptions["D004"]["reason"]
+        "C085": "fail", "C086": "pass", "C090": "fail"}
+    assert "4 main rooms" in descriptions["C085"]["reason"]
+    assert "105 m³/h; below the 120 m³/h minimum" in descriptions["C085"]["reason"]
+    assert "30 m³/h; meets the 30 m³/h minimum" in descriptions["C086"]["reason"]
+    assert "75 m³/h (below 90)" in descriptions["C090"]["reason"]
+    assert "45 m³/h (meets 45)" in descriptions["C090"]["reason"]
     assert "not recorded" not in str(descriptions)
-    row = {"trial": 0, "seed": 10000, "selected": True, "candidate_id": "synthetic-measured",
-           "sample": asdict(sample), "evaluation": asdict(evaluation)}
-    output = tmp_path / "measured_gallery"
-    gallery = build_gallery([{"label": "Synthetic measured design checks", "run_dir": tmp_path,
-                              "rows": [row], "summary": {"trial_seed_start": 10000}}], output)
-    html = Path(gallery["html"]).read_text()
-    example = gallery["examples"]["Synthetic measured design checks"]["invalid"]
-    graph = read_json(output / example["graph"])
-    assert graph["scenario"]["coordinate_scale_m_per_model_unit"] == 0.03515625
-    assert "paper_derived scale:" in (output / example["svg"]).read_text()
-    assert "not recorded" not in html
-    assert "Bedroom 1: 8 m²; below 10 m²" in html

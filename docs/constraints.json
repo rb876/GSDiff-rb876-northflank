@@ -1,12 +1,12 @@
 {
-  "description": "Ten implemented GPU checks: six assessment-derived constraints and four custom design requirements, plus three supporting measurement rules. Documentation snapshot; runtime configuration remains in the source files.",
+  "description": "Nine implemented Appendix A checks plus three supporting measurement rules. Ventilation capacities are declared scenario inputs, not model predictions. Documentation snapshot; runtime configuration remains in the source files.",
   "source_files": {
-    "constraints": "test_time/configs/constraints_design_v1.json",
-    "scenario": "test_time/configs/scenario_rplan18.json",
-    "experiment": "test_time/configs/experiment_design_v1.json"
+    "constraints": "test_time/configs/constraints_ventilation_v1.json",
+    "scenario": "test_time/configs/scenario_ventilation_v1.json",
+    "experiment": "test_time/configs/experiment_ventilation_v1.json"
   },
-  "version": 3,
-  "profile": "compact_three_bedroom_design_v1",
+  "version": 4,
+  "profile": "pdf_ventilation_v1",
   "coordinate_unit": "drawing_pixel",
   "groups": {
     "bedroom_accessibility": [
@@ -24,11 +24,10 @@
       "C079",
       "C080"
     ],
-    "design_brief": [
-      "D001",
-      "D002",
-      "D003",
-      "D004"
+    "ventilation": [
+      "C085",
+      "C086",
+      "C090"
     ]
   },
   "constraints": [
@@ -334,130 +333,146 @@
       "enabled": true
     },
     {
-      "id": "D001",
-      "checker": "minimum_bedroom_count",
-      "definition": "The dwelling contains at least three labelled bedrooms.",
-      "group": "design_brief",
+      "id": "C085",
+      "checker": "kitchen_ventilation",
+      "definition": "Kitchen extraction reaches the Appendix A minimum for the number of main rooms. Rates for 1, 2, 3, 4, 5+ main rooms are 75, 90, 105, 120, 135 m3/h.",
+      "group": "ventilation",
       "role": "check",
       "tier": "graph_plus_scenario",
-      "claim_level": "custom_design_requirement",
+      "claim_level": "assumption_based",
       "depends_on": [],
       "applicability": "residential",
       "thresholds": {
-        "minimum_count": 3,
-        "bedroom_labels": [
+        "main_room_labels": [
+          0,
           1
+        ],
+        "kitchen_labels": [
+          3
+        ],
+        "flows_m3_h": [
+          75.0,
+          90.0,
+          105.0,
+          120.0,
+          135.0
         ]
       },
       "required_observations": [
-        "room_polygons"
-      ],
-      "weight": 1.0,
-      "severity_type": "normalized_deficit",
-      "assumptions": [
-        "user_defined_design_requirement_not_regulatory",
-        "generated_room_semantics"
-      ],
-      "source_id": "user_design_brief:compact_three_bedroom_v1:D001",
-      "counts_toward_compliance": true,
-      "enabled": true
-    },
-    {
-      "id": "D002",
-      "checker": "minimum_each_bedroom_area",
-      "definition": "Every bedroom polygon has area at least 10 m2. A missing bedroom fails; the worst normalized deficit supplies the penalty.",
-      "group": "design_brief",
-      "role": "check",
-      "tier": "graph_plus_scenario",
-      "claim_level": "custom_design_requirement",
-      "depends_on": [],
-      "applicability": "residential",
-      "thresholds": {
-        "area_m2": 10.0,
-        "bedroom_labels": [
-          1
-        ]
-      },
-      "required_observations": [
-        "scale",
-        "room_polygons"
-      ],
-      "weight": 1.0,
-      "severity_type": "normalized_deficit",
-      "assumptions": [
-        "user_defined_design_requirement_not_regulatory",
-        "generated_room_semantics",
-        "zero_thickness_geometric_room_area",
-        "no_furniture_or_clearance_deduction"
-      ],
-      "source_id": "user_design_brief:compact_three_bedroom_v1:D002",
-      "counts_toward_compliance": true,
-      "enabled": true
-    },
-    {
-      "id": "D003",
-      "checker": "minimum_living_area",
-      "definition": "At least one living-room polygon has area at least 18 m2. Separate living rooms are not summed.",
-      "group": "design_brief",
-      "role": "check",
-      "tier": "graph_plus_scenario",
-      "claim_level": "custom_design_requirement",
-      "depends_on": [],
-      "applicability": "residential",
-      "thresholds": {
-        "area_m2": 18.0,
-        "living_room_labels": [
-          0
-        ]
-      },
-      "required_observations": [
-        "scale",
-        "room_polygons"
-      ],
-      "weight": 1.0,
-      "severity_type": "normalized_deficit",
-      "assumptions": [
-        "user_defined_design_requirement_not_regulatory",
-        "generated_room_semantics",
-        "zero_thickness_geometric_room_area",
-        "no_furniture_or_clearance_deduction"
-      ],
-      "source_id": "user_design_brief:compact_three_bedroom_v1:D003",
-      "counts_toward_compliance": true,
-      "enabled": true
-    },
-    {
-      "id": "D004",
-      "checker": "maximum_surface",
-      "definition": "Estimated habitable area under the shared C079/C080 policy does not exceed 100 m2.",
-      "group": "design_brief",
-      "role": "check",
-      "tier": "graph_plus_scenario",
-      "claim_level": "custom_design_requirement",
-      "depends_on": [
-        "C079",
-        "C080"
-      ],
-      "applicability": "residential",
-      "thresholds": {
-        "maximum_area_m2": 100.0
-      },
-      "required_observations": [
-        "scale",
         "room_polygons",
-        "ceiling_height",
-        "habitable_area_mode"
+        "kitchen_extraction_m3_h"
       ],
       "weight": 1.0,
-      "severity_type": "normalized_excess",
+      "severity_type": "normalized_deficit",
       "assumptions": [
-        "user_defined_design_requirement_not_regulatory",
-        "generated_room_semantics",
-        "habitable_area_uses_C079_C080",
-        "zero_thickness_wall_area_proxy",
-        "uniform_scenario_headroom"
+        "declared_ventilation_system_not_generated_or_measured",
+        "main_rooms_are_living_and_bedroom_polygons",
+        "no_airflow_network_or_inlet_verification",
+        "uniform_declared_flow_for_each_kitchen"
       ],
-      "source_id": "user_design_brief:compact_three_bedroom_v1:D004",
+      "source_id": "Technical_assessment_TTC.pdf:AppendixA:C085",
+      "counts_toward_compliance": true,
+      "enabled": true
+    },
+    {
+      "id": "C086",
+      "checker": "bathroom_ventilation",
+      "definition": "Bathroom extraction reaches the Appendix A minimum for the number of main rooms. Rates for 1, 2, 3, 4, 5+ main rooms are 15, 15, 30, 30, 30 m3/h. The scenario identifies label-4 rooms as bathrooms, not other shower rooms.",
+      "group": "ventilation",
+      "role": "check",
+      "tier": "graph_plus_scenario",
+      "claim_level": "assumption_based",
+      "depends_on": [],
+      "applicability": "residential",
+      "thresholds": {
+        "main_room_labels": [
+          0,
+          1
+        ],
+        "bathroom_labels": [
+          4
+        ],
+        "flows_m3_h": [
+          15.0,
+          15.0,
+          30.0,
+          30.0,
+          30.0
+        ]
+      },
+      "required_observations": [
+        "room_polygons",
+        "bathroom_extraction_m3_h",
+        "bathroom_ventilation_role"
+      ],
+      "weight": 1.0,
+      "severity_type": "normalized_deficit",
+      "assumptions": [
+        "declared_ventilation_system_not_generated_or_measured",
+        "main_rooms_are_living_and_bedroom_polygons",
+        "no_airflow_network_or_inlet_verification",
+        "label_4_rooms_are_full_bathrooms_with_uniform_declared_flow",
+        "other_shower_room_roles_unresolved"
+      ],
+      "source_id": "Technical_assessment_TTC.pdf:AppendixA:C086",
+      "counts_toward_compliance": true,
+      "enabled": true
+    },
+    {
+      "id": "C090",
+      "checker": "reduced_ventilation",
+      "definition": "Occupant-adjustable reduced ventilation meets both total and kitchen extraction minima. For 1 to 7 main rooms, total minima are 35, 60, 75, 90, 105, 120, 135 m3/h and kitchen minima are 20, 30, 45, 45, 45, 45, 45 m3/h. No extrapolation outside 1 to 7 rooms.",
+      "group": "ventilation",
+      "role": "check",
+      "tier": "graph_plus_scenario",
+      "claim_level": "assumption_based",
+      "depends_on": [],
+      "applicability": "occupant_adjustable_residential",
+      "thresholds": {
+        "main_room_labels": [
+          0,
+          1
+        ],
+        "kitchen_labels": [
+          3
+        ],
+        "total_flows_m3_h": [
+          35.0,
+          60.0,
+          75.0,
+          90.0,
+          105.0,
+          120.0,
+          135.0
+        ],
+        "kitchen_flows_m3_h": [
+          20.0,
+          30.0,
+          45.0,
+          45.0,
+          45.0,
+          45.0,
+          45.0
+        ]
+      },
+      "required_observations": [
+        "room_polygons",
+        "ventilation_mode",
+        "reduced_total_extraction_m3_h",
+        "reduced_kitchen_extraction_m3_h"
+      ],
+      "weight": 1.0,
+      "severity_type": "normalized_deficit",
+      "assumptions": [
+        "declared_ventilation_system_not_generated_or_measured",
+        "main_rooms_are_living_and_bedroom_polygons",
+        "no_airflow_network_or_inlet_verification",
+        "uniform_declared_flow_for_each_kitchen",
+        "reduced_total_is_dwelling_aggregate",
+        "inconsistent_service_flow_mapping_is_unknown",
+        "table_only_covers_1_to_7_main_rooms"
+      ],
+      "source_id": "Technical_assessment_TTC.pdf:AppendixA:C090",
       "counts_toward_compliance": true,
       "enabled": true
     }
@@ -476,11 +491,22 @@
       "Bathroom checks use empty-room geometry; fixtures and door swings are unobserved.",
       "Habitable area is estimated from room polygon unions with zero-thickness walls and no headroom map.",
       "C079/C080 support the area estimator only; no independent compliance success is awarded.",
-      "Uniform declared headroom below 1.80 m excludes all habitable area; exactly 1.80 m is included. Unrepresented area exclusions remain unverified."
+      "Uniform declared headroom below 1.80 m excludes all habitable area; exactly 1.80 m is included. Unrepresented area exclusions remain unverified.",
+      "User-selected declared ventilation system sized to the PDF tables for three main rooms: each kitchen has 105 m3/h normal extraction and 45 m3/h reduced extraction; each label-4 bathroom has 30 m3/h normal extraction; the dwelling has 75 m3/h aggregate reduced extraction. These are scenario capacities, not inferred or measured output from GSDiff.",
+      "Living-room and bedroom polygons count as main rooms. All label-4 rooms are treated as full bathrooms, with the same declared normal flow; other shower-room roles cannot be resolved by these labels.",
+      "The installation permits occupant-adjustable reduced ventilation. Normal and reduced operating rates are distinct; C090 checks both total and kitchen reduced-flow requirements.",
+      "Missing service-room mappings or an aggregate reduced flow below the sum of declared kitchen reduced flows remain unknown. Vent positions, air inlets, ducts and physical airflow are not verified.",
+      "System capacities remain fixed across all methods and candidates; they are not adjusted to make an individual layout pass."
     ],
     "geometry_grid_m": 0.25,
     "geometry_refine_m": 0.05,
-    "habitable_area_mode": "zero_thickness_proxy"
+    "habitable_area_mode": "zero_thickness_proxy",
+    "ventilation_mode": "occupant_adjustable",
+    "kitchen_extraction_m3_h": 105.0,
+    "bathroom_extraction_m3_h": 30.0,
+    "reduced_total_extraction_m3_h": 75.0,
+    "reduced_kitchen_extraction_m3_h": 45.0,
+    "bathroom_ventilation_role": "bathroom"
   },
   "active_scored_ids": [
     "C033",
@@ -489,10 +515,9 @@
     "C076",
     "C077",
     "C078",
-    "D001",
-    "D002",
-    "D003",
-    "D004"
+    "C085",
+    "C086",
+    "C090"
   ],
   "active_supporting_ids": [
     "C034",
@@ -501,13 +526,13 @@
   ],
   "disabled_constraints": [],
   "constraint_counts": {
-    "registered": 13,
-    "scored": 10,
+    "registered": 12,
+    "scored": 9,
     "supporting": 3,
-    "active": 13,
-    "active_scored": 10,
+    "active": 12,
+    "active_scored": 9,
     "active_supporting": 3,
     "disabled": 0
   },
-  "overall_validity": "Requires structural validity and every applicable one of the ten scored constraints to measurably pass. Unknown checks do not pass. D001–D004 are custom design requirements, not Appendix A regulatory claims. Supporting measurement rules add no independent pass."
+  "overall_validity": "Requires structural validity and every applicable one of the nine scored PDF constraints to measurably pass. Unknown checks do not pass. Supporting measurement rules add no independent pass."
 }

@@ -10,8 +10,8 @@ from .evaluate import ROOM_NAMES
 NAMES = {"C033": "Bedroom turning space", "C035": "Clearance around the bed",
          "C036": "Bathroom turning space", "C076": "Minimum main-room size",
          "C077": "Habitable floor area", "C078": "Habitable volume",
-         "D001": "Bedroom count", "D002": "Every bedroom's area",
-         "D003": "Living-room area", "D004": "Total area budget"}
+         "C085": "Kitchen extraction", "C086": "Bathroom extraction",
+         "C090": "Reduced-mode extraction"}
 
 
 def _dict(value):
@@ -57,15 +57,18 @@ def _room(observed, labels):
 
 def _requirement(identifier, limits, observed):
     diameter = limits.get("diameter_m")
-    if identifier == "D001":
-        count = limits.get("minimum_count", observed.get("required_count"))
-        return f"Design brief: at least {_number(count)} bedrooms."
-    if identifier == "D002":
-        return f"Design brief: every bedroom must have area ≥ {_number(limits.get('area_m2', observed.get('required_area_m2')))} m²."
-    if identifier == "D003":
-        return f"Design brief: at least one living room must have area ≥ {_number(limits.get('area_m2', observed.get('required_area_m2')))} m²."
-    if identifier == "D004":
-        return f"Design brief: estimated habitable area ≤ {_number(limits.get('maximum_area_m2', observed.get('maximum_area_m2')))} m²."
+    if identifier in {"C085", "C086"}:
+        kind = "kitchen" if identifier == "C085" else "bathroom"
+        minimum, count = observed.get("required_flow_m3_h"), observed.get("main_room_count")
+        if _numeric(minimum) and _numeric(count):
+            return f"Each {kind}: declared normal extraction ≥ {_number(minimum)} m³/h for {_number(count)} main rooms."
+        return f"{kind.capitalize()} extraction must meet the PDF minimum for the number of living rooms and bedrooms."
+    if identifier == "C090":
+        total, kitchen = observed.get("required_total_flow_m3_h"), observed.get("required_kitchen_flow_m3_h")
+        if _numeric(total) and _numeric(kitchen):
+            return (f"Occupant-adjustable reduced mode: total extraction ≥ {_number(total)} m³/h AND "
+                    f"each kitchen ≥ {_number(kitchen)} m³/h.")
+        return "Occupant-adjustable reduced ventilation must meet both the total-flow and kitchen-flow minima for the main-room count."
     if identifier == "C033":
         circle = f"a {_number(diameter)} m diameter turning circle" if _numeric(diameter) else "the required turning circle"
         return f"At least one bedroom must fit a bed and {circle}, without overlap."
@@ -104,7 +107,13 @@ def _unknown(check):
     explanation = check.get("explanation", "")
     if check.get("missing_fields"):
         fields = {"scale": "drawing-to-metre scale", "ceiling_height": "ceiling height",
-                  "occupants": "number of occupants", "habitable_area_mode": "habitable-area assumptions"}
+                  "occupants": "number of occupants", "habitable_area_mode": "habitable-area assumptions",
+                  "ventilation_mode": "ventilation operating mode",
+                  "kitchen_extraction_m3_h": "declared normal kitchen extraction",
+                  "bathroom_extraction_m3_h": "declared normal bathroom extraction",
+                  "bathroom_ventilation_role": "bathroom-to-equipment mapping",
+                  "reduced_total_extraction_m3_h": "declared reduced total extraction",
+                  "reduced_kitchen_extraction_m3_h": "declared reduced kitchen extraction"}
         missing = ", ".join(fields.get(name, name.replace("_", " ")) for name in check["missing_fields"])
         return f"Cannot decide: missing {missing}."
     if "Unreliable extracted geometry" in explanation:
@@ -170,42 +179,30 @@ def constraint_description(check, sample):
         description["reason"] = "This requirement does not apply to the saved scenario."
     elif status == "unknown":
         description["reason"] = _unknown(check)
-    elif identifier == "D001":
-        count, required = observed.get("bedroom_count"), observed.get("required_count", limits.get("minimum_count"))
-        if _numeric(count) and _numeric(required):
+    elif identifier in {"C085", "C086"}:
+        flow, minimum = observed.get("observed_flow_m3_h"), observed.get("required_flow_m3_h")
+        count, rooms = observed.get("main_room_count"), observed.get("room_count")
+        if all(_numeric(value) for value in (flow, minimum, count, rooms)):
+            left, right = _pair(flow, minimum)
+            kind = "kitchen" if identifier == "C085" else "bathroom"
             comparison = "below" if status == "fail" else "meets"
-            description["reason"] = f"Found {_number(count)} bedrooms; {comparison} the minimum of {_number(required)}."
+            description["reason"] = (f"{_number(count)} main rooms; {_number(rooms)} {kind}(s). "
+                f"Declared normal flow per {kind}: {left} m³/h; {comparison} the {right} m³/h minimum. "
+                "Airflow is a fixed scenario input, not a model prediction.")
         else:
             description["reason"] = fallback
-    elif identifier == "D002":
-        area, required = observed.get("minimum_bedroom_area_m2"), observed.get("required_area_m2", limits.get("area_m2"))
-        if observed.get("bedroom_count") == 0:
-            description["reason"] = "No bedroom is present, so the required bedroom-area check fails."
-        elif _numeric(area) and _numeric(required):
-            measured, threshold = _pair(area, required)
-            room = _room({"room_index": observed.get("worst_room_index")}, labels)
-            comparison = "below" if status == "fail" else "meets"
-            conclusion = "Larger bedrooms cannot compensate for this shortfall." if status == "fail" else "Every bedroom meets the minimum."
-            description["reason"] = f"Smallest bedroom, {room}: {measured} m²; {comparison} {threshold} m². {conclusion}"
-        else:
-            description["reason"] = fallback
-    elif identifier == "D003":
-        area, required = observed.get("largest_living_room_area_m2"), observed.get("required_area_m2", limits.get("area_m2"))
-        if observed.get("living_rooms") == []:
-            description["reason"] = "No living room is present, so the required living-room area is not provided."
-        elif _numeric(area) and _numeric(required):
-            measured, threshold = _pair(area, required)
-            room = labels.get(observed.get("room_index"), "Largest living room")
-            comparison = "below" if status == "fail" else "meets"
-            description["reason"] = f"{room}: {measured} m²; {comparison} the {threshold} m² minimum. Separate living rooms are not added together."
-        else:
-            description["reason"] = fallback
-    elif identifier == "D004":
-        area, maximum = observed.get("estimated_habitable_area_m2"), observed.get("maximum_area_m2", limits.get("maximum_area_m2"))
-        if _numeric(area) and _numeric(maximum):
-            measured, threshold = _pair(area, maximum)
-            comparison = "exceeds" if status == "fail" else "is within"
-            description["reason"] = f"Estimated habitable area: {measured} m²; {comparison} the {threshold} m² budget."
+    elif identifier == "C090":
+        values = [observed.get(key) for key in ("observed_total_flow_m3_h", "required_total_flow_m3_h",
+                  "observed_kitchen_flow_m3_h", "required_kitchen_flow_m3_h", "main_room_count")]
+        if all(_numeric(value) for value in values):
+            total, total_min, kitchen, kitchen_min, count = values
+            total_left, total_right = _pair(total, total_min)
+            kitchen_left, kitchen_right = _pair(kitchen, kitchen_min)
+            total_word = ("meets within checker tolerance" if status == "pass" else "below") if total < total_min else "meets"
+            kitchen_word = ("meets within checker tolerance" if status == "pass" else "below") if kitchen < kitchen_min else "meets"
+            description["reason"] = (f"{_number(count)} main rooms. Declared reduced total: {total_left} m³/h "
+                f"({total_word} {total_right}); per-kitchen flow: {kitchen_left} m³/h "
+                f"({kitchen_word} {kitchen_right}). Both requirements must pass; these flows are scenario inputs.")
         else:
             description["reason"] = fallback
     elif identifier in {"C033", "C035"}:

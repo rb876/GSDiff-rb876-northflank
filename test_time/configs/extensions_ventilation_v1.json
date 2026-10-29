@@ -1,13 +1,13 @@
 {
-  "name": "compact_three_bedroom_extensions_v1",
+  "name": "pdf_ventilation_extensions_v1",
   "variant": "unconstrained_rplan",
-  "scenario": "scenario_rplan18.json",
-  "constraints": "constraints_design_v1.json",
+  "scenario": "scenario_ventilation_v1.json",
+  "constraints": "constraints_ventilation_v1.json",
   "trials": 100,
   "seed": 10000,
   "inference_batch_size": 32,
   "validity_weight": 100.0,
-  "output_root": "test_time/outputs/design_extensions_001",
+  "output_root": "test_time/outputs/ventilation_extensions_001",
   "hard_h_mc": {
     "k": 4,
     "rollouts": 4,

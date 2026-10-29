@@ -66,7 +66,7 @@ PAPER_STYLE = {
 }
 FIGURE_CAPTIONS = {
     "overall_validity": "Every selected output remains in the denominator. Overall validity requires valid structure and all applicable scored constraints to pass; error bars are 95% Wilson intervals. The second panel retains invalid, unknown and N/A outcomes.",
-    "constraint_outcomes": "Each bar uses all selected outputs. Unknown and N/A are separate from passes; supporting definitions are excluded. C IDs are assessment checks; D IDs are custom design requirements, separated by a dotted line when both are present. An asterisk marks the highest confirmed failure count within each method. Labels show segments of at least 8%.",
+    "constraint_outcomes": "Each bar uses all selected outputs. Unknown and N/A are separate from passes; supporting definitions are excluded. Ventilation checks are labelled and separated from geometric checks by a dotted line when both are present. An asterisk marks the highest confirmed failure count within each method. Labels show segments of at least 8%.",
     "passed_constraints": "Grouped bars are integer-bin histograms, normalized separately by each method's selected-output count. Unknown, failed and inapplicable checks do not add a pass; supporting definitions are excluded. Passing checks alone does not establish structural validity. Nonzero bars are labelled; zero bins remain empty.",
     "constraint_severity": "All panels share bins and axis limits. Only finite severities of applicable, measured scored checks are included, including zero-severity passes. Panel annotations give unknown check counts. Unknown values are omitted, never converted to zero; structural penalties are excluded.",
     "layout_distributions": "Each method is normalized by its structurally valid selected designs with finite, positive room areas; eligible counts are recorded in the report tables. Bins and axis limits are shared within each row. Outside label 6 is excluded. Area is in drawing pixels squared. These baseline-relative diagnostics are not RPLAN fidelity metrics.",
@@ -227,7 +227,8 @@ def _plot_analysis(records, output_dir):
             continue
         y = np.arange(len(constraints))
         highest = max(item.get("fail", 0) for item in constraints)
-        ids = [item["id"] + (" · design" if item["id"].startswith("D") else "")
+        family = lambda item: "ventilation" if item["id"] in {"C085", "C086", "C090"} else "geometry"
+        ids = [item["id"] + (" · vent." if family(item) == "ventilation" else "")
                + (" *" if highest and item.get("fail", 0) == highest else "") for item in constraints]
         left = np.zeros(len(constraints))
         for status, style in STATUS_STYLES.items():
@@ -239,7 +240,7 @@ def _plot_analysis(records, output_dir):
             left += values
         ax.set(yticks=y, yticklabels=ids, xlim=(0, 1), xlabel="Selected designs (%)")
         for index in range(1, len(constraints)):
-            if constraints[index]["id"].startswith("D") != constraints[index - 1]["id"].startswith("D"):
+            if family(constraints[index]) != family(constraints[index - 1]):
                 ax.axhline(index - 0.5, color="#999999", linewidth=0.65, linestyle=":")
         ax.invert_yaxis()
         ax.xaxis.set_major_formatter(PercentFormatter(1, decimals=0))

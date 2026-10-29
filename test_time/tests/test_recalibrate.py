@@ -1,6 +1,5 @@
 """Model-free replay tests using tiny synthetic floorplans and saved trajectories."""
 
-from copy import deepcopy
 from dataclasses import asdict
 import json
 from pathlib import Path
@@ -9,6 +8,7 @@ import pytest
 import torch
 
 from test_time.constraints import load_specs
+from test_time.evaluate import comparison_group
 from test_time.gpu_constraints import TensorConstraintEvaluator
 from test_time.gpu_graph import extract_rooms
 from test_time.policy import ConstraintEvaluator
@@ -191,61 +191,6 @@ def test_guided_sources_are_explicitly_skipped_and_decoder_checked(tmp_path):
         recalibrate(source, tmp_path / "out", scenario_path)
 
 
-def test_explicit_added_constraint_reselects_pool_and_audits_both_controls(tmp_path):
-    source, scenario_path, _ = fixture_pool(tmp_path)
-    config_dir = Path(__file__).resolve().parents[1] / "configs"
-    # Both living rooms meet the original main-room requirement. Only the larger
-    # one meets D003 at the corrected scale; changing the registry must reverse
-    # the original tie-break winner without changing any generated graph.
-    original_spec = next(spec for spec in load_specs(config_dir / "constraints_v1.json") if spec.id == "C076")
-    added_spec = next(spec for spec in load_specs(config_dir / "constraints_design_v1.json") if spec.id == "D003")
-    for directory in (source / "baseline", source / "best_of_n"):
-        config = read_json(directory / "config.json")
-        config["constraints"] = [asdict(original_spec)]
-        config["guidance"]["tensor_settings"] = TensorConstraintEvaluator([original_spec], max_positions=128).metadata
-        rows = read_rows(directory / "candidates.jsonl")
-        for index, row in enumerate(rows):
-            side = (120, 160)[index]
-            points = [[0, 0], [side, 0], [side, side], [0, side]]
-            semantics = [1, 0, 0, 0, 0, 0, 0]
-            sample = row["sample"]
-            sample["nodes"] = [[*point, *semantics] for point in points]
-            sample["rooms"] = [{"label": 0, "polygon": points + [points[0]]}]
-            for vertex, (x, y) in enumerate(points):
-                sample["raw_nodes"][vertex] = [(x - 256) / 256, (y - 256) / 256, *semantics, 0]
-            evaluation = ConstraintEvaluator([original_spec]).evaluate(
-                FloorplanSample.from_dict(sample), Scenario(**config["scenario"]))
-            row.update(evaluation=asdict(evaluation), overall_validity=overall_validity(asdict(evaluation)),
-                       selected=index == 0)
-        write_json(directory / "config.json", config)
-        save_rows(directory / "candidates.jsonl", rows)
-    registry = tmp_path / "expanded.json"
-    write_json(registry, {"version": 1, "constraints": [asdict(original_spec), asdict(added_spec)]})
-    before = {path.relative_to(source): path.read_bytes() for path in source.rglob("*") if path.is_file()}
-
-    old_output, new_output = tmp_path / "same_checks", tmp_path / "expanded_checks"
-    recalibrate(source, old_output, scenario_path, inference_batch_size=2)
-    manifest = recalibrate(source, new_output, scenario_path, inference_batch_size=2, constraints_path=registry)
-    old_rows = read_rows(old_output / "best_of_n/candidates.jsonl")
-    new_rows = read_rows(new_output / "best_of_n/candidates.jsonl")
-    assert [row["selected"] for row in old_rows] == [True, False]
-    assert [row["selected"] for row in new_rows] == [False, True]
-    assert manifest["protocol"] == CONSTRAINT_PROTOCOL and manifest["changed_winners"] == 1
-    assert manifest["constraints_override"]["sha256"] == file_hash(registry)
-    updated = read_json(new_output / "best_of_n/config.json")
-    assert updated["constraints"] == [asdict(original_spec), asdict(added_spec)]
-    assert updated["scale_recalibration"]["original_constraints"] == [asdict(original_spec)]
-    assert updated["scale_recalibration"]["constraints_changed"]
-    assert new_rows[1]["evaluation_backend"] == CHECKER_VERSION
-    assert {check["id"]: check["status"] for check in new_rows[1]["evaluation"]["results"]} == {
-        "C076": "pass", "D003": "pass"}
-    baseline = read_rows(new_output / "baseline/candidates.jsonl")[0]
-    assert baseline["overall_validity"] == "invalid"
-    assert baseline["evaluation"]["results"][-1]["id"] == "D003"
-    assert baseline["evaluation"]["results"][-1]["status"] == "fail"
-    assert before == {path.relative_to(source): path.read_bytes() for path in source.rglob("*") if path.is_file()}
-
-
 def test_constraints_cli_argument_is_explicit_and_optional(monkeypatch, capsys):
     import test_time.recalibrate as module
 
@@ -256,8 +201,91 @@ def test_constraints_cli_argument_is_explicit_and_optional(monkeypatch, capsys):
     monkeypatch.setattr(module, "recalibrate", capture)
     arguments = ["--experiment_dir", "source", "--output_dir", "output", "--scenario", "scenario.json"]
     module.main(arguments)
-    module.main(arguments + ["--constraints", "design.json", "--device", "cuda:0"])
+    module.main(arguments + ["--constraints", "constraints.json", "--device", "cuda:0"])
     assert calls[0][1] == {"constraints_path": None}
-    assert calls[1][1] == {"constraints_path": "design.json"}
+    assert calls[1][1] == {"constraints_path": "constraints.json"}
     assert calls[1][0][3] == "cuda:0"
     assert "No model inference performed" in capsys.readouterr().out
+
+
+def ventilation_pool(tmp_path):
+    source, scenario_path, _ = fixture_pool(tmp_path)
+    configs = Path(__file__).resolve().parents[1] / "configs"
+    scenario = read_json(configs / "scenario_ventilation_v1.json")
+    write_json(scenario_path, scenario)
+    for directory in (source / "baseline", source / "best_of_n"):
+        config = read_json(directory / "config.json")
+        rows = read_rows(directory / "candidates.jsonl")
+        original_specs = [load_specs(configs / "constraints_v2.json")[3]]
+        for index, row in enumerate(rows):
+            # Both candidates pass the original bathroom check. Candidate zero
+            # has four main rooms; candidate one has three. The fixed system is
+            # adequate only for candidate one under C085/C090.
+            labels = [0] + [1] * (3 - index) + [3, 4]
+            nodes, edges, rooms = [], [], []
+            raw = [[0.0] * 9 + [1.0] for _ in range(53)]
+            for room_index, label in enumerate(labels):
+                x, y = (room_index % 3) * 160, (room_index // 3) * 160
+                points = [[x, y], [x + 128, y], [x + 128, y + 128], [x, y + 128]]
+                semantic = [int(value == label) for value in range(7)]
+                first = len(nodes)
+                for point in points:
+                    raw[len(nodes)] = [(point[0] - 256) / 256, (point[1] - 256) / 256, *semantic, 0]
+                    nodes.append([*point, *semantic])
+                edges += [[first, first + 1], [first + 1, first + 2],
+                          [first + 2, first + 3], [first, first + 3]]
+                rooms.append({"label": label, "polygon": points + [points[0]]})
+            sample = row["sample"]
+            sample.update(nodes=nodes, raw_nodes=raw, edges=edges, raw_edges=edges, rooms=rooms)
+            evaluation = ConstraintEvaluator(original_specs).evaluate(
+                FloorplanSample.from_dict(sample), Scenario(**config["scenario"]))
+            row.update(evaluation=asdict(evaluation), overall_validity=overall_validity(asdict(evaluation)),
+                       selected=index == 0)
+        save_rows(directory / "candidates.jsonl", rows)
+    return source, scenario_path, configs / "constraints_ventilation_v1.json"
+
+
+def test_explicit_ventilation_scenario_reselects_and_preserves_source_provenance(tmp_path):
+    source, scenario_path, registry = ventilation_pool(tmp_path)
+    before = {path.relative_to(source): path.read_bytes() for path in source.rglob("*") if path.is_file()}
+    output = tmp_path / "ventilation"
+    result = recalibrate(source, output, scenario_path, inference_batch_size=2, constraints_path=registry)
+    assert result["protocol"] == CONSTRAINT_PROTOCOL and result["changed_winners"] == 1
+    assert result["constraints_override"]["sha256"] == file_hash(registry)
+    rows = read_rows(output / "best_of_n/candidates.jsonl")
+    assert [row["selected"] for row in rows] == [False, True]
+    checks = {item["id"]: item for item in rows[1]["evaluation"]["results"] if item["counts_toward_compliance"]}
+    assert len(checks) == 9 and all(item["status"] == "pass" for item in checks.values())
+    assert rows[1]["evaluation_backend"] == CHECKER_VERSION
+    baseline = read_rows(output / "baseline/candidates.jsonl")[0]
+    statuses = {item["id"]: item["status"] for item in baseline["evaluation"]["results"]}
+    assert statuses["C085"] == statuses["C090"] == "fail"
+    assert baseline["overall_validity"] == "invalid"
+    assert baseline["evaluation_backend"] == CHECKER_VERSION
+    updated = read_json(output / "best_of_n/config.json")
+    provenance = updated["scale_recalibration"]
+    assert updated["constraints"] == [asdict(spec) for spec in load_specs(registry)]
+    assert provenance["original_constraints"] == read_json(source / "best_of_n/config.json")["constraints"]
+    assert provenance["constraints_changed"]
+    assert provenance["scenario_changes"]["kitchen_extraction_m3_h"] == {"from": None, "to": 105.0}
+    assert provenance["original_scenario"] == read_json(source / "best_of_n/config.json")["scenario"]
+    fresh = {key: value for key, value in updated.items() if key != "scale_recalibration"}
+    assert comparison_group(updated) == comparison_group(fresh)
+    assert before == {path.relative_to(source): path.read_bytes() for path in source.rglob("*") if path.is_file()}
+
+
+@pytest.mark.parametrize("violation", ["no_registry", "unrelated_registry", "occupancy"])
+def test_ventilation_change_requires_relevant_explicit_registry_and_keeps_other_guards(tmp_path, violation):
+    source, scenario_path, registry = ventilation_pool(tmp_path)
+    kwargs = {"constraints_path": registry}
+    if violation == "no_registry":
+        kwargs = {}
+    elif violation == "unrelated_registry":
+        kwargs["constraints_path"] = registry.parent / "constraints_v2.json"
+    else:
+        scenario = read_json(scenario_path)
+        scenario["intended_occupants"] = 6
+        write_json(scenario_path, scenario)
+    with pytest.raises(ValueError, match="scenario differs"):
+        recalibrate(source, tmp_path / "rejected", scenario_path, **kwargs)
+    assert not (tmp_path / "rejected").exists()

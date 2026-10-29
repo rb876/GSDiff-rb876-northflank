@@ -33,6 +33,10 @@ PROTOCOL = "scale_recalibration_v1"
 CONSTRAINT_PROTOCOL = "constraint_recalibration_v1"
 SOURCE_FILES = ("config.json", "run.json", "candidates.jsonl")
 SCALE_FIELDS = {"coordinate_scale_m_per_model_unit", "scale_provenance", "assumptions"}
+VENTILATION_FIELDS = {"ventilation_mode", "kitchen_extraction_m3_h", "bathroom_extraction_m3_h",
+                      "reduced_total_extraction_m3_h", "reduced_kitchen_extraction_m3_h",
+                      "bathroom_ventilation_role"}
+VENTILATION_IDS = {"C085", "C086", "C090"}
 
 
 def file_hash(path):
@@ -47,12 +51,15 @@ def _checkpoint_identity(adapter):
     return hashes
 
 
-def _compatible_scenario(old, new):
-    # Scale documentation may change; operational scenario inputs may not.
+def _compatible_scenario(old, new, allowed_scenario_fields=()):
+    # Unguided trajectories can be reused for explicitly added ventilation
+    # checks. Other operational assumptions remain protected from silent changes.
     before, after = asdict(Scenario(**old)), asdict(Scenario(**new))
-    changed = [key for key in before if key not in SCALE_FIELDS and before[key] != after[key]]
+    allowed = SCALE_FIELDS | set(allowed_scenario_fields)
+    changed = [key for key in before if key not in allowed and before[key] != after[key]]
     if changed:
-        raise ValueError(f"Only scale/provenance/documentation may change; scenario differs in {changed}")
+        raise ValueError("Only scale/provenance/documentation and ventilation inputs required by an explicit "
+                         f"replacement registry may change; scenario differs in {changed}")
 
 
 def _validate_graph(sample):
@@ -100,7 +107,7 @@ def graph_tensors(rows, device):
     return dict(xy=xy, semantics=semantics, node_mask=mask, adjacency=adjacency)
 
 
-def _prepare_sources(root, scenario):
+def _prepare_sources(root, scenario, allowed_scenario_fields=()):
     paths = [root] if (root / "candidates.jsonl").exists() else sorted(
         {path.parent for path in root.rglob("candidates.jsonl")})
     records, skipped, reference = [], [], None
@@ -115,7 +122,7 @@ def _prepare_sources(root, scenario):
             raise ValueError(f"Source run is not complete: {path}")
         if config.get("scale_recalibration"):
             raise ValueError("Use the original generation pool, not an already recalibrated output")
-        _compatible_scenario(config["scenario"], scenario)
+        _compatible_scenario(config["scenario"], scenario, allowed_scenario_fields)
         adapter = config.get("adapter", {})
         checkpoints = _checkpoint_identity(adapter)
         if (adapter.get("variant") != "unconstrained_rplan" or adapter.get("drawing_resolution") != 512
@@ -203,9 +210,12 @@ def recalibrate(experiment_dir, output_dir, scenario_path, device="cpu", inferen
     if scenario.coordinate_scale_m_per_model_unit is None:
         raise ValueError("A supplied metric scale is required")
     torch.device(device)  # Fail invalid device syntax before creating output.
-    records, skipped = _prepare_sources(root, asdict(scenario))
     constraints = ([asdict(spec) for spec in load_specs(constraints_path)]
                    if constraints_path is not None else None)
+    allowed_scenario_fields = {field for spec in constraints or []
+                               if spec["id"] in VENTILATION_IDS and spec["enabled"]
+                               for field in spec["required_observations"] if field in VENTILATION_FIELDS}
+    records, skipped = _prepare_sources(root, asdict(scenario), allowed_scenario_fields)
     override = ({"file": str(Path(constraints_path).resolve()), "sha256": file_hash(constraints_path),
                  "ids": [spec["id"] for spec in constraints]}
                 if constraints is not None else None)
@@ -225,6 +235,7 @@ def recalibrate(experiment_dir, output_dir, scenario_path, device="cpu", inferen
                 "source_experiment": str(root), "scenario": asdict(scenario),
                 "scenario_file": str(Path(scenario_path).resolve()), "scenario_sha256": file_hash(scenario_path),
                 "constraints_override": override,
+                "allowed_ventilation_scenario_changes": sorted(allowed_scenario_fields),
                 "code_sha256": {name: file_hash(Path(__file__).parent / name) for name in code_files},
                 "device": str(device), "inference_batch_size": inference_batch_size,
                 "model_inference_performed": False, "skipped_runs": skipped, "methods": [],
@@ -290,6 +301,10 @@ def recalibrate(experiment_dir, output_dir, scenario_path, device="cpu", inferen
             changed = sum(not rows[index]["selected"] for index in selected_indices)
             metadata = {"protocol": protocol, "source_run_dir": str(source), "source_hashes": record["hashes"],
                         "checker_version": CHECKER_VERSION, "scenario": asdict(scenario),
+                        "original_scenario": record["config"]["scenario"],
+                        "scenario_changes": {key: {"from": old, "to": asdict(scenario)[key]}
+                                             for key, old in asdict(Scenario(**record["config"]["scenario"])).items()
+                                             if old != asdict(scenario)[key]},
                         "constraints_override": override,
                         "constraints_changed": config["constraints"] != record["config"]["constraints"],
                         "original_constraints": record["config"]["constraints"],

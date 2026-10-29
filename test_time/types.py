@@ -24,6 +24,12 @@ class Scenario:
     geometry_grid_m: float = 0.25
     geometry_refine_m: float = 0.05
     habitable_area_mode: str = "zero_thickness_proxy"
+    ventilation_mode: str | None = None
+    kitchen_extraction_m3_h: float | None = None
+    bathroom_extraction_m3_h: float | None = None
+    reduced_total_extraction_m3_h: float | None = None
+    reduced_kitchen_extraction_m3_h: float | None = None
+    bathroom_ventilation_role: str | None = None
 
     def __post_init__(self):
         if self.habitable_area_mode not in {"zero_thickness_proxy", "unknown"}:
@@ -43,6 +49,16 @@ class Scenario:
             or self.intended_occupants < 1
         ):
             raise ValueError("intended_occupants must be a positive integer or null")
+        if self.ventilation_mode not in {None, "occupant_adjustable", "automatic", "fixed"}:
+            raise ValueError("ventilation_mode must be occupant_adjustable, automatic, fixed, or null")
+        if self.bathroom_ventilation_role not in {None, "bathroom", "other_shower", "mixed", "unknown"}:
+            raise ValueError("bathroom_ventilation_role must identify bathroom, other_shower, mixed, unknown, or null")
+        for name in ("kitchen_extraction_m3_h", "bathroom_extraction_m3_h",
+                     "reduced_total_extraction_m3_h", "reduced_kitchen_extraction_m3_h"):
+            value = getattr(self, name)
+            if value is not None and (isinstance(value, bool) or not isinstance(value, (int, float))
+                                      or not math.isfinite(value) or value < 0):
+                raise ValueError(f"{name} must be a nonnegative finite number or null")
 
 
 @dataclass

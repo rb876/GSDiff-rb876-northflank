@@ -199,10 +199,9 @@ def write_analysis_report(output, records, skipped, figures, gallery):
              "compute multiplier, subset size, applicability coverage, compliance, severity, structural validity, "
              "distribution-preservation diagnostics, vector outputs and annotated successful/failed examples. "
              "It also requests an ablation and honest assumptions/limitations. It specifies no sample count or mandatory FID/KID metric.", "",
-             "The tables use each run's saved registry. The expanded design profile has six assessment-derived checks, "
-             "four custom design requirements (D001–D004) and three supporting measurement rules. "
-             "Design requirements contribute to overall constraint success but are not additional Appendix A regulatory claims. "
-             "Historical profiles keep their original checks and denominators.", "",
+             "The tables use each run's saved registry. The default profile has nine Appendix A checks and three supporting "
+             "measurement rules. C085/C086/C090 use graph-derived main-room counts and declared ventilation-system rates, "
+             "not measured airflow. Historical profiles keep their original checks and denominators.", "",
              "## Saved run settings", "",
              "| Method | N | K | Guided steps | Temperature | Reward backend |",
              "|---|---:|---:|---:|---:|---|"]
@@ -235,7 +234,7 @@ def write_analysis_report(output, records, skipped, figures, gallery):
     lines += ["", "Intervals are 95% Wilson intervals for each method's overall-valid indicator; "
               "they describe sampling uncertainty under the fixed scenario. They do not establish legal compliance or test a difference between methods.", "",
               "## Constraint groups", "",
-              "Design-brief checks are custom requirements. Each group's overall validity also requires a structurally valid graph; "
+              "Each group's overall validity also requires a structurally valid graph; "
               "supporting definitions do not add successes.", "",
               "| Method | Group | Scored IDs | Overall valid | Check pass/applicable | Unknown checks |",
               "|---|---|---|---:|---:|---:|"]

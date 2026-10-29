@@ -55,7 +55,7 @@ def test_default_preview_has_both_methods_and_summary_without_creating_output(tm
         assert command[command.index("--inference_batch_size") + 1] == "32"
         assert command[command.index("--workers") + 1] == "1"
         assert command[command.index("--device") + 1] == "cuda:0"
-        assert command[command.index("--config") + 1] == "test_time/configs/extensions_design_v1.json"
+        assert command[command.index("--config") + 1] == "test_time/configs/extensions_ventilation_v1.json"
         assert command[command.index("--output_dir") + 1] == str(tmp_path / "output with spaces" / method)
         assert "--k" not in command
     assert planned[-1][-2:] == ["--summarize_root", str(tmp_path / "output with spaces")]
@@ -69,7 +69,7 @@ def test_smoke_changes_trial_and_proposal_counts_without_shortening_guidance(tmp
     for command in (hard, repair):
         assert command[command.index("--trials") + 1] == "2"
         assert command[command.index("--k") + 1] == "2"
-        assert command[command.index("--config") + 1] == "test_time/configs/extensions_design_v1.json"
+        assert command[command.index("--config") + 1] == "test_time/configs/extensions_ventilation_v1.json"
         assert "--guided_steps" not in command
     assert hard[hard.index("--rollouts") + 1] == "2"
     assert hard[hard.index("--terminal_k") + 1] == "2"
@@ -90,12 +90,12 @@ def test_parallel_workers_keep_total_trials_and_method_order(tmp_path):
     assert not (tmp_path / "output with spaces").exists()
 
 
-def test_design_output_default_and_custom_config_override(tmp_path):
+def test_ventilation_output_default_and_custom_config_override(tmp_path):
     result = launch(tmp_path, EVAL_OUTPUT="", EXTENSION_CONFIG="custom extension config.json")
     assert result.returncode == 0, result.stderr
     for command in commands(result)[:2]:
         assert command[command.index("--config") + 1] == "custom extension config.json"
-        assert command[command.index("--output_dir") + 1].startswith("test_time/outputs/design_extensions_001/")
+        assert command[command.index("--output_dir") + 1].startswith("test_time/outputs/ventilation_extensions_001/")
     assert "Config: custom extension config.json" in result.stdout
 
 

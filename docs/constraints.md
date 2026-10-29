@@ -1,9 +1,9 @@
 # GSDiff constraints: what we check and what we assume
 
-The current design-brief profile evaluates **ten constraints**: six assessment-derived checks and four custom design requirements, using **three supporting measurement rules**.
-All thirteen registry entries are implemented. The ten checks determine reward and validity; the three rules define measurements and add no separate reward or pass/fail result. D001–D004 describe a compact dwelling with at least three bedrooms; they are chosen design requirements, not additional regulatory claims from Appendix A.
+The default profile evaluates **nine constraints from Appendix A of the assessment**, using **three supporting measurement rules**.
+All twelve registry entries are implemented. The nine checks determine reward and validity; supporting rules define measurements and add no separate reward or pass/fail result. The scored IDs are C033, C035, C036, C076, C077, C078, C085, C086 and C090.
 
-GSDiff generates walls and room labels. It does not generate furniture, toilets, doors or physical measurements; metric dimensions are derived from the documented coordinate scale.
+GSDiff generates walls and room labels. It does not generate furniture, toilets, doors, ventilation equipment or airflow; metric dimensions are derived from the documented coordinate scale.
 Our results therefore describe **geometric feasibility under the assumptions below**, rather than verified building compliance.
 
 ## Assumptions shared by the checks
@@ -15,8 +15,10 @@ Our results therefore describe **geometric feasibility under the assumptions bel
 | Ceiling height | 2.5 metres everywhere | Height is supplied by the scenario; the model generates only a floorplan. |
 | Wall thickness | Zero-thickness area estimate | We do not subtract real wall footprints because the model does not provide them. |
 | Furniture and fixtures | Only the hypothetical bed used by the bedroom search | Other furniture, bathroom fittings and door swings are not obstacles in the current checks. |
+| Ventilation system | Normal kitchen 105 and bathroom 30 m³/h per room; reduced total 75 and kitchen 45 m³/h per kitchen | Declared three-main-room system specification, fixed across candidates. These are scenario inputs, not GSDiff predictions. |
+| Ventilation mapping/mode | All kitchen labels use the same declared equipment; all bathroom labels are full bathrooms; occupant-adjustable reduced mode | The graph does not identify equipment or distinguish an “other shower room” role. |
 
-Changing these assumptions can change whether a design passes. They are saved with each run. The design-brief profile retains the existing two-person scenario; three bedrooms are a separate requested design requirement, not an inferred occupancy of six people. The older six-check profiles and their outputs remain separate.
+Ventilation capacities and the operating mode are declared in the [scenario](../test_time/configs/scenario_ventilation_v1.json), fixed before candidate generation and shared across methods. **The threshold tables are from the PDF; the available airflow values are experimental scenario assumptions, not observations or predictions of an installed system.** Changing these inputs can change whether a plan passes; every run saves them. Main rooms are distinct living-room and bedroom polygons (labels 0 and 1).
 
 ## Six assessment-derived scored checks
 
@@ -84,41 +86,48 @@ For two people, the minimum is **66 m³**.
 
 **Assumptions:** The same area and occupancy assumptions as C077 apply, together with a uniform ceiling height. At 2.5 m, 66 m³ corresponds to 26.4 m²; consequently, passing the current 28 m² area requirement also satisfies this volume requirement. These checks are not independent under that scenario.
 
-## Four custom design requirements
+## Ventilation checks from Appendix A, page 7
 
-These thresholds define the requested design brief. They do not increase the count of implemented Appendix A constraints. Counts and areas use existing room labels and polygons; every new reward calculation stays on GPU during guidance, with matching CPU checks for final reports.
+C085/C086 evaluate normal extraction. C090 evaluates a separate occupant-adjustable **reduced operating mode**, so its lower flow values do not replace the normal-flow requirements. Room counts come from the graph; capacity comes from the declared ventilation scenario. The GPU performs room counting, table lookup and scalar deficits entirely with tensors.
 
-### D001 — At least three bedrooms
+### C085 — Kitchen extraction
 
-**Constraint:** The plan contains **at least 3 bedrooms**.
+**Constraint:** Each kitchen's normal extraction must reach the following flow for the dwelling's main-room count:
 
-**Implementation:** Count extracted rooms with bedroom label 1. Penalize the normalized count shortfall `(3 − count) / 3`, clamped below at zero. This check does not need metric scale.
+| Main rooms | 1 | 2 | 3 | 4 | 5 or more |
+|---|---:|---:|---:|---:|---:|
+| Minimum kitchen flow (m³/h) | 75 | 90 | 105 | 120 | 135 |
 
-**Assumptions:** Extracted polygons correspond to distinct rooms and the model's room labels are correct. Three bedrooms are a program requirement, without assuming their occupants or furnishing.
+**Implementation:** Count living rooms and bedrooms, select the table entry and compare with the scenario's `kitchen_extraction_m3_h`. The same declared per-kitchen capability applies to every kitchen-labelled polygon.
 
-### D002 — Every bedroom is at least 10 m²
+**Assumptions:** Kitchens have the declared equipment and normal flow. No duct, inlet, outlet placement or physical airflow is inferred from wall geometry. An absent kitchen leaves the room-to-equipment mapping unknown; it does not create an automatic pass. A zero main-room count lies outside the table and remains unknown.
 
-**Constraint:** **Each bedroom has geometric area ≥10 m²**.
+### C086 — Bathroom extraction
 
-**Implementation:** Calculate every bedroom polygon's metric area and score the worst normalized deficit. A larger bedroom cannot compensate for a smaller one. No bedrooms is a failure with severity 1.
+**Constraint:** Each bathroom's normal extraction must reach the following flow:
 
-**Assumptions:** These are geometric room areas with zero-thickness walls; furniture is not subtracted. This area test does not establish bed-clearance feasibility, which remains checked by C033/C035.
+| Main rooms | 1 | 2 | 3 | 4 | 5 or more |
+|---|---:|---:|---:|---:|---:|
+| Minimum bathroom flow (m³/h) | 15 | 15 | 30 | 30 | 30 |
 
-### D003 — A living room is at least 18 m²
+**Implementation:** Use the same main-room count and compare the threshold with `bathroom_extraction_m3_h`.
 
-**Constraint:** **At least one living room has geometric area ≥18 m²**.
+**Assumptions:** `bathroom_ventilation_role="bathroom"` explicitly maps every label-4 polygon to the bathroom category and the same declared per-room equipment. The model cannot distinguish the separately treated “other shower room” category in C087. Missing, mixed or unresolved role mappings remain unknown. No bathroom also leaves the mapping unknown.
 
-**Implementation:** Compare the largest label-0 living-room polygon against 18 m². Disconnected living rooms are not added together. Missing living rooms is a failure with severity 1.
+### C090 — Occupant-adjustable reduced ventilation
 
-**Assumptions:** The living-room semantic label is correct; area is measured with zero-thickness walls and without furnishings.
+**Constraint:** In occupant-adjustable reduced mode, both the total dwelling flow **and each kitchen's flow** must reach their respective minima:
 
-### D004 — Habitable area stays within 100 m²
+| Main rooms | 1 | 2 | 3 | 4 | 5 | 6 | 7 |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| Minimum total flow (m³/h) | 35 | 60 | 75 | 90 | 105 | 120 | 135 |
+| Minimum kitchen flow (m³/h) | 20 | 30 | 45 | 45 | 45 | 45 | 45 |
 
-**Constraint:** **Estimated total habitable area ≤100 m²**.
+**Implementation:** Compare `reduced_total_extraction_m3_h` and `reduced_kitchen_extraction_m3_h` with both table entries. The larger normalized deficit supplies the penalty, matching the AND condition. A declared total below the sum of per-kitchen reduced flows is inconsistent scenario metadata and remains unknown.
 
-**Implementation:** Reuse the C079/C080 habitable-area estimator, then score normalized excess over the budget. The CPU uses polygon unions; the GPU sums verified non-overlapping eligible room areas.
+**Assumptions:** C090 applies when `ventilation_mode="occupant_adjustable"`. Another known mode is not applicable; an unspecified mode is unknown. The PDF supplies no values beyond seven main rooms, so counts outside 1–7 remain unknown rather than being extrapolated. Total flow is a dwelling-level input; it is not inferred by summing generated room equipment. C091 is not part of this profile.
 
-**Assumptions:** The same exclusions, scale and uniform-headroom assumptions as C077 apply. The cap limits habitable area, not the exterior footprint; excluded storage and balconies do not count toward it.
+Source for all three tables: [Technical assessment, Appendix A, page 7](../Technical_assessment_TTC.pdf). These checks are conditional capacity-versus-demand tests. Under the default 105/30/75/45 m³/h specification, C086 passes for every supported main-room count when its mapping is known; C085 and C090 both limit the count to at most three. They are correlated, not independent measures. Fixed capacities can favor fewer main rooms, so room-count distributions must be reported alongside success. The specification is not a guarantee that Best-of-N will become difficult.
 
 ## Three supporting rules — no extra compliance points
 
@@ -153,7 +162,7 @@ These thresholds define the requested design brief. They do not increase the cou
 - **Unknown:** An active check lacks required information, or its bounded search is inconclusive. It does not count as passing.
 - **Not applicable:** The check does not apply to the scenario. Supporting definitions also use this stored status because they are not independent checks.
 
-Overall validity requires a structurally valid graph and **every applicable one of the ten scored checks to pass**. Any failure makes the design invalid. With no failure but an unknown active check, overall validity is unknown. If no scored checks apply, the result is not applicable, not valid. Plots and tables distinguish the six assessment checks (C IDs) from the four custom design requirements (D IDs).
+Overall validity requires a structurally valid graph and **every applicable one of the nine scored checks to pass**. Any failure makes the design invalid. With no failure but an unknown active check, overall validity is unknown. If no scored checks apply, the result is not applicable, not valid. Plots and tables report the ventilation group separately from bedroom accessibility, bathroom turning and habitability.
 
 Energy adds the weighted measurable violations and a separate structural-invalidity penalty. Deficit-based checks give no additional reward once their threshold is reached. Unknowns receive no invented severity; candidate selection also protects measurement coverage so that hiding a known violation behind missing information is not treated as a straightforward improvement.
 
@@ -167,7 +176,7 @@ Each scored constraint produces a nonnegative **violation severity**. A satisfie
 
 $$
 \mathcal{J}=\{\mathrm{C033},\mathrm{C035},\mathrm{C036},\mathrm{C076},\mathrm{C077},\mathrm{C078},
-\mathrm{D001},\mathrm{D002},\mathrm{D003},\mathrm{D004}\},
+\mathrm{C085},\mathrm{C086},\mathrm{C090}\},
 $$
 
 $$
@@ -313,45 +322,32 @@ $$
 
 For two occupants, $V_{\min}=66\ \mathrm{m}^3$. Unknown scale, height or area-model inputs leave the corresponding active checks unknown.
 
-### D001–D004 — design-brief penalties
+### C085, C086 and C090 — ventilation penalties
 
-Let $B$ be the set of bedroom polygons, $L$ the set of living-room polygons, and $a_i$ a room's geometric area in m². With the shortfall function $d$ above:
-
-$$
-v_{\mathrm{D001}}=d(|B|;3),
-\qquad
-v_{\mathrm{D002}}=\begin{cases}\max_{b\in B}d(a_b;10),&B\ne\varnothing,\\1,&B=\varnothing,\end{cases}
-$$
+Let $N$ be the number of living-room and bedroom polygons. Let $b_K(N)$ and $b_B(N)$ be the C085/C086 table thresholds; $b_T^r(N)$ and $b_K^r(N)$ are C090's reduced total/kitchen thresholds. The declared scenario flows are $q_K,q_B,q_T^r,q_K^r$, in m³/h. Using the normalized shortfall $d$ defined above:
 
 $$
-v_{\mathrm{D003}}=d\!\left(\max\big(\{a_l:l\in L\}\cup\{0\}\big);18\right),
-\qquad
-v_{\mathrm{D004}}=\max\left(0,\frac{A_{\mathrm{hab}}-100}{100}\right).
+v_{\mathrm{C085}}=d(q_K;b_K(N)),\qquad
+v_{\mathrm{C086}}=d(q_B;b_B(N)),
 $$
 
-At exactly the threshold each check passes, within numerical tolerance. D001 is count-based; the other three supply continuous area penalties. Missing scale leaves D002–D004 unknown. Missing habitable-area inputs also leave D004 unknown. Unreliable geometry cannot establish a pass.
+$$
+v_{\mathrm{C090}}=\max\left(d(q_T^r;b_T^r(N)),\ d(q_K^r;b_K^r(N))\right).
+$$
 
-### Worked design-brief example
+The maximum in C090 enforces both requirements: sufficient total extraction cannot compensate for insufficient kitchen extraction. Every scored constraint has weight one. Missing inputs, unresolved mappings and unsupported table indices remain unknown and add no invented severity. A known inapplicable ventilation mode excludes C090 from the denominator.
 
-Suppose a structurally valid design contains two bedrooms, the smallest bedroom is 8 m², the largest living room is 16 m², and total habitable area is 110 m²:
+**Illustrative calculation:** for four main rooms and declared flows $q_K=105$, $q_B=30$, $q_T^r=75$, $q_K^r=45$ m³/h:
 
 | Check | Calculation | Severity |
 |---|---|---:|
-| D001 | $(3-2)/3$ | 0.3333… |
-| D002 | $(10-8)/10$ | 0.20 |
-| D003 | $(18-16)/18$ | 0.1111… |
-| D004 | $(110-100)/100$ | 0.10 |
+| C085 | $(120-105)/120$ | 0.125 |
+| C086 | $\max(0,(30-30)/30)$ | 0 |
+| C090 | $\max((90-75)/90,0)$ | 0.1667… |
 
-If the six assessment checks contribute $E_C=1.20$, the total is
+These three checks contribute $7/24\approx0.2917$ to energy. This example illustrates the PDF tables and declared flows; it is not a generated experimental result. With equal validity and coverage, a smaller total penalty receives a higher reward.
 
-$$
-E(x)=E_C+\frac13+0.20+\frac2{18}+0.10\approx1.9444,
-\qquad r(x)\approx-1.9444.
-$$
-
-This is an illustrative calculation, not an experimental result. With equal validity and coverage, a smaller total penalty receives a higher reward.
-
-The CPU formula adds 100 for structural invalidity when the other measurements remain available. The GPU backend skips constraint searches for invalid graphs, so their scored severities remain unknown and its energy is 100.
+The CPU formula adds 100 for structural invalidity when other measurements remain available. The GPU backend leaves scored severities unknown for invalid graphs and assigns energy 100.
 
 ### How Best-of-N and SVDD use this reward
 
@@ -378,12 +374,12 @@ SVDD then continues the selected **noisy** diffusion state, not its clean predic
 
 During generation, room extraction, constraint geometry and proposal selection use tensors on the GPU. The placement search uses configured **0.25 m and 0.05 m grids**, at most **20,000 bed positions per room**, and up to **32 retained directional circle witnesses**. A missed placement is not proof of impossibility.
 
-Every final design is checked with the CPU reference implementation. The CPU and GPU placement searches can differ; **reported final validity uses the CPU result**. The four design checks use the same count/area definitions and severity formulas on both backends. They add no CPU geometry calls inside GPU guidance.
+Every final design is checked with the CPU reference implementation. The CPU and GPU placement searches can differ; **reported final validity uses the CPU result**. The three ventilation checks use the same room-count tables, scenario inputs and severity formulas on both backends. They add no CPU geometry calls inside GPU guidance.
 
 ## Files and inspection
 
-- [Constraint registry](../test_time/configs/constraints_design_v1.json): six assessment checks, four custom design checks and three measurement rules.
-- [Scenario](../test_time/configs/scenario_rplan18.json): paper/code-derived scale, occupancy, height and area model.
+- [Constraint registry](../test_time/configs/constraints_ventilation_v1.json): nine Appendix A checks and three measurement rules.
+- [Scenario](../test_time/configs/scenario_ventilation_v1.json): declared ventilation mode/capacities, paper/code-derived scale, occupancy, height and area model.
 - [Documentation snapshot](constraints.json): the same selection in a convenient JSON file.
 - [CPU checks](../test_time/constraints.py), [GPU checks](../test_time/gpu_constraints.py), and [shared area rules](../test_time/area.py).
 
@@ -393,4 +389,4 @@ List the current selection without loading models or generating designs:
 python -m test_time.run --method baseline --list-constraints
 ```
 
-The original v1/v2 and six-check RPLAN-scale configurations remain available for reproducing older results. This guide describes the design-brief profile, not a complete building-regulation assessment. Adding these requirements changes the reward: baseline can be rechecked and the full Best-of-N bank reselected, while guidance needs new runs. Treat the existing bank as a development pilot and freeze the brief before the final comparison on fresh seeds.
+The default profile contains only the nine scored Appendix A checks listed above. Historical configurations remain available for reproducing their saved outputs, but their metrics must not be mixed with this profile. Baseline can be rechecked and the full Best-of-N bank reselected; guidance needs new runs under the same saved ventilation scenario. Freeze the scenario before the final comparison on fresh seeds.

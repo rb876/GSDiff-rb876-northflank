@@ -13,7 +13,7 @@ from .types import Scenario, overall_validity, read_json, write_json
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--config", type=Path, default=Path(__file__).parent / "configs/experiment_design_v1.json")
+    parser.add_argument("--config", type=Path, default=Path(__file__).parent / "configs/experiment_ventilation_v1.json")
     parser.add_argument("--method", required=True, choices=["baseline", "best_of_n", "svdd_pm"])
     for name in ("trials", "seed", "n", "k", "guided_steps"):
         parser.add_argument("--" + name, type=int)
