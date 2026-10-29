@@ -107,7 +107,7 @@ def test_failed_attempt_and_lookahead_success_remain_distinct_from_returned_succ
     for _, options in calls:
         assert (options["k"], options["rollouts"], options["terminal_k"]) == (2, 2, 2)
         assert options["anchor_remaining"] == [200, 100, 30]
-        assert options["inference_batch_size"] == 10 and options["progress"] is None
+        assert options["inference_batch_size"] == 32 and options["progress"] is None
     assert json.loads((output / "traces/trial-0000.json").read_text())[0]["success_count"] == 0
     run_extensions.main(["--summarize_root", str(tmp_path)])
     assert "1/2" in (tmp_path / "comparison.md").read_text()

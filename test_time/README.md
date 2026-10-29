@@ -401,11 +401,12 @@ Set `TRIALS_PER_RUN`, `EVAL_SEED`, `INFERENCE_BATCH_SIZE`, `DEVICE`, or `PYTHON`
 to override launcher defaults. To launch just one method, set
 `METHODS=hard_h_mc` or `METHODS=svdd_repair_aware`. Existing output directories are
 never overwritten; choose a new `EVAL_OUTPUT` for another run. Methods execute
-sequentially; proposals/rollouts within an attempt use batched neural inference.
+sequentially: **repair-aware SVDD first, then hard-h MC**. Both default to an
+inference microbatch size of **32** for proposals/rollouts within each attempt.
 
 Settings are in [`configs/extensions_v1.json`](configs/extensions_v1.json):
 
-- **`hard_h_mc`:** independent ordinary root prefixes, four proposals, sixteen
+- **`hard_h_mc`:** independent ordinary root prefixes, four proposals, four
   unguided completions per proposal, decisions at 200/100/30 transitions remaining,
   then eight terminal completions. Selection is proportional to verified joint
   success counts. All-zero estimates use a logged fresh ordinary continuation.
@@ -418,6 +419,10 @@ Settings are in [`configs/extensions_v1.json`](configs/extensions_v1.json):
   sixteen inner candidates and 128 final candidates.
   Tensor repair scoring runs on the model device. The final repaired graph is
   checked with the CPU audit; a GPU score is not a compliance certificate.
+
+The faster hard-h default reduces rollouts per proposal from 16 to 4, trading
+estimate precision for speed and increasing the chance of an all-zero bank.
+Saved per-run `config.json` files remain authoritative for previous and new runs.
 
 Both methods retain six scored checks and three supporting definitions, the same
 unconditional checkpoint, and the declared metric scale/height/occupancy. Hard-h

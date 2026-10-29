@@ -22,10 +22,10 @@ cd "$repo_dir"
 python_bin="${PYTHON:-python}"
 trials="${TRIALS_PER_RUN:-100}"
 seed="${EVAL_SEED:-10000}"
-inference_batch_size="${INFERENCE_BATCH_SIZE:-10}"
+inference_batch_size="${INFERENCE_BATCH_SIZE:-32}"
 device="${DEVICE:-cuda:0}"
 output_root="${EVAL_OUTPUT:-test_time/outputs/extensions_001}"
-read -r -a methods <<< "${METHODS:-hard_h_mc svdd_repair_aware}"
+read -r -a methods <<< "${METHODS:-svdd_repair_aware hard_h_mc}"
 if [[ "$smoke" == true ]]; then
   trials=2
 fi

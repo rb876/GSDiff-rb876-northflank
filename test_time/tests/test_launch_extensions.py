@@ -15,10 +15,10 @@ SCRIPT = REPO / "test_time" / "launch_extensions.sh"
 
 def launch(tmp_path, *arguments, **settings):
     env = os.environ.copy()
+    for name in ("INFERENCE_BATCH_SIZE", "METHODS"):
+        env.pop(name, None)
     env.update(PYTHON="must-not-run-in-preview", TRIALS_PER_RUN="100", EVAL_SEED="10000",
-               INFERENCE_BATCH_SIZE="10", DEVICE="cuda:0",
-               EVAL_OUTPUT=str(tmp_path / "output with spaces"),
-               METHODS="hard_h_mc svdd_repair_aware")
+               DEVICE="cuda:0", EVAL_OUTPUT=str(tmp_path / "output with spaces"))
     env.update(settings)
     return subprocess.run(["bash", str(SCRIPT), *arguments], cwd=tmp_path, env=env,
                           text=True, capture_output=True)
@@ -48,11 +48,11 @@ def test_default_preview_has_both_methods_and_summary_without_creating_output(tm
     assert result.returncode == 0, result.stderr
     planned = commands(result)
     assert len(planned) == 3
-    for command, method in zip(planned[:2], ("hard_h_mc", "svdd_repair_aware")):
+    for command, method in zip(planned[:2], ("svdd_repair_aware", "hard_h_mc")):
         assert command[command.index("--method") + 1] == method
         assert command[command.index("--trials") + 1] == "100"
         assert command[command.index("--seed") + 1] == "10000"
-        assert command[command.index("--inference_batch_size") + 1] == "10"
+        assert command[command.index("--inference_batch_size") + 1] == "32"
         assert command[command.index("--device") + 1] == "cuda:0"
         assert command[command.index("--output_dir") + 1] == str(tmp_path / "output with spaces" / method)
         assert "--k" not in command
@@ -63,7 +63,7 @@ def test_default_preview_has_both_methods_and_summary_without_creating_output(tm
 def test_smoke_changes_trial_and_proposal_counts_without_shortening_guidance(tmp_path):
     result = launch(tmp_path, "--smoke", "--dry-run", TRIALS_PER_RUN="500")
     assert result.returncode == 0, result.stderr
-    hard, repair, _ = commands(result)
+    repair, hard, _ = commands(result)
     for command in (hard, repair):
         assert command[command.index("--trials") + 1] == "2"
         assert command[command.index("--k") + 1] == "2"
@@ -86,14 +86,14 @@ def test_invalid_settings_are_rejected_before_execution(tmp_path, settings):
 
 def test_existing_second_method_prevents_any_run_and_preserves_data(tmp_path):
     output = tmp_path / "output with spaces"
-    existing = output / "svdd_repair_aware"
+    existing = output / "hard_h_mc"
     existing.mkdir(parents=True)
     marker = existing / "saved.txt"
     marker.write_text("original")
     result = launch(tmp_path, "--run")
     assert result.returncode == 2 and "Output already exists" in result.stderr
     assert marker.read_text() == "original"
-    assert not (output / "hard_h_mc.log").exists()
+    assert not (output / "svdd_repair_aware.log").exists()
 
 
 def test_run_supports_paths_with_spaces_and_unselected_existing_method(tmp_path):
@@ -118,5 +118,5 @@ def test_runner_failure_survives_tee_and_stops_later_methods(tmp_path):
                     LAUNCH_CALLS=str(calls), LAUNCH_EXIT="7")
     assert result.returncode == 7
     assert len(calls.read_text().splitlines()) == 1
-    assert not (tmp_path / "output with spaces" / "svdd_repair_aware.log").exists()
+    assert not (tmp_path / "output with spaces" / "hard_h_mc.log").exists()
     assert not (tmp_path / "output with spaces" / "comparison.log").exists()
