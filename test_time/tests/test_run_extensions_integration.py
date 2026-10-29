@@ -106,7 +106,7 @@ def test_failed_attempt_and_lookahead_success_remain_distinct_from_returned_succ
     assert [seed for seed, _ in calls] == [10000, 10001]
     for _, options in calls:
         assert (options["k"], options["rollouts"], options["terminal_k"]) == (2, 2, 2)
-        assert options["anchor_remaining"] == [200, 100, 30]
+        assert options["anchor_remaining"] == [100, 50, 15]
         assert options["inference_batch_size"] == 32 and options["progress"] is None
     assert json.loads((output / "traces/trial-0000.json").read_text())[0]["success_count"] == 0
     run_extensions.main(["--summarize_root", str(tmp_path)])
@@ -138,7 +138,7 @@ def test_repair_preserves_before_after_graphs_and_cpu_evidence(tmp_path, monkeyp
     def sampler(adapter, evaluator, scenario, seed, **options):
         received.update(options)
         return ExtensionResult(after, after_checks, "success",
-                               stats={"wall_seconds": 2.0, "node_samples": 1800},
+                               stats={"wall_seconds": 2.0, "node_samples": 1200},
                                trace=[{"move_m": 0.1}], extra_samples={"pre_repair": (before, before_checks)})
 
     install_fakes(monkeypatch, sampler, "svdd_repair_aware")
@@ -155,7 +155,7 @@ def test_repair_preserves_before_after_graphs_and_cpu_evidence(tmp_path, monkeyp
     assert set(row["extra_artifacts"]) == {"pre_repair"}
     for paths in (row["artifacts"], row["extra_artifacts"]["pre_repair"]):
         assert all(not Path(path).is_absolute() and (output / path).is_file() for path in paths.values())
-    assert received["k"] == 2 and received["guided_steps"] == 200
+    assert received["k"] == 2 and received["guided_steps"] == 100
     assert received["tensor_evaluator"] == "tensor-checker"
     assert received["repair_config"]["inner_evaluations"] == 16
     assert received["repair_config"]["final_evaluations"] == 128

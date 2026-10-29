@@ -63,7 +63,7 @@ def test_cli_overrides_and_existing_policy_are_reused():
     config, parameters, scenario, specs = load_configuration(args)
     assert config["trials"] == 2
     assert parameters["k"] == parameters["rollouts"] == 2
-    assert parameters["anchor_remaining"] == [200, 100, 30]
+    assert parameters["anchor_remaining"] == [100, 50, 15]
     assert scenario.coordinate_scale_m_per_model_unit == .03515625
     assert {s.id for s in specs if s.enabled and s.counts_toward_compliance} == {
         "C033", "C035", "C036", "C037", "C041", "C076", "C077", "C078", "C085", "C086", "C090"}

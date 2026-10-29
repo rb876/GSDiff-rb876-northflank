@@ -12,9 +12,9 @@
     "k": 4,
     "rollouts": 4,
     "anchor_remaining": [
-      200,
       100,
-      30
+      50,
+      15
     ],
     "terminal_k": 8,
     "zero_policy": "fresh_base",
@@ -22,7 +22,7 @@
   },
   "svdd_repair_aware": {
     "k": 4,
-    "guided_steps": 200,
+    "guided_steps": 100,
     "repair": {
       "max_displacement_m": 0.2,
       "inner_evaluations": 16,

@@ -58,9 +58,10 @@ def load_records(experiment_dir):
         if method == "baseline":
             rank = 0
         elif method == "best_of_n":
-            rank = 1 if config.get("n") == 3 else 3
+            rank = 1 if config.get("n") in {2, 3} else 3
         elif method == "svdd_pm":
-            rank = 2 if config.get("guided_steps") == 200 or record["label"] == "svdd_pm_last20" else 4
+            rank = 2 if (config.get("guided_steps") in {100, 200}
+                         or record["label"] in {"svdd_pm_last10", "svdd_pm_last20"}) else 4
         else:
             rank = 5
         return str(record["run_dir"].parent), rank, config.get("n") or 0, record["label"]
@@ -313,9 +314,10 @@ def write_analysis_report(output, records, skipped, figures, gallery):
               "`tables/paired_validity.csv` records changes on shared trial seeds, including outputs only one method validates. "
               "It does not pair by the winning Best-of-N candidate's seed. Runs with different saved comparison settings or seed sets are not paired. "
               "Different seed batches remain separate in this report; no cross-batch pooling is performed.", "",
-              "Denoiser-count comparisons are in `denoiser_comparison.json`. At the default settings, Best-of-3 targets late "
-              "SVDD at 3,000 evaluations per output each; Best-of-11 targets full SVDD at 11,000 versus 10,990. "
-              "These are two separate budget comparisons; only compatible completed runs with recorded counts establish a match. "
+              "Denoiser-count comparisons are in `denoiser_comparison.json`. Each method's NFE is the recorded number of "
+              "evaluated denoiser sample states per selected output, including candidate trajectories and SVDD lookahead. "
+              "Prefix-reselected controls use the equivalent generation budget of their retained candidates. "
+              "Each Best-of-N and SVDD budget is compared separately; only compatible completed runs with recorded counts establish a match. "
               "Matching denoiser counts does not match edge-model work, constraint checking or elapsed time. "
               "Timing is amortized per selected output and excludes model loading/rendering/export.", "",
               "## Annotated examples", "",

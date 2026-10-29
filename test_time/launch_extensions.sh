@@ -60,7 +60,7 @@ printf 'Trials per method: %s; first design seed: %s; inference batch: %s; devic
   "$trials" "$seed" "$inference_batch_size" "$device"
 printf 'Workers per method: %s; methods run sequentially.\n' "$workers"
 printf 'Config: %s; output: %s\n' "$config" "$output_root"
-printf 'Last-20%% settings and final repair come from the saved extension config.\n'
+printf 'Guidance windows, decision anchors and final repair come from the extension config.\n'
 
 # Check every selected destination before starting either method.
 if [[ "$dry_run" == false ]]; then

@@ -424,7 +424,8 @@ EVAL_OUTPUT=test_time/outputs/extensions_smoke_001 \
 ```
 
 The smoke run uses two proposals per decision and two rollouts/terminal proposals
-for hard feasibility. It preserves the 1,000-step model schedule and final-20% window;
+for hard feasibility. It preserves the 1,000-step model schedule and the configured
+guidance window (the final 10% in the default bathroom configuration);
 it tests execution and outputs, not whether the method reliably finds successes.
 
 Run the chosen configurations (100 attempts per method, seeds 10000–10099):
@@ -461,12 +462,12 @@ a replacement, and use a new output root.
 Settings are in [`configs/extensions_bathroom_v1.json`](configs/extensions_bathroom_v1.json):
 
 - **`hard_h_mc`:** independent ordinary root prefixes, four proposals, four
-  unguided completions per proposal, decisions at 200/100/30 transitions remaining,
+  unguided completions per proposal, decisions at 100/50/15 transitions remaining,
   then eight terminal completions. Selection is proportional to verified joint
   success counts. All-zero estimates use a logged fresh ordinary continuation.
   Only a passing terminal graph is returned; failure and budget exhaustion remain
   recorded attempts. The NFE cap is 40,000 per attempt.
-- **`svdd_repair_aware`:** four proposals at steps 200 through 1; bounded coordinate
+- **`svdd_repair_aware`:** four proposals at steps 100 through 1; bounded coordinate
   repair of predicted graphs, followed by selection of the original noisy proposal.
   Final repair is enabled. Default displacement is at most 0.20 m per junction,
   with at most two wall movements, twelve moved junctions, 2.4 m total displacement,

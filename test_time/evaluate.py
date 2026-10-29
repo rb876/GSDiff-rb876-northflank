@@ -207,6 +207,11 @@ def comparison_group(config):
     return hashlib.sha256(json.dumps(identity, sort_keys=True).encode()).hexdigest()[:12]
 
 
+def denoiser_comparison_group(config):
+    """Match evaluated-state budgets across batching without relaxing runtime matches."""
+    return comparison_group({**config, "batch_size": 1, "inference_batch_size": 1})
+
+
 def summarize_run(run_dir):
     run_dir = Path(run_dir)
     config = read_json(run_dir / "config.json")
@@ -296,6 +301,7 @@ def summarize_run(run_dir):
         "prefix_reselection": prefix_reselection,
         "final_evaluation_backend": final_evaluation_backend(config),
         "comparison_group": comparison_group(config), "scenario": config.get("scenario", {}),
+        "denoiser_comparison_group": denoiser_comparison_group(config),
         "status": status, "expected_trials": expected_trials,
         "selected_trials": count, "saved_final_candidates": len(rows),
         "trial_seed_start": config.get("seed"), "selected_trial_ids": sorted(trial_ids),
@@ -480,7 +486,8 @@ def denoiser_comparisons(experiment_dir, summaries):
     for best in (summary for summary in summaries if summary["method"] == "best_of_n"):
         for svdd in (summary for summary in summaries if summary["method"] == "svdd_pm"):
             if (best["status"] != "complete" or svdd["status"] != "complete"
-                    or best["comparison_group"] != svdd["comparison_group"]
+                    or best.get("denoiser_comparison_group", best["comparison_group"])
+                    != svdd.get("denoiser_comparison_group", svdd["comparison_group"])
                     or best.get("trial_seed_start") is None
                     or best["trial_seed_start"] != svdd.get("trial_seed_start")
                     or best["selected_trials"] != svdd["selected_trials"]
@@ -596,8 +603,10 @@ def write_comparison(experiment_dir, summaries):
                   "not batched forward calls (`node_calls`) or wall time. Counts include every Best-of-N candidate "
                   "and every SVDD proposal. Matching here means within 1%; exact matches are identified separately. "
                   "Edge prediction, constraint checks and elapsed time are not matched by this criterion.", "",
-                  "Only complete runs with matching scenario, model, backend, batching, trial seed start and trial IDs "
-                  "are paired. Missing recorded counts remain unknown. Details are saved in `denoiser_comparison.json`.", ""])
+                  "Only complete runs with matching scenario, model, constraints, checker, reward backend, tensor settings, "
+                  "trial seed start and trial IDs are paired. Batching may differ for denoiser matching; runtime matching "
+                  "still requires identical batching controls. Missing recorded counts remain unknown. "
+                  "Details are saved in `denoiser_comparison.json`.", ""])
     if denoiser["comparisons"]:
         lines.extend(["| Best-of-N run | SVDD run | BoN evaluations/output | SVDD evaluations/output | BoN / SVDD | Difference | Matched |",
                       "|---|---|---:|---:|---:|---:|---|"])

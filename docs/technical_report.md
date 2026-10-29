@@ -182,11 +182,35 @@ The default profile evaluates **eleven constraints from Appendix A** of the [ass
 
 ### Shared Scenario and Assumptions
 
-GSDiff generates wall geometry and room-type labels, but the selected checks also need information the model does not provide: occupant count, ceiling height, furniture, fixtures and ventilation capacity. For example, a two-dimensional floorplan alone cannot tell us a room's volume or whether an installed ventilation system is sufficient. We therefore derive the metric scale from the dataset and code conventions, and explicitly specify the remaining inputs. **The same scenario is used for every method**, so the comparison measures how well each method solves the same task. A pass establishes feasibility under these declared conditions; it does not verify the equipment or dimensions of a real building.
+GSDiff provides wall geometry and room types. The checks also need physical dimensions, occupancy, furnishings and building services. We specify these inputs once and use **the same scenario for every method**.
 
-**Scenario:** paper/code-derived scale **0.03515625 m/drawing pixel**, two occupants, uniform 2.5 m ceilings, an axis-aligned 1.40 × 1.90 m hypothetical bed and zero-thickness walls. Main rooms are living-room and bedroom polygons; every bathroom label is explicitly mapped to the full-bathroom category.
+**Shared Inputs**
 
-**Bathroom completion:** GSDiff provides neither fixtures nor doors. We therefore declare a combined bathroom/WC with a **0.40 × 0.70 m toilet**, **0.60 × 0.50 m basin** with clear space underneath, and **0.80 m inward-swinging door**. These dimensions and the combined-room programme are scenario assumptions, not PDF requirements. C041 is implemented for this bathroom circle only; bedroom door/fixture overlaps remain unverified. One shared search places these objects, the transfer rectangle and the turning circle together. Free transfer and turning spaces may overlap; solid fixtures obstruct them. A found layout establishes potential furnishing feasibility, not an observed fitted bathroom or an accessible route through the dwelling.
+| Input | Setting |
+|---|---|
+| Metric scale | **0.03515625 m/drawing pixel**, derived from the dataset and code |
+| Occupancy | **2 people** |
+| Ceiling height | **2.5 m**, uniform throughout |
+| Bed | **1.40 × 1.90 m** from C034; axis-aligned placement assumed |
+| Walls | Zero-thickness representation for area estimates |
+| Main rooms | Living rooms and bedrooms |
+| Bathroom category | Every bathroom label is treated as a full bathroom |
+
+**Assumed Bathroom Layout**
+
+We model a combined bathroom/WC with the objects below. Their dimensions and the combined-room arrangement are **scenario assumptions, not PDF requirements**.
+
+| Object | Assumed Dimensions and Properties |
+|---|---|
+| Toilet | **0.40 × 0.70 m** |
+| Basin | **0.60 × 0.50 m**, with clear space underneath |
+| Door | **0.80 m** wide, opening inward |
+
+- **Joint placement:** one search places the fixtures, door swing, transfer rectangle and turning circle together.
+- **Overlap rules:** transfer and turning spaces may overlap; interactions with fixtures and the door must satisfy C036/C037/C041.
+- **Scope:** C041 applies only to the bathroom turning circle. Bedroom door and fixture overlaps remain unverified.
+
+> **What a Pass Means:** feasibility under the declared scenario. It does not verify a real building's dimensions, installed equipment or accessible routes.
 
 The declared ventilation system is fixed across all methods:
 
@@ -246,7 +270,7 @@ The joint term replaces the three bathroom severities during selection, avoiding
 | Best-of-11 | 100 | 11,000 | Pending |
 | SVDD, full | 100 | 10,990 | Pending |
 
-**Two budget comparisons:** Best-of-2 matches late SVDD at **2,000 NFE/output**; Best-of-11 approximately matches full SVDD at **11,000 versus 10,990**. To construct Best-of-2, retain candidate indices **0 and 1** in every saved Best-of-11 trial, fixed before inspecting scores. Reapply the same selection rule to their saved GPU scores, then CPU-audit the selected design. Retain all 100 trials and keep the Best-of-11 results. These are nested, paired controls rather than independent candidate banks. Existing Best-of-3 results retain their **3,000-NFE** budget and are not relabelled as Best-of-2.
+**Two budget comparisons:** Best-of-2 matches late SVDD at **2,000 NFE/output**; Best-of-11 approximately matches full SVDD at **11,000 versus 10,990**. To construct Best-of-2, retain candidate indices **0 and 1** in every saved Best-of-11 trial, fixed before inspecting scores. Reapply the same selection rule to their saved GPU scores, then CPU-audit the selected design. Retain all 100 trials and keep the Best-of-11 results. These are nested, paired controls rather than independent candidate banks.
 
 **Pilot protocol:** 100 outputs per method with paired seeds `10000–10099`, shared frozen checkpoints, eleven scored checks and the scenario above. Final selected outputs use the CPU placement audit; preserve failed and unresolved cases in the denominators. Report **bedroom, bathroom, habitability and ventilation** results alongside overall success. These groups organize the analysis; overall validity still requires all applicable scored checks to pass. Keep search budgets identical across methods, and report bathroom unknowns separately from proven failures.
 
@@ -254,7 +278,7 @@ Report overall validity with 95% Wilson intervals, per-constraint pass/fail/unkn
 
 Best-of-2's **2,000 NFE** is the equivalent generation cost of its retained prefix. Reselection performs no new model inference; the source bank already cost 11,000 NFE/output. Its standalone runtime and batched forward-call counts are unmeasured, so no speedup is inferred from this reuse.
 
-The 10% protocol requires explicit run settings: the checked-in launch defaults still use 200 steps. Saved run configurations must confirm the guidance window and NFE before results are entered here.
+The 10% protocol requires explicit settings for standard SVDD: `launch_eval.sh` still defaults to 200 late guided steps. The bathroom extension configuration uses 100. Saved run configurations must confirm the guidance window and NFE before results are entered here.
 
 The completed evaluation will include one comparison table, per-constraint results and labelled success/failure examples at the corrected metric scale. [Reproduction instructions](../test_time/README.md), [sweep launcher](../test_time/launch_eval.sh) and [machine-readable constraints](../test_time/configs/constraints_bathroom_v1.json) provide the assessment's baseline comparison, compute accounting and reproducibility requirements. One scenario and seed batch limit generalization; this profile does not guarantee a lower Best-of-N success rate or an SVDD advantage.
 
@@ -301,7 +325,7 @@ $$
 \qquad \Pr(I=k\mid\text{bank})=\frac{\widehat h_k}{\sum_j\widehat h_j}.
 $$
 
-Continuous severity never enters this stochastic selection. For the 10% protocol, decision anchors must lie within the **final 100 transitions**; their exact positions are recorded in each run configuration. Independent initial noises and ordinary prefixes form the first bank, approximating $p_b^F$. Each completion includes GSDiff's actual edge decoder: random interpolation followed by edge-logit argmax and graph extraction.
+Continuous severity never enters this stochastic selection. Decision anchors lie at **100, 50 and 15 transitions remaining**, within the final 10%; their positions are recorded in each run configuration. Independent initial noises and ordinary prefixes form the first bank, approximating $p_b^F$. Each completion includes GSDiff's actual edge decoder: random interpolation followed by edge-logit argmax and graph extraction.
 
 **Main trade-off:** completed rollouts and CPU audits are expensive, and four rollouts per proposal give a coarse success estimate. If every rollout fails, the binary scores cannot distinguish promising near misses from poor layouts. Neural continuations are batched on GPU; an all-zero bank triggers a recorded fresh ordinary block. Zero observed successes do not prove impossibility.
 
@@ -340,6 +364,35 @@ An empty eligible repair bank falls back to its unchanged graph. The chosen **or
 **Main trade-off:** the score measures what the finite edit search can find. Its proposal order favours enlarging the largest bedroom and does not specifically target the coupled bathroom checks. Small coordinate changes may be insufficient, and the search does not establish the minimum repair needed. Final repair can still leave failed constraints and changes the output distribution. Results therefore describe the combined guidance-and-final-repair procedure; they do not isolate either stage or establish a compute match or exact feasibility-conditioned sampling.
 
 The [launcher](../test_time/launch_extensions.sh) previews repair-aware SVDD first, then `hard_h_mc`; `--run` executes that order. Defaults are 100 attempts per method starting at seed 10000, with inference microbatches of **32**, saved under `test_time/outputs/bathroom_extensions_001/`. `--smoke` retains two attempts with two hard-h rollouts and two terminal completions. Saved per-run configurations define the actual budgets, including earlier runs with $L=16$. See [reproduction instructions](../test_time/README.md).
+
+### Constraint-Checking Cost Beyond NFE
+
+Repair-aware SVDD searches inside every guided step. With $G$ guided steps, $K$ proposals and at most $B$ repair candidates per proposal (including the unchanged graph), its inner GPU scoring budget per attempt is
+
+$$
+N_{\mathrm{repair}}\leq GKB.
+$$
+
+The [extension configuration](../test_time/configs/extensions_bathroom_v1.json) uses **100 repair steps**, giving
+
+$$
+N_{\mathrm{repair}}\leq
+\underbrace{100}_{\text{steps}}\times
+\underbrace{4}_{\text{proposals}}\times
+\underbrace{16}_{\text{repair candidates}}
+=\boxed{6{,}400\text{ graph evaluations}}.
+$$
+
+Each evaluation extracts rooms and checks constraints, including the bathroom placement search. Final repair adds up to 128 GPU-scored candidates and CPU validation. Saved run configurations determine the actual budget.
+
+Hard-MC checks completed plans at three decision anchors. With four proposals, four rollouts per proposal and eight terminal candidates, a complete attempt requires
+
+$$
+N_{\mathrm{MC}}=3\times4\times4+8
+=\boxed{56\text{ completed-plan CPU audits}}.
+$$
+
+Budget exhaustion can reduce this count; fresh-base fallbacks add denoising work. Hard-MC spends more on neural continuations, while repair-aware repeatedly searches intermediate geometry. **NFE alone misses much of repair-aware's cost:** report constraint-evaluation counts, checking time and total elapsed time alongside NFE. GPU proxy evaluations and CPU audits also have different costs, so their count ratio is not a runtime speedup.
 
 ## Future Directions
 

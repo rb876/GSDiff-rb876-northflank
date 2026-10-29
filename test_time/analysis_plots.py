@@ -23,6 +23,7 @@ METHOD_STYLES = {
     "best_of_n": ("#df8134", "\\\\\\\\"),
     "best_of_n_3": ("#9e6aa8", "...."),
     "best_of_n_11": ("#df8134", "\\\\\\\\"),
+    "svdd_pm_last10": ("#8b8683", ""),
     "svdd_pm_last20": ("#8b8683", ""),
     "svdd_pm_full": ("#579b50", "xxxx"),
 }
@@ -87,8 +88,10 @@ def _method(record):
     if method == "best_of_n" or name.startswith("best_of_n"):
         n = config.get("n", parameters.get("n"))
         return (f"best_of_n_{n}", f"Best-of-{n}") if n is not None else ("best_of_n", "Best-of-N")
-    if method in {"svdd_pm", "svdd_pm_full", "svdd_pm_last20"}:
+    if method in {"svdd_pm", "svdd_pm_full", "svdd_pm_last10", "svdd_pm_last20"}:
         steps = config.get("guided_steps", parameters.get("guided_steps"))
+        if name == "svdd_pm_last10" or method == "svdd_pm_last10" or (method == "svdd_pm" and steps == 100):
+            return "svdd_pm_last10", "SVDD (last 10%)"
         if name == "svdd_pm_last20" or (method == "svdd_pm" and steps == 200):
             return "svdd_pm_last20", "SVDD (last 20%)"
         if name == "svdd_pm_full" or (method == "svdd_pm" and steps == 999):

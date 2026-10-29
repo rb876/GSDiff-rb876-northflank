@@ -256,7 +256,7 @@ def denoiser_run(path, method, evaluations, trial_ids=(0, 1), **settings):
     directory = make_run(path, [candidate(trial, [result("C076", "pass")]) for trial in trial_ids],
                          method=method)
     config = json.loads((directory / "config.json").read_text())
-    config.update(seed=10000, batch_size=4, inference_batch_size=10, **settings)
+    config.update({"seed": 10000, "batch_size": 4, "inference_batch_size": 10, **settings})
     write_json(directory / "config.json", config)
     run = json.loads((directory / "run.json").read_text())
     run.update(status="complete", node_samples=evaluations * len(trial_ids) if evaluations is not None else None)
@@ -292,7 +292,8 @@ def test_denoiser_matching_uses_recorded_states_for_both_svdd_budgets(tmp_path):
     assert "Approximately matched compute" not in markdown
 
 
-@pytest.mark.parametrize("difference", ["seed", "unknown_seed", "batch_size", "inference_batch_size", "partial", "trials", "trial_ids"])
+@pytest.mark.parametrize("difference", ["seed", "unknown_seed", "scenario", "model", "checker", "reward_backend",
+                                       "tensor_settings", "constraints", "partial", "trials", "trial_ids"])
 def test_denoiser_matching_requires_complete_paired_compatible_runs(tmp_path, difference):
     best_dir = denoiser_run(tmp_path / "best", "best_of_n", 3000)
     trials = (0,) if difference == "trials" else (0, 2) if difference == "trial_ids" else (0, 1)
@@ -300,14 +301,51 @@ def test_denoiser_matching_requires_complete_paired_compatible_runs(tmp_path, di
     config = json.loads((svdd_dir / "config.json").read_text())
     if difference in {"seed", "unknown_seed"}:
         config["seed"] = 20000 if difference == "seed" else None
-    elif difference in {"batch_size", "inference_batch_size"}:
-        config[difference] = 1
+    elif difference == "scenario":
+        config["scenario"]["coordinate_scale_m_per_model_unit"] = 0.05
+    elif difference == "model":
+        config["adapter"]["checkpoints"]["node"]["sha256"] = "different-node"
+    elif difference == "checker":
+        config["final_checker"] = "cpu_refined"
+    elif difference == "reward_backend":
+        config["reward_backend"] = "gpu"
+    elif difference == "tensor_settings":
+        config["guidance"] = {"tensor_settings": {"max_bed_positions_per_room": 1000}}
+    elif difference == "constraints":
+        config["constraints"][0]["weight"] = 2
     elif difference == "partial":
         config["trials"] = 100
     write_json(svdd_dir / "config.json", config)
     write_comparison(tmp_path, [write_report(best_dir), write_report(svdd_dir)])
     saved = json.loads((tmp_path / "denoiser_comparison.json").read_text())
     assert saved["comparisons"] == []
+
+
+@pytest.mark.parametrize("batch_size,inference_batch_size", [(10, 10), (4, 32), (10, 32)])
+def test_denoiser_matching_allows_different_batching_without_matching_runtime(tmp_path, batch_size, inference_batch_size):
+    best = write_report(denoiser_run(tmp_path / "best_b2", "best_of_n", 2000, n=2))
+    svdd = write_report(denoiser_run(tmp_path / "svdd_g100", "svdd_pm", 2000, k=10, guided_steps=100,
+                                    batch_size=batch_size, inference_batch_size=inference_batch_size))
+    rows = write_comparison(tmp_path, [best, svdd])
+    assert best["comparison_group"] != svdd["comparison_group"]
+    assert best["denoiser_comparison_group"] == svdd["denoiser_comparison_group"]
+    pair, = json.loads((tmp_path / "denoiser_comparison.json").read_text())["comparisons"]
+    assert pair["matched"] and pair["exact"]
+    assert pair["best_of_n_evaluations_per_output"] == pair["svdd_evaluations_per_output"] == 2000
+    assert all(row["compute_multiplier"] is None for row in rows)
+    markdown = (tmp_path / "comparison.md").read_text()
+    assert "Similar measured runtime (within 20% wall time per trial): none measured yet" in markdown
+    assert "Batching may differ for denoiser matching; runtime matching still requires identical batching controls" in markdown
+
+
+def test_denoiser_matching_accepts_legacy_summaries_with_same_comparison_group(tmp_path):
+    summaries = [write_report(denoiser_run(tmp_path / name, method, 2000))
+                 for name, method in (("best", "best_of_n"), ("svdd", "svdd_pm"))]
+    for summary in summaries:
+        summary.pop("denoiser_comparison_group")
+    write_comparison(tmp_path, summaries)
+    pair, = json.loads((tmp_path / "denoiser_comparison.json").read_text())["comparisons"]
+    assert pair["matched"] and pair["exact"]
 
 
 def test_denoiser_matching_preserves_unknown_counts(tmp_path):
