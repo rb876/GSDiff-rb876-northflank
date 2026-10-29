@@ -370,3 +370,84 @@ No RPLAN-relative FID/KID is claimed without reference data.
 
 References: [GSDiff](https://arxiv.org/abs/2408.16258), [SVDD](https://arxiv.org/abs/2408.08252),
 and the supplied `Technical_assessment_TTC.pdf`, Appendix A.
+# Late extensions: hard feasibility and repair-aware SVDD
+
+The separate launcher keeps the original experiments unchanged. Activate the existing
+`gsdiff` environment on the node, pull the repository, then preview the commands:
+
+```bash
+bash test_time/launch_extensions.sh
+```
+
+Run two smoke-test attempts per method before a full experiment:
+
+```bash
+EVAL_OUTPUT=test_time/outputs/extensions_smoke_001 \
+  bash test_time/launch_extensions.sh --smoke --run
+```
+
+The smoke run uses two proposals per decision and two rollouts/terminal proposals
+for hard feasibility. It preserves the 1,000-step model schedule and final-20% window;
+it tests execution and outputs, not whether the method reliably finds successes.
+
+Run the chosen configurations (100 attempts per method, seeds 10000–10099):
+
+```bash
+EVAL_OUTPUT=test_time/outputs/extensions_001 \
+  bash test_time/launch_extensions.sh --run
+```
+
+Set `TRIALS_PER_RUN`, `EVAL_SEED`, `INFERENCE_BATCH_SIZE`, `DEVICE`, or `PYTHON`
+to override launcher defaults. To launch just one method, set
+`METHODS=hard_h_mc` or `METHODS=svdd_repair_aware`. Existing output directories are
+never overwritten; choose a new `EVAL_OUTPUT` for another run. Methods execute
+sequentially; proposals/rollouts within an attempt use batched neural inference.
+
+Settings are in [`configs/extensions_v1.json`](configs/extensions_v1.json):
+
+- **`hard_h_mc`:** independent ordinary root prefixes, four proposals, sixteen
+  unguided completions per proposal, decisions at 200/100/30 transitions remaining,
+  then eight terminal completions. Selection is proportional to verified joint
+  success counts. All-zero estimates use a logged fresh ordinary continuation.
+  Only a passing terminal graph is returned; failure and budget exhaustion remain
+  recorded attempts. The NFE cap is 40,000 per attempt.
+- **`svdd_repair_aware`:** four proposals at steps 200 through 1; bounded coordinate
+  repair of predicted graphs, followed by selection of the original noisy proposal.
+  Final repair is enabled. Default displacement is at most 0.20 m per junction,
+  with at most two wall movements, twelve moved junctions, 2.4 m total displacement,
+  sixteen inner candidates and 128 final candidates.
+  Tensor repair scoring runs on the model device. The final repaired graph is
+  checked with the CPU audit; a GPU score is not a compliance certificate.
+
+Both methods retain six scored checks and three supporting definitions, the same
+unconditional checkpoint, and the declared metric scale/height/occupancy. Hard-h
+uses the audited CPU checker for every rollout label. No new ablation sweep is
+included; repair results measure guidance **plus** final repair together.
+
+Outputs are grouped under the chosen root:
+
+```text
+extensions_001/
+  comparison.md, comparison.csv
+  hard_h_mc/                 # own config.json, run.json, summary.json, report.md
+  svdd_repair_aware/          # same structure
+    trials.jsonl             # every attempt, including failures without a graph
+    candidates.jsonl         # returned graphs only
+    events.jsonl             # completed hard-h lookahead/terminal outcomes
+    traces/                  # decisions, costs and repair edits
+    samples/                 # graphs, check evidence, PNG/SVG; pre-repair and edit overlays too
+    lookaheads/              # verified successful hard-h lookahead graphs/evidence
+```
+
+Use `trials.jsonl` and the extension summaries for success rates. The old analysis
+assumes one selected graph per trial and would omit hard-h failures with no returned
+graph. Regenerate the extension comparison without loading models:
+
+```bash
+python -m test_time.run_extensions --summarize_root test_time/outputs/extensions_001
+```
+
+The configurations are not compute matched. Reports count actual denoiser states,
+all sampling/checking/repair time, and unsuccessful attempts. Runtime excludes model
+loading and artifact export. Generated output folders remain Git-ignored; download
+the whole chosen output root from the node to preserve graphs and audit evidence.

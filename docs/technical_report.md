@@ -181,3 +181,43 @@ This evaluation covers one fixed scenario and one seed batch; broader replicatio
 Finite searches may remain unknown, binary penalties provide weak incremental feedback, and greedy selection may reduce diversity. At the assumed height, C077 already implies C078, partly duplicating the objective. Results establish feasibility under the stated assumptions; baseline-relative diagnostics do not establish RPLAN fidelity.
 
 [Technical notes](technical_notes.md) retain checkpoint details, exact process-weighting equations, assessment alignment and extended results tables.
+
+## Extensions: late hard-feasibility and repair-aware SVDD
+
+These two extensions keep the frozen checkpoints, six scored constraints and scenario assumptions above. **Results for these new extensions are pending**; the preceding audited experiments are unchanged.
+
+### Binary-rollout conditioning (`hard_h_mc`)
+
+Let $C(G)=1$ only when structure and every applicable scored check pass. Unknowns are nonsuccesses. The desired distribution and continuation probability are
+
+$$
+p_F(G)=\frac{p_{\mathrm{pre}}(G)C(G)}{\Pr_{\mathrm{pre}}(C=1)},
+\qquad h_t(z)=\mathbb E_{\mathrm{pre}}[C(G)\mid Z_t=z].
+$$
+
+For a block of ordinary denoising steps, the ideal conditioned kernel is
+
+$$
+K^F_{a\to b}(z_b\mid z_a)
+=K_{a\to b}(z_b\mid z_a)\frac{h_b(z_b)}{h_a(z_a)}.
+$$
+
+We draw **four block proposals**, complete each with **16 independent unguided rollouts**, and resample proportional to $\widehat h_b=\frac1{16}\sum_\ell C(G_\ell)$. Continuous severity never enters this selection. Anchors retain **200, 100 and 30 remaining transitions**. Independent initial noises and ordinary prefixes form the first bank, approximating the conditioned first-anchor marginal instead of fixing an unweighted root state.
+
+Neural continuations are batched on GPU; completed-rollout feasibility uses the CPU audit. An all-zero bank triggers a fresh ordinary block, explicitly recording the fallback. The final bank contains eight completions; selection is uniform among verified successes, otherwise the attempt fails without returning a least-bad design. Finite banks, fallbacks and a **40,000-NFE attempt cap** prevent claims of exact conditional sampling. Success rates must include failed attempts.
+
+### Bounded repair lookahead (`svdd_repair_aware`)
+
+At steps **200…1**, four noisy proposals are scored through bounded repairs of their predicted clean graphs. Among eligible found repairs $G'$, minimize the following tuple lexicographically:
+
+$$
+\left(1-C_{\mathrm{GPU}}(G'),\ U_{\mathrm{GPU}}(G'),\ E_{\mathrm{GPU}}(G'),\ D(G',G)\right),
+\qquad
+D(G',G)=\frac{\sum_i\|v'_i-v_i\|_2\;\text{(metres)}}{2.4\;\text{m}}.
+$$
+
+Here $C_{\mathrm{GPU}}$ is joint proxy feasibility and $U_{\mathrm{GPU}}$ counts unknown checks. This is a searched witness, not a global minimum. Tensor proposals move internal collinear junction groups by at most **0.20 m per junction**, with at most 12 moved junctions and 2.4 m total displacement, preserving adjacency, semantics and the exterior footprint. Search includes the unchanged graph and forbids introducing unknown checks.
+
+The chosen **original noisy proposal** continues diffusion; repaired clean coordinates are not injected into it. Inner scoring allows 16 candidate evaluations; final repair allows 128 and is actually applied, subject to CPU audit acceptance. Before/after graphs and edit costs remain distinguishable. GPU proxy success alone is insufficient. This combined intervention does not isolate guidance from final-repair effects; no ablation result or compute match is claimed.
+
+The [launcher](../test_time/launch_extensions.sh) previews both methods by default; `--smoke` previews two attempts with smaller banks, and `--run` explicitly executes. Defaults are 100 attempts per method starting at seed 10000, saved under `test_time/outputs/extensions_001/`. See [reproduction instructions](../test_time/README.md).
