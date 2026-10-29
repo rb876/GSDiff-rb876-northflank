@@ -182,6 +182,16 @@ def polygon_area(points):
                    for a, b in zip(points, points[1:] + points[:1]))) / 2
 
 
+def final_evaluation_backend(config):
+    """Identify the checker of selected outputs, including offline re-evaluation."""
+    return ((config.get("scale_recalibration") or {}).get("selected_evaluation_backend")
+            or (config.get("evaluation_audit") or {}).get("checker_version")
+            or config.get("final_checker")
+            or config.get("guidance", {}).get("final_evaluator")
+            or config.get("final_evaluator")
+            or "cpu_reference")
+
+
 def comparison_group(config):
     adapter = config.get("adapter", {})
     checkpoints = {name: data.get("sha256") for name, data in adapter.get("checkpoints", {}).items()}
@@ -191,8 +201,9 @@ def comparison_group(config):
                 "inference_batch_size": config.get("inference_batch_size", 1),
                 "reward_backend": config.get("reward_backend", "cpu"),
                 "tensor_settings": config.get("guidance", {}).get("tensor_settings")}
-    if audit := config.get("evaluation_audit"):
-        identity["evaluation_checker_version"] = audit["checker_version"]
+    checker = final_evaluation_backend(config)
+    if checker != "cpu_reference":
+        identity["evaluation_checker_version"] = checker
     return hashlib.sha256(json.dumps(identity, sort_keys=True).encode()).hexdigest()[:12]
 
 
@@ -250,6 +261,14 @@ def summarize_run(run_dir):
                 "artifacts": row.get("artifacts", {}), "energy": row["evaluation"]["energy"],
                 "failed_ids": [r["id"] for r in counted_results(row) if r["status"] == "fail"],
                 "unknown_ids": [r["id"] for r in counted_results(row) if r["status"] == "unknown"]}
+    recalibration = config.get("scale_recalibration")
+    mixed_population = (recalibration or {}).get("population_evaluation_backend") == "mixed_tensor_cpu"
+    all_candidates = ({"count": len(rows), "status": "not_reported",
+                       "reason": "Selected outputs have CPU audits; rejected candidates retain tensor scores. "
+                                 "Mixed checker results are not pooled into compliance or validity rates."}
+                      if mixed_population else {
+                          "count": len(rows), **validity_summary(rows),
+                          **check_summary([result for row in rows for result in counted_results(row)])})
     return {
         "metric_schema_version": 3,
         "validity_definitions": {
@@ -271,6 +290,8 @@ def summarize_run(run_dir):
         },
         "guidance": config.get("guidance", {"backend": "cpu", "final_evaluator": "cpu_reference"}),
         "evaluation_audit": config.get("evaluation_audit"),
+        "scale_recalibration": recalibration,
+        "final_evaluation_backend": final_evaluation_backend(config),
         "comparison_group": comparison_group(config), "scenario": config.get("scenario", {}),
         "status": status, "expected_trials": expected_trials,
         "selected_trials": count, "saved_final_candidates": len(rows),
@@ -289,11 +310,7 @@ def summarize_run(run_dir):
         "per_constraint": {key: check_summary(value) for key, value in sorted(per_id.items())},
         "auxiliary_checks": {key: check_summary(value) for key, value in sorted(auxiliary.items())},
         "per_group": group_summary(selected, specs),
-        "all_candidates": {
-            "count": len(rows),
-            **validity_summary(rows),
-            **check_summary([result for row in rows for result in counted_results(row)]),
-        },
+        "all_candidates": all_candidates,
         "graph_statistics": {
             "junctions": describe([len(sample["nodes"]) for sample in samples]),
             "edges": describe([len(sample["edges"]) for sample in samples]),
@@ -338,20 +355,28 @@ def write_report(run_dir):
                      "and are not counted as unknown or passed." if counts["disabled"] else "")
     parameters = ", ".join(f"{key}={value}" for key, value in result["parameters"].items() if value is not None)
     audit = result["evaluation_audit"]
+    recalibration = result["scale_recalibration"]
     saved_population = (f"{result['saved_final_candidates']} originally selected outputs saved for this audit; "
-                        "the original full candidate pool is excluded" if audit else
+                        "the original full candidate pool is excluded" if audit and not recalibration else
                         f"{result['saved_final_candidates']} complete final candidates saved")
     audit_note = ([f"Offline CPU audit: **{audit['checker_version']}**. Original selections and generation are unchanged; "
                    "no candidates were reselected. All saved-candidate statistics refer only to the originally selected outputs. "
                    "Generation timings and counters are copied from the original run and exclude this offline audit; "
                    "the sweep's `audit.json` records audit time separately. Guidance metadata describes the original generation.", ""]
-                  if audit else [])
+                  if audit and not recalibration else [])
+    if recalibration:
+        audit_note = ["Offline scale recalibration: selected-output metrics use the recorded CPU checker. "
+                      "No new diffusion was run; denoiser counters describe historical generation, "
+                      "and generation runtime was not remeasured.", ""]
+        if result["all_candidates"].get("status") == "not_reported":
+            audit_note += [result["all_candidates"]["reason"], ""]
     lines = [f"# {result['method']} experiment", "",
              f"Status: **{result['status']}**. {result['selected_trials']}/{result['expected_trials']} selected trials; "
              f"{saved_population}. {parameters}.", "", *audit_note,
              f"Scale: **{scenario.get('scale_provenance', 'missing')}**, {scenario.get('coordinate_scale_m_per_model_unit')} m/drawing pixel. "
              "Results under declared geometry/scenario assumptions are not verified real-world compliance.", "",
-             f"Guidance backend: **{result['parameters']['reward_backend']}**. Reported final validity and compliance use the **CPU reference checker**. "
+             f"Guidance backend: **{result['parameters']['reward_backend']}**. Reported final validity and compliance use the **CPU reference checker** "
+             f"(`{result['final_evaluation_backend']}`). "
              "GPU guidance uses conservative finite searches and can differ from the reference; its scores are saved separately in sample metadata.", "",
              f"Saved registry: **{counts['registered']} IDs** ({counts['scored']} checks, {counts['supporting']} supporting rules). "
              f"Active: **{counts['active_scored']} scored checks** and {counts['active_supporting']} supporting rules. "

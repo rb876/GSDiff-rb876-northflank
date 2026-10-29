@@ -3,6 +3,13 @@
 Edit on Kraken, push the code, pull on Northflank, and run on its H100.
 The original GSDiff network architecture and pretrained weights are unchanged.
 
+**Current calibration:** new runs default to `scenario_rplan18.json`, using
+18/512 = **0.03515625 m/drawing pixel**. Follow the
+[corrected-scale rerun commands](../docs/rplan18_rerun.md) to reuse baseline,
+reselect the complete Best-of-11 bank, smoke-test guidance and rerun SVDD/extensions.
+The older `scenario_v2.json` and `experiment_v2.json` remain historical configurations
+at the user-assumed 0.025 m/pixel; explicit commands using them retain that scale.
+
 Read the [concise technical report](../docs/technical_report.md) or consult the
 [technical notes](../docs/technical_notes.md) for full implementation and assessment details.
 

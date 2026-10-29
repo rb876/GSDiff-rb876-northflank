@@ -32,7 +32,7 @@ The paper introduces a **mixed-base alignment loss** to penalize junction misali
 
 We use the released **unconditional RPLAN** checkpoints because our scenario prescribes neither topology nor boundary. Every comparison shares the same frozen networks and output representation; the original training losses are not optimized during our experiments.
 
-The resulting polygons provide areas and regions for placement checks. Our output schema has no explicit doors, fixtures or ceiling heights, and metric scale remains an assumption. Thus, we evaluate the observable geometric subset rather than infer missing building attributes.
+The resulting polygons provide areas and regions for placement checks. Our output schema has no explicit doors, fixtures or ceiling heights. Metric conversion follows the documented RPLAN/GSDiff coordinate conventions below; we evaluate the observable geometric subset rather than infer missing building attributes.
 
 This architecture determines where guidance must act: **we change node-sampling decisions, but score decoded graphs**. Edge prediction and room extraction introduce discrete decisions, making derivative-free SVDD suitable. Instability in early decoded predictions motivates comparing full-trajectory guidance with late guidance. The method must still establish structural validity and constraint satisfaction through final evaluation.
 
@@ -131,7 +131,16 @@ We score six accessibility/habitability checks from Appendix A of the [assessmen
 | **C077** | Habitable area ≥**28 m²** for two occupants. |
 | **C078** | Habitable volume ≥**66 m³** for two occupants. |
 
-**Assumptions:** 0.025 m/drawing pixel, two occupants, uniform 2.5 m ceilings, a hypothetical axis-aligned 1.40 × 1.90 m bed and zero-thickness walls. Scale and height are supplied. Doors, swings, fixtures and navigable routes are unobserved; requirements needing them are excluded. Supporting rules C034/C079/C080 define measurements without adding compliance points.
+**Scenario:** paper/code-derived scale **0.03515625 m/drawing pixel** (`paper_derived` provenance). Assumptions remain two occupants, uniform 2.5 m ceilings, a hypothetical axis-aligned 1.40 × 1.90 m bed and zero-thickness walls. Doors, swings, fixtures and navigable routes are unobserved; requirements needing them are excluded. Supporting rules C034/C079/C080 define measurements without adding compliance points.
+
+**Scale calibration:** the [original RPLAN paper (§4)](https://wutomwu.github.io/publications/2019-DeepLayout/paper.pdf) describes an 18 m square encoded as 256 × 256 pixels. GSDiff's [normalization](../datasets/rplan-process4.py) uses $z=(x_{256}-128)/128$; our [decoder](../test_time/adapter.py) exports $x_{512}=\operatorname{trunc}(256z+256)$. Therefore,
+
+$$
+s=\frac{18}{512}=0.03515625\;\mathrm{m/drawing\ pixel},
+\qquad A_{\mathrm{m}^2}=A_{\mathrm{pixel}^2}s^2.
+$$
+
+This conversion is derived from the dataset and code conventions, rather than a physical measurement of each generated building. Updated generation rewards and final checks use the same conversion. Earlier experiments used a different assumed scale; their results and figures are retained only in the [archived report](technical_report_assumed_scale_archive.md).
 
 For applicable, measurable checks $\mathcal M(G)$, equal-weight scalarization gives
 
@@ -145,68 +154,25 @@ Bedroom feasibility uses binary penalties. Dimensional deficits use normalized s
 
 ## Evaluation and compute
 
-**Protocol:** 100 selected outputs per method, paired seeds `10000–10099`, one fixed scenario, H100 80 GB, generation/inference batches 4/10. The CPU audit rechecks the original outputs; it changes neither generation rewards nor candidate selection.
+**Corrected-scale results are pending.** This report will present only evaluations using the 18 m RPLAN canvas. Changing final checks alone does not change earlier guidance decisions; revised guided runs must use the corrected scale during generation.
 
-**Table 1.** All methods score the same **six checks, with 100% applicability**. Validity includes all outputs; brackets give 95% Wilson intervals. Check success is passes/all applicable checks, including unknowns in the denominator. Severity averages measured penalties, excluding unknowns and the structural penalty. Room-count $W_1$ measures distribution shift from baseline (lower is closer).
+**Protocol:** 100 outputs per method with paired seeds `10000–10099`, shared frozen checkpoints, six scored checks and the scenario above. Compare baseline, Best-of-11, SVDD over the last 20% and full-trajectory SVDD. Final selected outputs use the CPU placement audit; preserve failed and unresolved cases in the denominators.
 
-| Method | Overall valid, % [95% CI] | Check success, % | Severity ↓ | Structure valid, % | Room-count $W_1$ ↓ | NFE/output | Seconds/output |
-|---|---:|---:|---:|---:|---:|---:|---:|
-| Baseline | 2 [0.6–7.0] | 63.8 | 0.185 | 86 | 0.000 | 1,000 | 3.54 |
-| Best-of-11 | 9 [4.8–16.2] | 83.3 | 0.137 | 100 | 0.217 | 11,000 | 20.15 |
-| SVDD, last 20% | 14 [8.5–22.1] | 83.7 | 0.142 | 98 | 0.150 | 3,000 | 84.68 |
-| SVDD, full | 15 [9.3–23.3] | 85.0 | 0.135 | 99 | 0.138 | 10,990 | 230.05 |
+Report overall validity with 95% Wilson intervals, per-constraint pass/fail/unknown rates, structural validity, measured severity and layout diversity. Record NFE and elapsed sampling/checking time separately. Sample-wise denoiser cost is $T+KG$ for SVDD and $NT$ for Best-of-N, where $G$ is the number of guided transitions; this does not match edge-model or checker cost.
 
-**Compute:** sample-wise denoiser evaluations (NFE) cost $T+KL$ for SVDD and $NT$ for Best-of-N. Multipliers are **1× / 11× / 3× / 10.99×**, respectively. Best-of-11 matches full SVDD within 0.091% in NFE. NFE excludes edge/reward costs: full SVDD takes **11.4× longer** than Best-of-11. Timings exclude loading, rendering and the offline audit.
-
-**Main finding:** SVDD improves observed joint validity, but the benefit is uneven across constraints. Late guidance yields **14 valid designs**, versus **15** for full guidance, using 3,000 rather than 10,990 NFE. On paired seeds there are 12 late-only and 13 full-only successes; this batch does not establish that full guidance is superior. The comparison changes both guidance timing and budget.
-
-### Which constraints improve?
-
-![Pass rates for each of the six constraints, comparing baseline, Best-of-11, late SVDD and full SVDD.](assets/sweep_002_cpu_audit_v2/constraint_success.png)
-
-**Figure 1.** Per-constraint passes divided by all 100 selected outputs. Unknowns remain in the denominator and do not count as passes. These are individual-check outcomes; overall validity additionally requires valid structure and joint success. [Vector PDF](assets/sweep_002_cpu_audit_v2/constraint_success.pdf).
-
-- **Bathroom turning space (C036):** success rises from **32%** for baseline to **80%** for Best-of-11 and **97–99%** for SVDD. This is the clearest improvement among the initially difficult checks.
-- **Bedroom accessibility (C033/C035):** fitting a bed and turning circle reaches **97–100%** under selection/guidance, but adding circulation clearance remains difficult. Best-of-11 has the highest C035 pass rate (**20%**), ahead of late/full SVDD (**14%/16%**), yet lower overall validity. Improving one constraint does not guarantee better joint performance.
-- **Habitability (C076–C078):** baseline already passes **91–93%**; selection/guidance reaches **98–100%**. C077 and C078 have identical outcomes across this sweep. At the assumed 2.5 m height, their area-equivalent thresholds are 28 m² and $66/2.5=26.4$ m², so passing C077 implies C078; these are partly redundant objectives.
-
-### C035 limits joint validity
-
-![Designs partitioned into overall valid, C035 as the sole failure, and other outcomes.](assets/sweep_002_cpu_audit_v2/c035_bottleneck.png)
-
-**Figure 2.** A sole C035 failure means **valid structure and all five other checks passing**. Other outcomes include additional failures, unknowns and invalid structure. This diagnoses the bottleneck; it does not measure how many designs a repair algorithm could fix. [Vector PDF](assets/sweep_002_cpu_audit_v2/c035_bottleneck.pdf).
-
-C035 is the only obstacle in **71 Best-of-11, 81 late-SVDD and 76 full-SVDD designs**. Full SVDD has **80 confirmed C035 failures and four unknowns**: the failures violate necessary geometric bounds, while unknowns remain unresolved placement searches. The low success rate therefore persists even after the improved CPU audit; it is predominantly a geometric limitation under the assumed scale.
-
-For the assumed 1.40 × 1.90 m bed, the two clearance options require rectangular envelopes of **3.20 × 3.10 m** or **3.80 × 2.80 m**. Hence **9.92 m² is a necessary minimum**, not a sufficient condition: room shape and a shared bed/turning-circle placement still matter. The binary C035 penalty gives the same score to all confirmed failures, providing little information about incremental geometric improvement. This motivates the repair-aware extension, whose results are still pending.
-
-**Diversity:** among usable, structurally valid outputs (86/100/98/99), all graphs are unique and mean pairwise semantic-layout distance stays near **0.804–0.807**. These diagnostics show no obvious collapse, but neither establish RPLAN fidelity nor rule out changes in unmeasured layout features. [Metrics and complete analysis](../test_time/outputs/sweep_002_cpu_audit_v2/analysis/REPORT.md).
-
-### What success and failure look like
-
-![Paired baseline and successful full-SVDD floorplans at seed 10009, plus a full-SVDD floorplan failing only C035 at seed 10000.](assets/sweep_002_cpu_audit_v2/qualitative_examples.png)
-
-**Figure 3.** Saved floorplans at the same drawing scale, with room types labelled. The first valid full-SVDD output (seed **10009**) is paired with its baseline; the third panel is the first invalid full-SVDD output (seed **10000**). Furniture/turning-space overlays are hypothetical checker witnesses, not predicted furnishings. [Vector PDF](assets/sweep_002_cpu_audit_v2/qualitative_examples.pdf).
-
-The paired baseline fails **C035 and C036**: its largest bedroom is **8.41 m²**, and its bathroom's turning-circle diameter upper bound is **1.20 m**. Full SVDD passes all six checks, with a shared bedroom placement and **49.30 m²** habitable area. The separate failed SVDD example passes C033 and C036 but has bedrooms of only **7.77 and 7.07 m²**, demonstrating why turning space alone does not establish C035 clearance. These are different generated outputs, not before/after repairs. [Detailed successful design](assets/svdd_full_seed10009.svg) · [Vector graph](assets/svdd_full_seed10009_graph.json) · [Check evidence](assets/svdd_full_seed10009_evaluation.json).
-
-### Assessment coverage
-
-The experiments address the assessment's baseline comparison, compute accounting, guidance-window ablation and annotated vector outputs. [Reproduction instructions](../test_time/README.md), [sweep launcher](../test_time/launch_eval.sh) and [machine-readable constraints](../test_time/configs/constraints_v2.json) accompany this report. New logic lives in `test_time/`; the upstream change to [`house_nn2.py`](../gsdiff/house_nn2.py) supplies reproducible edge randomness. The registry's explicit per-rule severity formulas/output-field mapping still need completing; formulas are currently documented separately.
-
-This evaluation covers one fixed scenario and one seed batch; broader replication remains necessary.
+The completed evaluation will include one comparison table, per-constraint results and labelled success/failure examples at the corrected metric scale. [Reproduction instructions](../test_time/README.md), [sweep launcher](../test_time/launch_eval.sh) and [machine-readable constraints](../test_time/configs/constraints_v2.json) provide the assessment's baseline comparison, compute accounting and reproducibility requirements. One scenario and seed batch limit generalization.
 
 ## Practical limits
 
 **GPU evaluation** batches room extraction and constraint searches, avoiding repeated CPU geometry work inside the guidance loop. Final metrics use the CPU reference checker; search outcomes and severities can differ between backends.
 
-Finite searches may remain unknown, binary penalties provide weak incremental feedback, and greedy selection may reduce diversity. At the assumed height, C077 already implies C078, partly duplicating the objective. Results establish feasibility under the stated assumptions; baseline-relative diagnostics do not establish RPLAN fidelity.
+Finite searches may remain unknown, binary penalties provide weak incremental feedback, and greedy selection may reduce diversity. At the assumed height, C077 already implies C078, partly duplicating the objective. These checks assess feasibility under the stated assumptions; baseline-relative diagnostics do not establish RPLAN fidelity.
 
-[Technical notes](technical_notes.md) retain checkpoint details, exact process-weighting equations, assessment alignment and extended results tables.
+[Technical notes](technical_notes.md) retain checkpoint details, exact process-weighting equations and assessment alignment; their historical result tables belong to the archived assumed-scale experiments.
 
 ## Extensions: late hard-feasibility and repair-aware SVDD
 
-These two extensions keep the frozen checkpoints, six scored constraints and scenario assumptions above. **Results for these new extensions are pending**; the preceding audited experiments are unchanged.
+These two extensions keep the frozen checkpoints, six scored constraints and scenario above. **Results at the corrected 18 m calibration are pending for both extensions.**
 
 ### Binary-rollout conditioning (`hard_h_mc`)
 
@@ -266,4 +232,4 @@ An empty eligible repair bank falls back to its unchanged graph. The chosen **or
 
 Final repair changes the output distribution and may still leave failed constraints. This combined intervention does not isolate guidance from final-repair effects; no ablation result, compute match or exact feasibility-conditioned distribution is claimed.
 
-The [launcher](../test_time/launch_extensions.sh) previews repair-aware SVDD first, then `hard_h_mc`; `--run` executes that order. Defaults are 100 attempts per method starting at seed 10000, with inference microbatches of **32**, saved under `test_time/outputs/extensions_001/`. `--smoke` retains two attempts with two hard-h rollouts and two terminal completions. Saved per-run configurations define the actual budgets, including earlier runs with $L=16$. See [reproduction instructions](../test_time/README.md).
+The [launcher](../test_time/launch_extensions.sh) previews repair-aware SVDD first, then `hard_h_mc`; `--run` executes that order. Defaults are 100 attempts per method starting at seed 10000, with inference microbatches of **32**, saved under `test_time/outputs/rplan18_extensions_001/`. `--smoke` retains two attempts with two hard-h rollouts and two terminal completions. Saved per-run configurations define the actual budgets, including earlier runs with $L=16$. See [reproduction instructions](../test_time/README.md).

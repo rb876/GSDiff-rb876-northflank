@@ -25,7 +25,8 @@ seed="${EVAL_SEED:-10000}"
 inference_batch_size="${INFERENCE_BATCH_SIZE:-32}"
 workers="${WORKERS:-1}"
 device="${DEVICE:-cuda:0}"
-output_root="${EVAL_OUTPUT:-test_time/outputs/extensions_001}"
+config="${EXTENSION_CONFIG:-test_time/configs/extensions_rplan18.json}"
+output_root="${EVAL_OUTPUT:-test_time/outputs/rplan18_extensions_001}"
 read -r -a methods <<< "${METHODS:-svdd_repair_aware hard_h_mc}"
 if [[ "$smoke" == true ]]; then
   trials=2
@@ -58,7 +59,7 @@ printf 'Mode: %s; smoke: %s\n' "$([[ "$dry_run" == true ]] && echo preview || ec
 printf 'Trials per method: %s; first design seed: %s; inference batch: %s; device: %s\n' \
   "$trials" "$seed" "$inference_batch_size" "$device"
 printf 'Workers per method: %s; methods run sequentially.\n' "$workers"
-printf 'Config: test_time/configs/extensions_v1.json; output: %s\n' "$output_root"
+printf 'Config: %s; output: %s\n' "$config" "$output_root"
 printf 'Last-20%% settings and final repair come from the saved extension config.\n'
 
 # Check every selected destination before starting either method.
@@ -94,7 +95,7 @@ for method in "${methods[@]}"; do
     fi
   fi
   execute "$output_root/$method.log" "$python_bin" -u -m test_time.run_extensions \
-    --method "$method" --config test_time/configs/extensions_v1.json \
+    --method "$method" --config "$config" \
     --trials "$trials" --seed "$seed" --inference_batch_size "$inference_batch_size" \
     --workers "$workers" --device "$device" --output_dir "$output_root/$method" "${extra[@]}"
 done

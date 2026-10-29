@@ -52,7 +52,8 @@ def test_runner_exports_tail_batch_and_counts_shared_compute_once(monkeypatch, t
     monkeypatch.setattr(sampling, method + "_batch", sample_batch)
     monkeypatch.setattr(visualize, "save_sample", lambda sample, evaluation, prefix:
                         {extension: str(prefix.with_suffix('.' + extension)) for extension in ("png", "svg")})
-    monkeypatch.setattr(sys, "argv", ["run", "--method", method, "--reward_backend", "cpu", "--trials", "3", "--seed", "1000",
+    monkeypatch.setattr(sys, "argv", ["run", "--config", str(run.Path(run.__file__).parent / "configs/experiment_v2.json"),
+                                    "--method", method, "--reward_backend", "cpu", "--trials", "3", "--seed", "1000",
                                     "--batch_size", "2", "--inference_batch_size", "3", "--n", "2",
                                     "--k", "2", "--guided_steps", "2", "--output_dir", str(output)])
     run.main()
@@ -109,8 +110,10 @@ def test_constraint_listing_needs_no_models_and_preserves_legacy_profile(monkeyp
 
 
 @pytest.mark.parametrize("method", ["baseline", "best_of_n", "svdd_pm"])
-def test_default_gpu_dispatch_metadata_and_final_cpu_results(monkeypatch, tmp_path, capsys, method):
+@pytest.mark.parametrize("final_checker", ["cpu_reference", "cpu_bedroom_audit_v2"])
+def test_default_gpu_dispatch_metadata_and_final_cpu_results(monkeypatch, tmp_path, capsys, method, final_checker):
     from test_time import gpu_constraints, gpu_sampling, policy
+    from test_time.audit_geometry import refined_bedroom_search
     import torch
 
     cpu_calls, tensor_instances, dispatched = [], [], []
@@ -126,8 +129,9 @@ def test_default_gpu_dispatch_metadata_and_final_cpu_results(monkeypatch, tmp_pa
             return "unchanged"
 
     class CpuReference:
-        def __init__(self, specs, validity_weight):
+        def __init__(self, specs, validity_weight, *, bedroom_search_fn=None):
             self.specs, self.validity_weight = specs, validity_weight
+            self.bedroom_search_fn = bedroom_search_fn
 
         def evaluate(self, sample, scenario):
             cpu_calls.append(sample)
@@ -148,6 +152,7 @@ def test_default_gpu_dispatch_metadata_and_final_cpu_results(monkeypatch, tmp_pa
 
     def sample_batch(model, evaluator, scenario, seeds, inference_batch_size, **settings):
         assert isinstance(evaluator, CpuReference)
+        assert evaluator.bedroom_search_fn is (refined_bedroom_search if final_checker == "cpu_bedroom_audit_v2" else None)
         assert inference_batch_size == 3
         if method == "baseline":
             assert "tensor_evaluator" not in settings
@@ -183,9 +188,12 @@ def test_default_gpu_dispatch_metadata_and_final_cpu_results(monkeypatch, tmp_pa
         monkeypatch.setattr(gpu_sampling, name + "_batch_gpu", sample_batch if name == method else forbidden)
     monkeypatch.setattr(visualize, "save_sample", lambda *args: {})
     output = tmp_path / method
-    monkeypatch.setattr(sys, "argv", ["run", "--method", method, "--device", "cpu",
+    arguments = ["run", "--method", method, "--device", "cpu",
                                     "--trials", "3", "--batch_size", "2", "--inference_batch_size", "3",
-                                    "--n", "2", "--k", "2", "--guided_steps", "2", "--output_dir", str(output)])
+                                    "--n", "2", "--k", "2", "--guided_steps", "2", "--output_dir", str(output)]
+    if final_checker == "cpu_reference":
+        arguments += ["--config", str(run.Path(run.__file__).parent / "configs/experiment_v2.json")]
+    monkeypatch.setattr(sys, "argv", arguments)
     run.main()
 
     trial_logs = [line for line in capsys.readouterr().out.splitlines() if "amortized_seconds=" in line]
@@ -196,12 +204,13 @@ def test_default_gpu_dispatch_metadata_and_final_cpu_results(monkeypatch, tmp_pa
     assert snapshot["reward_backend"] == snapshot["guidance"]["backend"] == "gpu"
     assert snapshot["guidance"]["device"] == "cpu"  # backend tests do not require CUDA
     assert snapshot["guidance"]["tensor_settings"] == TensorGuidance.metadata
-    assert snapshot["guidance"]["final_evaluator"] == "cpu_reference"
+    assert snapshot["final_checker"] == snapshot["guidance"]["final_evaluator"] == final_checker
     assert snapshot["guidance"]["trace_format"] == "scores_and_selections"
     saved = [json.loads(line) for line in (output / "candidates.jsonl").read_text().splitlines()]
     assert len(cpu_calls) == len(saved) == (6 if method == "best_of_n" else 3)
     assert all(row["evaluation"]["results"][0]["status"] == "fail" for row in saved)
     assert all(row["overall_validity"] == "invalid" for row in saved)
+    assert all(row["sample"]["metadata"]["final_evaluation_backend"] == final_checker for row in saved)
     counters = json.loads((output / "run.json").read_text())
     assert counters["cpu_candidate_evaluations"] == len(cpu_calls)
     assert counters["gpu_candidate_evaluations"] == (0 if method == "baseline" else 7 * len(cpu_calls))
@@ -209,3 +218,16 @@ def test_default_gpu_dispatch_metadata_and_final_cpu_results(monkeypatch, tmp_pa
     summary = json.loads((output / "summary.json").read_text())
     assert summary["parameters"]["reward_backend"] == "gpu"
     assert summary["overall_valid_rate"] == 0 and summary["structural_valid_rate"] == 1
+
+
+def test_unknown_final_checker_rejected_before_loading_models(monkeypatch, tmp_path, capsys):
+    config = json.loads((run.Path(run.__file__).parent / "configs/experiment_v2.json").read_text())
+    config["final_checker"] = "unrecognised_checker"
+    path = tmp_path / "config.json"
+    path.write_text(json.dumps(config))
+    monkeypatch.setattr(sys, "argv", ["run", "--config", str(path), "--method", "baseline"])
+    monkeypatch.setattr(adapter, "GSDiffAdapter", lambda **kwargs: pytest.fail("Should reject before loading models"))
+    with pytest.raises(SystemExit) as error:
+        run.main()
+    assert error.value.code == 2
+    assert "final_checker must be" in capsys.readouterr().err

@@ -13,7 +13,7 @@ from .types import Scenario, overall_validity, read_json, write_json
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--config", type=Path, default=Path(__file__).parent / "configs/experiment_v2.json")
+    parser.add_argument("--config", type=Path, default=Path(__file__).parent / "configs/experiment_rplan18.json")
     parser.add_argument("--method", required=True, choices=["baseline", "best_of_n", "svdd_pm"])
     for name in ("trials", "seed", "n", "k", "guided_steps"):
         parser.add_argument("--" + name, type=int)
@@ -32,7 +32,8 @@ def main():
                         help="List configured checks and supporting rules without loading models")
     args = parser.parse_args()
     config_path = args.config.resolve()
-    config = {"batch_size": 4, "inference_batch_size": 10, "reward_backend": "gpu", **read_json(config_path)}
+    config = {"batch_size": 4, "inference_batch_size": 10, "reward_backend": "gpu",
+              "final_checker": "cpu_reference", **read_json(config_path)}
     config.update({name: value for name, value in vars(args).items()
                    if name in {"method", "trials", "seed", "n", "k", "guided_steps", "temperature",
                                "batch_size", "inference_batch_size", "reward_backend"} and value is not None})
@@ -42,6 +43,8 @@ def main():
         parser.error("batch_size and inference_batch_size must be positive integers")
     if config["reward_backend"] not in {"cpu", "gpu"}:
         parser.error("reward_backend must be cpu or gpu")
+    if config["final_checker"] not in {"cpu_reference", "cpu_bedroom_audit_v2"}:
+        parser.error("final_checker must be cpu_reference or cpu_bedroom_audit_v2")
     scenario = Scenario(**read_json(config_path.parent / config["scenario"]))
     from .constraints import load_specs
     from .policy import ConstraintEvaluator
@@ -55,7 +58,11 @@ def main():
     print("Supporting rules: " + ", ".join(selection["active_supporting_ids"]), flush=True)
     if selection["disabled_constraints"]:
         print("Not assessed: " + ", ".join(item["id"] for item in selection["disabled_constraints"]), flush=True)
-    evaluator = ConstraintEvaluator(specs, validity_weight=config["validity_weight"])
+    checker_options = {}
+    if config["final_checker"] == "cpu_bedroom_audit_v2":
+        from .audit_geometry import refined_bedroom_search
+        checker_options["bedroom_search_fn"] = refined_bedroom_search
+    evaluator = ConstraintEvaluator(specs, validity_weight=config["validity_weight"], **checker_options)
     from .adapter import GSDiffAdapter, file_hash
     from . import sampling
     from .evaluate import write_report
@@ -91,7 +98,7 @@ def main():
                 "adapter": adapter.metadata, "repo_commit": commit,
                 "guidance": {"backend": config["reward_backend"], "device": str(adapter.device),
                              "tensor_settings": tensor_evaluator.metadata if tensor_evaluator else None,
-                             "final_evaluator": "cpu_reference",
+                             "final_evaluator": config["final_checker"],
                              "trace_format": "scores_and_selections" if tensor_evaluator else "full_candidate_graphs"},
                 "source_sha256": {str(path.relative_to(repo)): file_hash(path)
                                   for path in sorted([*(repo / "test_time").glob("*.py"),
@@ -113,7 +120,7 @@ def main():
            "candidate_evaluations": 0, "fallback_count": 0, "peak_gpu_allocated_bytes": 0}
     write_json(output / "run.json", run)
     print(f"Run: {output}; batch_size={config['batch_size']}, inference_batch_size={config['inference_batch_size']}, "
-          f"reward_backend={config['reward_backend']}, device={adapter.device}", flush=True)
+          f"reward_backend={config['reward_backend']}, final_checker={config['final_checker']}, device={adapter.device}", flush=True)
     if adapter.device.type == "cuda":
         torch.cuda.reset_peak_memory_stats(adapter.device)
     started = time.perf_counter()
@@ -159,6 +166,7 @@ def main():
                         candidate.sample.metadata.update({"config_file": "config.json", "trial": trial,
                                                           "trial_seed": seed, "candidate_id": candidate.candidate_id,
                                                           "active_scored_ids": selection["active_scored_ids"],
+                                                          "final_evaluation_backend": config["final_checker"],
                                                           "not_assessed_ids": [item["id"] for item in selection["disabled_constraints"]],
                                                           "overall_validity": overall_validity(candidate.evaluation)})
                         prefix = output / "samples" / candidate.candidate_id

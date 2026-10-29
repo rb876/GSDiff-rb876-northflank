@@ -41,4 +41,6 @@ def area_policy(specs, scenario):
                                   "unrepresented_area_exclusions_unverified"]
     if scenario.scale_provenance == "assumed":
         result["assumption_flags"].append("assumed_metric_scale")
+    elif scenario.scale_provenance == "paper_derived":
+        result["assumption_flags"].append("paper_derived_metric_scale")
     return result

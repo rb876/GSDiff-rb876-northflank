@@ -28,11 +28,11 @@ class Scenario:
     def __post_init__(self):
         if self.habitable_area_mode not in {"zero_thickness_proxy", "unknown"}:
             raise ValueError("habitable_area_mode must be zero_thickness_proxy or unknown")
-        if self.scale_provenance not in {"missing", "assumed", "verified"}:
-            raise ValueError("scale_provenance must be missing, assumed, or verified")
+        if self.scale_provenance not in {"missing", "assumed", "paper_derived", "verified"}:
+            raise ValueError("scale_provenance must be missing, assumed, paper_derived, or verified")
         scale = self.coordinate_scale_m_per_model_unit
         if (scale is None) != (self.scale_provenance == "missing"):
-            raise ValueError("A supplied scale needs assumed/verified provenance; absent scale needs missing provenance")
+            raise ValueError("A supplied scale needs assumed/paper_derived/verified provenance; absent scale needs missing provenance")
         for name in ("coordinate_scale_m_per_model_unit", "ceiling_height_m", "geometry_grid_m", "geometry_refine_m"):
             value = getattr(self, name)
             if value is not None and (not math.isfinite(value) or value <= 0):

@@ -186,6 +186,47 @@ def test_legacy_state_counts_are_unknown_and_batching_defaults_to_one(tmp_path):
     assert row["node_samples"] == row["edge_samples"] == row["node_samples_per_trial"] == ""
 
 
+def test_comparison_groups_use_selected_checker_not_recalibration_provenance():
+    legacy = {"scenario": {"coordinate_scale_m_per_model_unit": 18 / 512},
+              "constraints": [{"id": "C035"}], "reward_backend": "gpu"}
+    refined = {**legacy, "final_checker": "cpu_bedroom_audit_v2",
+               "guidance": {"final_evaluator": "cpu_bedroom_audit_v2"}}
+    audited = {**legacy, "evaluation_audit": {"checker_version": "cpu_bedroom_audit_v2"}}
+    recalibrated = {**legacy, "scale_recalibration": {
+        "selected_evaluation_backend": "cpu_bedroom_audit_v2",
+        "population_evaluation_backend": "mixed_tensor_cpu", "source_root": "/historical/run"}}
+    assert comparison_group(legacy) != comparison_group(refined)
+    assert comparison_group(refined) == comparison_group(audited) == comparison_group(recalibrated)
+    assert comparison_group(legacy) == comparison_group({**legacy, "final_checker": "cpu_reference"})
+    # Latest selected-output evaluation takes precedence over historical settings.
+    assert comparison_group({**refined, "scale_recalibration": {
+        "selected_evaluation_backend": "cpu_reference"}}) == comparison_group(legacy)
+
+
+def test_mixed_recalibration_reports_selected_cpu_outputs_without_pooling_tensor_scores(tmp_path):
+    rows = [candidate(0, [result("C035", "fail")]),
+            candidate(0, [result("C035", "pass")], selected=False)]
+    directory = make_run(tmp_path / "recalibrated", rows, method="best_of_n", seconds=None)
+    config = json.loads((directory / "config.json").read_text())
+    config["scale_recalibration"] = {
+        "selected_evaluation_backend": "cpu_bedroom_audit_v2",
+        "population_evaluation_backend": "mixed_tensor_cpu"}
+    write_json(directory / "config.json", config)
+    summary = write_report(directory)
+    assert summary["saved_final_candidates"] == 2 and summary["selected_trials"] == 1
+    assert summary["overall_valid_rate"] == 0 and summary["per_constraint"]["C035"]["fail"] == 1
+    assert summary["final_evaluation_backend"] == "cpu_bedroom_audit_v2"
+    assert summary["all_candidates"]["count"] == 2
+    assert summary["all_candidates"]["status"] == "not_reported"
+    assert "overall_valid_rate" not in summary["all_candidates"]
+    assert "compliance" not in summary["all_candidates"]
+    assert summary["compute"]["wall_seconds_per_trial"] is None
+    report = (directory / "report.md").read_text()
+    assert "Mixed checker results are not pooled" in report
+    assert "No new diffusion was run" in report
+    assert "cpu_bedroom_audit_v2" in report
+
+
 def denoiser_run(path, method, evaluations, trial_ids=(0, 1), **settings):
     directory = make_run(path, [candidate(trial, [result("C076", "pass")]) for trial in trial_ids],
                          method=method)

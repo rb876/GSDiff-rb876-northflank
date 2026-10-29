@@ -27,8 +27,25 @@ guided_steps="${GUIDED_STEPS:-999}"
 late_guided_steps="${LATE_GUIDED_STEPS:-200}"
 temperature="${TEMPERATURE:-0}"
 python_bin="${GSDIFF_PYTHON:-python}"
-config="${EVAL_CONFIG:-test_time/configs/experiment_v2.json}"
-output_root="${EVAL_OUTPUT:-test_time/outputs/evaluation_$(date -u +%Y%m%dT%H%M%SZ)}"
+config="${EVAL_CONFIG:-test_time/configs/experiment_rplan18.json}"
+output_root="${EVAL_OUTPUT:-test_time/outputs/rplan18_sweep_001}"
+read -r -a variants <<< "${VARIANTS-baseline best_of_n svdd_pm_last20 svdd_pm_full}"
+if (( ${#variants[@]} == 0 )); then
+  echo "VARIANTS must contain at least one sweep variant." >&2
+  exit 2
+fi
+seen=" "
+for variant in "${variants[@]}"; do
+  case "$variant" in
+    baseline|best_of_n|svdd_pm_last20|svdd_pm_full) ;;
+    *) echo "Unsupported VARIANTS entry: $variant" >&2; exit 2 ;;
+  esac
+  if [[ "$seen" == *" $variant "* ]]; then
+    echo "Duplicate VARIANTS entry: $variant" >&2
+    exit 2
+  fi
+  seen+="$variant "
+done
 
 # Match evaluated denoiser states, not batched forward calls or elapsed time.
 # SVDD uses T + K*G states per output; K=1 takes the baseline shortcut.
@@ -51,7 +68,6 @@ full_states=$((denoising_steps + (svdd_k > 1 ? svdd_k * guided_steps : 0)))
 late_states=$((denoising_steps + (svdd_k > 1 ? svdd_k * late_guided_steps : 0)))
 # N must be an integer: round to the nearest complete trajectory, ties upward.
 best_n=$(((full_states + denoising_steps / 2) / denoising_steps))
-variants=(baseline best_of_n svdd_pm_last20 svdd_pm_full)
 
 if [[ ! "$trials" =~ ^[1-9][0-9]*$ ]] || (( ${#batch_seeds[@]} == 0 )); then
   echo "TRIALS_PER_RUN must be positive and EVAL_SEEDS must contain batch start seeds." >&2
@@ -71,6 +87,7 @@ for ((i=0; i<${#batch_seeds[@]}; i++)); do
 done
 
 printf 'Mode: %s\n' "$([[ "$dry_run" == true ]] && echo preview || echo run)"
+printf 'Config: %s; selected variants: %s\n' "$config" "${variants[*]}"
 printf 'Plan: %s batches x %s trials = %s selected outputs per variant (%s variants).\n' \
   "${#batch_seeds[@]}" "$trials" "$(( ${#batch_seeds[@]} * trials ))" "${#variants[@]}"
 printf 'SVDD K=%s, full guidance=%s steps, late guidance=%s steps, temperature=%s.\n' \
@@ -91,6 +108,11 @@ if [[ "$dry_run" == false ]]; then
   fi
   mkdir -p "$output_root"
   cp -- "$repo_dir/test_time/launch_eval.sh" "$output_root/launcher.sh"
+  compute_pairs='[]'
+  if [[ "$seen" == *" best_of_n "* && "$seen" == *" svdd_pm_full "* ]]; then
+    printf -v compute_pairs '[{"best_of_n":"best_of_n","svdd":"svdd_pm_full","n":%s,"guided_steps":%s,"svdd_states":%s,"best_of_n_states":%s}]' \
+      "$best_n" "$guided_steps" "$full_states" "$((best_n * denoising_steps))"
+  fi
   cat > "$output_root/compute_budget.json" <<EOF
 {
   "metric": "denoiser_evaluated_states_per_selected_output",
@@ -98,10 +120,7 @@ if [[ "$dry_run" == false ]]; then
   "svdd_k": $svdd_k,
   "rounding": "nearest integer N, ties upward",
   "runtime_matched": false,
-  "pairs": [
-    {"best_of_n": "best_of_n", "svdd": "svdd_pm_full", "n": $best_n,
-     "guided_steps": $guided_steps, "svdd_states": $full_states, "best_of_n_states": $((best_n * denoising_steps))}
-  ]
+  "pairs": $compute_pairs
 }
 EOF
 fi

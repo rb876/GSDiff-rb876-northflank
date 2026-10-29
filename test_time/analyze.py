@@ -172,6 +172,14 @@ def write_analysis_report(output, records, skipped, figures, gallery):
              "This report analyses completed saved runs without generating or rechecking designs. "
              "Only the selected output from each trial contributes to method comparisons. "
              "Best-of-N's rejected candidates are excluded. Final constraint outcomes come from the saved CPU reference audit.", ""]
+    if any(record["summary"].get("scale_recalibration") for record in records):
+        lines += ["## Scale recalibration", "",
+                  "Baseline reuses saved unconditioned designs. Best-of-N reselects from its complete saved candidate bank "
+                  "using tensor rewards at the new scale; selected designs receive the refined CPU checker. "
+                  "Rejected candidates retain tensor scores and do not enter the selected-output comparisons. "
+                  "Reused denoiser NFE is historical generation work, not additional inference. "
+                  "Generation runtime is unavailable for recalibrated controls; their separate offline rescoring and audit "
+                  "times are recorded in each run's `calibration.json`. No runtime multiplier is inferred from these controls.", ""]
     if any(record["summary"].get("evaluation_audit") for record in records):
         lines += ["## Evaluation audit", "",
                   "The re-audited runs reuse the **originally selected outputs**, with no reselection or new generation. "

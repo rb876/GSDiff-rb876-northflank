@@ -248,7 +248,7 @@ class TensorConstraintEvaluator:
         severity = torch.full((batch, len(self.specs)), torch.nan, device=device, dtype=dtype)
         count_flags = torch.tensor([spec.counts_toward_compliance for spec in self.specs], device=device, dtype=torch.bool)
         weights = torch.tensor([spec.weight for spec in self.specs], device=device, dtype=dtype)
-        assume_flags = torch.tensor([bool(spec.assumptions) or scenario.scale_provenance == "assumed" or
+        assume_flags = torch.tensor([bool(spec.assumptions) or scenario.scale_provenance in {"assumed", "paper_derived"} or
                                      "ceiling_height" in spec.required_observations for spec in self.specs], device=device)
         low = starts.masked_fill(~vertex_mask[..., None], torch.inf).amin(-2)
         high = starts.masked_fill(~vertex_mask[..., None], -torch.inf).amax(-2)

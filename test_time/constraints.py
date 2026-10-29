@@ -79,6 +79,8 @@ def _result(spec, scenario, status, severity=None, observed=None, explanation=""
     flags = list(dict.fromkeys([*spec.assumptions, *extra_flags]))
     if scenario.scale_provenance == "assumed":
         flags.append("assumed_metric_scale")
+    elif scenario.scale_provenance == "paper_derived":
+        flags.append("paper_derived_metric_scale")
     if "ceiling_height" in spec.required_observations:
         flags.append("scenario_uniform_ceiling_height")
     return ConstraintResult(
