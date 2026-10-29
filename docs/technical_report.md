@@ -30,7 +30,9 @@ The paper introduces a **mixed-base alignment loss** to penalize junction misali
 
 ### Our use of the model
 
-We use the released **unconditional RPLAN** checkpoints because our scenario prescribes neither topology nor boundary. Every comparison shares the same frozen networks and output representation; the original training losses are not optimized during our experiments.
+GSDiff also provides pretrained **topology-constrained** and **boundary-constrained** variants. [Released checkpoints](https://github.com/SizheHu/GSDiff#params-place-in-the-outputs-folder) These could be combined with our inference-time guidance framework by conditioning on a prescribed room-adjacency graph or external building footprint, respectively. They represent complementary settings when room programmes or building boundaries are specified in advance.
+
+We deliberately select the **unconditional RPLAN** checkpoints to isolate the ability of inference-time guidance to satisfy the selected regulatory checks without additional architectural conditioning. Every comparison shares the same frozen networks and output representation; the original training losses are not optimized during our experiments.
 
 The resulting polygons provide areas and regions for placement checks. Our output schema has no explicit doors, fixtures or ceiling heights. Metric conversion follows the documented RPLAN/GSDiff coordinate conventions below; we evaluate the observable geometric subset rather than infer missing building attributes.
 
@@ -39,6 +41,8 @@ This architecture determines where guidance must act: **we change node-sampling 
 ## SVDD-PM: search within the denoising trajectory
 
 **Best-of-N** spends its budget on independent, complete designs and ranks them afterward. **SVDD** repeatedly branches from the current noisy state, using intermediate scores to decide where to continue. Each output retains one active trajectory; the other proposals are discarded at every guided step.
+
+**Reward assumption:** we require only reward evaluations; **differentiability is not assumed**. Discrete graph decoding, thresholded checks and finite placement searches make the scoring pipeline non-differentiable in general. SVDD selects proposals using scalar scores, without backpropagating through the reward or geometry checker. This motivates our choice of derivative-free guidance; GPU execution accelerates the evaluations without changing this assumption.
 
 ### The energy-tilted target
 
@@ -120,21 +124,42 @@ Finite proposals, clean-estimate rewards, coverage filtering and the greedy defa
 
 ## Constraints define the reward
 
-The default profile evaluates **eleven constraints from Appendix A** of the [assessment](../Technical_assessment_TTC.pdf), using three supporting measurement definitions:
+The default profile evaluates **eleven constraints from Appendix A** of the [assessment](../Technical_assessment_TTC.pdf), grouped below. **Every method uses all four groups**; `bathroom_001` names the experiment, not a bathroom-only evaluation. Three supporting rules define measurements without adding separate reward terms or compliance points.
+
+### Bedroom — bed placement and clearance
 
 | ID | Requirement |
 |---|---|
 | **C033** | A bedroom fits a bed and a separate **1.50 m diameter** turning circle. |
 | **C035** | Bed clearances: **0.90 m** on both long sides + **1.20 m** at one short side, or **1.20 m + 0.90 m**. Joint success with C033 requires the same bed placement. |
+
+### Bathroom — one shared furnishing arrangement
+
+| ID | Requirement |
+|---|---|
 | **C036** | A furnished bathroom fits a **1.50 m diameter** turning circle, sharing one fixture/door arrangement with C037/C041. |
 | **C037** | A WC has **0.80 × 1.30 m** lateral transfer space, outside the door swing. |
 | **C041** | **Bathroom-scoped:** the same turning circle overlaps the door swing by **≤0.25 m OR** the space beneath a basin by **≤0.15 m**; at most one overlap is used. |
+
+### Habitability — room size and dwelling capacity
+
+| ID | Requirement |
+|---|---|
 | **C076** | One living room/bedroom satisfies **(area ≥9 m² AND height ≥2.20 m) OR volume ≥20 m³**. |
 | **C077** | Habitable area ≥**28 m²** for two occupants. |
 | **C078** | Habitable volume ≥**66 m³** for two occupants. |
+
+### Ventilation — capacity for the generated room count
+
+| ID | Requirement |
+|---|---|
 | **C085** | Normal kitchen extraction meets the PDF's main-room-count table. |
 | **C086** | Normal bathroom extraction meets the PDF's main-room-count table. |
 | **C090** | Occupant-adjustable reduced ventilation meets **both total and kitchen** flow minima for the main-room count. |
+
+**Supporting rules (not scored):** C034 defines the hypothetical bed dimensions; C079/C080 define habitable-area measurement and exclusions. They supply inputs to the checks above and are excluded from success-rate denominators.
+
+### Shared scenario and assumptions
 
 **Scenario:** paper/code-derived scale **0.03515625 m/drawing pixel**, two occupants, uniform 2.5 m ceilings, an axis-aligned 1.40 × 1.90 m hypothetical bed and zero-thickness walls. Main rooms are living-room and bedroom polygons; every bathroom label is explicitly mapped to the full-bathroom category.
 
@@ -151,7 +176,7 @@ The declared ventilation system is fixed across all methods:
 
 These are scenario capacities selected for a three-main-room dwelling; GSDiff generates the room count but does not predict these rates.
 
-The ventilation threshold tables come from **Appendix A, page 7**. The declared capacities represent a three-main-room system and are held constant across methods. Missing equipment mappings or flows remain unknown. C090 is applicable only in the declared occupant-adjustable mode and uses its supplied table only for 1–7 main rooms. The model does not establish installed airflow, duct routing or inlet/outlet placement. Supporting C034/C079/C080 define measurements without adding compliance points.
+The ventilation threshold tables come from **Appendix A, page 7**. The declared capacities represent a three-main-room system and are held constant across methods. Missing equipment mappings or flows remain unknown. C090 is applicable only in the declared occupant-adjustable mode and uses its supplied table only for 1–7 main rooms. The model does not establish installed airflow, duct routing or inlet/outlet placement.
 
 **Scale calibration:** the [original RPLAN paper (§4)](https://wutomwu.github.io/publications/2019-DeepLayout/paper.pdf) describes an 18 m square encoded as 256 × 256 pixels. GSDiff's [normalization](../datasets/rplan-process4.py) uses $z=(x_{256}-128)/128$; our [decoder](../test_time/adapter.py) exports $x_{512}=\operatorname{trunc}(256z+256)$. Therefore,
 
@@ -161,6 +186,8 @@ s=\frac{18}{512}=0.03515625\;\mathrm{m/drawing\ pixel},
 $$
 
 This conversion is derived from the dataset and code conventions, rather than a physical measurement of each generated building. Generation rewards and final checks use the same conversion.
+
+### From checks to a scalar reward
 
 For applicable, measurable checks $\mathcal M(G)$, equal-weight scalarization gives
 
@@ -198,7 +225,7 @@ The joint term replaces the three bathroom severities during selection, avoiding
 
 **Two budget comparisons:** Best-of-3 matches late SVDD at **3,000 NFE/output**; Best-of-11 approximately matches full SVDD at **11,000 versus 10,990**. Construct Best-of-3 from candidate indices **0, 1 and 2** in every saved Best-of-11 trial, fixed before inspecting scores. Reapply the same selection rule to their saved GPU scores, then CPU-audit the selected design. Retain all 100 trials and keep the Best-of-11 results. These are nested, paired controls rather than independent candidate banks.
 
-**Pilot protocol:** 100 outputs per method with paired seeds `10000–10099`, shared frozen checkpoints, eleven scored checks and the scenario above. Final selected outputs use the CPU placement audit; preserve failed and unresolved cases in the denominators. Report ventilation, accessibility and habitability group results alongside overall success. Keep search budgets identical across methods, and report bathroom unknowns separately from proven failures.
+**Pilot protocol:** 100 outputs per method with paired seeds `10000–10099`, shared frozen checkpoints, eleven scored checks and the scenario above. Final selected outputs use the CPU placement audit; preserve failed and unresolved cases in the denominators. Report **bedroom, bathroom, habitability and ventilation** results alongside overall success. These groups organize the analysis; overall validity still requires all applicable scored checks to pass. Keep search budgets identical across methods, and report bathroom unknowns separately from proven failures.
 
 Report overall validity with 95% Wilson intervals, per-constraint pass/fail/unknown rates, structural validity, measured severity and layout diversity. Record NFE and elapsed sampling/checking time separately. Sample-wise denoiser cost is $T+KG$ for SVDD and $NT$ for Best-of-N, where $G$ is the number of guided transitions; this does not match edge-model or checker cost.
 
@@ -279,3 +306,17 @@ Final repair changes the output distribution and may still leave failed constrai
 The existing finite wall-proposal order favours enlarging the largest bedroom. Adding bathroom scoring does not make that proposal bank target bathroom bottlenecks, and cannot guarantee a useful bathroom repair.
 
 The [launcher](../test_time/launch_extensions.sh) previews repair-aware SVDD first, then `hard_h_mc`; `--run` executes that order. Defaults are 100 attempts per method starting at seed 10000, with inference microbatches of **32**, saved under `test_time/outputs/bathroom_extensions_001/`. `--smoke` retains two attempts with two hard-h rollouts and two terminal completions. Saved per-run configurations define the actual budgets, including earlier runs with $L=16$. See [reproduction instructions](../test_time/README.md).
+
+## Future directions
+
+### Feynman–Kac steering: population search
+
+Given more time, we would also investigate [**Feynman–Kac steering** (Singhal et al., ICML 2025)](https://proceedings.mlr.press/v267/singhal25b.html) as an alternative to SVDD, maintaining and resampling a population of diffusion trajectories using constraint-based potentials. This could improve exploration and reduce the risk of prematurely discarding promising floorplans.
+
+### ParetoFlow: multi-objective exploration
+
+[ParetoFlow (Yuan et al., ICLR 2025)](https://arxiv.org/abs/2412.03718) explores a Pareto front using multiple objective weightings and exchanges candidates between neighbouring searches. Inspired by this, we could retain alternative compromises between the four constraint groups during search. Final acceptance would still require every applicable check to pass. ParetoFlow uses flow matching and gradients of learned objective predictors; applying its ideas to our frozen DDPM and discrete graph checks would require adaptation.
+
+### MARTINI: learned reward composition
+
+[MARTINI: Steered Not Stirred (Sargood et al., 2026)](https://arxiv.org/abs/2610.25502) learns to combine cheap surrogate rewards from limited reference scores or rankings. We could use a separate CPU-audited calibration set to learn how GPU proxy scores predict audited feasibility, then use that scalar reward within SVDD or Feynman–Kac steering. The composition would be fitted offline; inference would use its scores without requiring gradients through the geometry checks. This changes reward construction rather than the sampling algorithm. Final CPU checks would remain authoritative, and unresolved audits would remain unknown.
