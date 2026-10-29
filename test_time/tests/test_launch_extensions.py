@@ -15,7 +15,7 @@ SCRIPT = REPO / "test_time" / "launch_extensions.sh"
 
 def launch(tmp_path, *arguments, **settings):
     env = os.environ.copy()
-    for name in ("INFERENCE_BATCH_SIZE", "METHODS"):
+    for name in ("INFERENCE_BATCH_SIZE", "METHODS", "WORKERS"):
         env.pop(name, None)
     env.update(PYTHON="must-not-run-in-preview", TRIALS_PER_RUN="100", EVAL_SEED="10000",
                DEVICE="cuda:0", EVAL_OUTPUT=str(tmp_path / "output with spaces"))
@@ -53,6 +53,7 @@ def test_default_preview_has_both_methods_and_summary_without_creating_output(tm
         assert command[command.index("--trials") + 1] == "100"
         assert command[command.index("--seed") + 1] == "10000"
         assert command[command.index("--inference_batch_size") + 1] == "32"
+        assert command[command.index("--workers") + 1] == "1"
         assert command[command.index("--device") + 1] == "cuda:0"
         assert command[command.index("--output_dir") + 1] == str(tmp_path / "output with spaces" / method)
         assert "--k" not in command
@@ -75,8 +76,22 @@ def test_smoke_changes_trial_and_proposal_counts_without_shortening_guidance(tmp
     assert not (tmp_path / "output with spaces").exists()
 
 
+def test_parallel_workers_keep_total_trials_and_method_order(tmp_path):
+    result = launch(tmp_path, WORKERS="2", TRIALS_PER_RUN="5")
+    assert result.returncode == 0, result.stderr
+    repair, hard, summary = commands(result)
+    assert repair[repair.index("--method") + 1] == "svdd_repair_aware"
+    assert hard[hard.index("--method") + 1] == "hard_h_mc"
+    for command in (repair, hard):
+        assert command[command.index("--workers") + 1] == "2"
+        assert command[command.index("--trials") + 1] == "5"
+    assert "--summarize_root" in summary
+    assert not (tmp_path / "output with spaces").exists()
+
+
 @pytest.mark.parametrize("settings", [{"METHODS": "baseline"}, {"METHODS": "hard_h_mc hard_h_mc"},
                                      {"TRIALS_PER_RUN": "0"}, {"INFERENCE_BATCH_SIZE": "-1"},
+                                     {"WORKERS": "0"}, {"WORKERS": "two"},
                                      {"EVAL_SEED": "wrong"}])
 def test_invalid_settings_are_rejected_before_execution(tmp_path, settings):
     result = launch(tmp_path, "--run", **settings)

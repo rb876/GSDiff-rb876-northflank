@@ -23,6 +23,7 @@ python_bin="${PYTHON:-python}"
 trials="${TRIALS_PER_RUN:-100}"
 seed="${EVAL_SEED:-10000}"
 inference_batch_size="${INFERENCE_BATCH_SIZE:-32}"
+workers="${WORKERS:-1}"
 device="${DEVICE:-cuda:0}"
 output_root="${EVAL_OUTPUT:-test_time/outputs/extensions_001}"
 read -r -a methods <<< "${METHODS:-svdd_repair_aware hard_h_mc}"
@@ -31,8 +32,9 @@ if [[ "$smoke" == true ]]; then
 fi
 
 if [[ ! "$trials" =~ ^[1-9][0-9]*$ || ! "$inference_batch_size" =~ ^[1-9][0-9]*$ ||
+      ! "$workers" =~ ^[1-9][0-9]*$ ||
       ! "$seed" =~ ^(0|[1-9][0-9]*)$ ]]; then
-  echo "TRIALS_PER_RUN and INFERENCE_BATCH_SIZE must be positive integers; EVAL_SEED must be nonnegative." >&2
+  echo "TRIALS_PER_RUN, INFERENCE_BATCH_SIZE and WORKERS must be positive integers; EVAL_SEED must be nonnegative." >&2
   exit 2
 fi
 if (( ${#methods[@]} == 0 )); then
@@ -55,6 +57,7 @@ done
 printf 'Mode: %s; smoke: %s\n' "$([[ "$dry_run" == true ]] && echo preview || echo run)" "$smoke"
 printf 'Trials per method: %s; first design seed: %s; inference batch: %s; device: %s\n' \
   "$trials" "$seed" "$inference_batch_size" "$device"
+printf 'Workers per method: %s; methods run sequentially.\n' "$workers"
 printf 'Config: test_time/configs/extensions_v1.json; output: %s\n' "$output_root"
 printf 'Last-20%% settings and final repair come from the saved extension config.\n'
 
@@ -93,7 +96,7 @@ for method in "${methods[@]}"; do
   execute "$output_root/$method.log" "$python_bin" -u -m test_time.run_extensions \
     --method "$method" --config test_time/configs/extensions_v1.json \
     --trials "$trials" --seed "$seed" --inference_batch_size "$inference_batch_size" \
-    --device "$device" --output_dir "$output_root/$method" "${extra[@]}"
+    --workers "$workers" --device "$device" --output_dir "$output_root/$method" "${extra[@]}"
 done
 
 execute "$output_root/comparison.log" "$python_bin" -m test_time.run_extensions \

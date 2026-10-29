@@ -397,12 +397,29 @@ EVAL_OUTPUT=test_time/outputs/extensions_001 \
   bash test_time/launch_extensions.sh --run
 ```
 
-Set `TRIALS_PER_RUN`, `EVAL_SEED`, `INFERENCE_BATCH_SIZE`, `DEVICE`, or `PYTHON`
+Set `TRIALS_PER_RUN`, `EVAL_SEED`, `INFERENCE_BATCH_SIZE`, `WORKERS`, `DEVICE`, or `PYTHON`
 to override launcher defaults. To launch just one method, set
 `METHODS=hard_h_mc` or `METHODS=svdd_repair_aware`. Existing output directories are
 never overwritten; choose a new `EVAL_OUTPUT` for another run. Methods execute
 sequentially: **repair-aware SVDD first, then hard-h MC**. Both default to an
 inference microbatch size of **32** for proposals/rollouts within each attempt.
+
+To overlap CPU checking/export with GPU generation, use two independent workers
+on the same GPU (the default remains one):
+
+```bash
+WORKERS=2 EVAL_OUTPUT=test_time/outputs/extensions_003 \
+  bash test_time/launch_extensions.sh --run
+```
+
+This still runs **100 attempts per method**, split into seeds 10000–10049 and
+10050–10099. Both repair-aware workers finish before either hard-h worker starts.
+Each worker loads its own model and writes its own directory; the parent combines
+their attempt ledgers and summaries, including failed attempts. Parallel workers
+default to one OpenMP/MKL thread each unless those environment variables are set.
+The benefit depends on available CPU cores and GPU contention; this does not
+change the rollout or repair budgets. Stop the previous launcher before starting
+a replacement, and use a new output root.
 
 Settings are in [`configs/extensions_v1.json`](configs/extensions_v1.json):
 
@@ -443,6 +460,19 @@ extensions_001/
     samples/                 # graphs, check evidence, PNG/SVG; pre-repair and edit overlays too
     lookaheads/              # verified successful hard-h lookahead graphs/evidence
 ```
+
+With `WORKERS=2`, each method directory instead contains `worker_001/` and
+`worker_002/` with those artifacts, plus `worker_001.log`, `worker_002.log`, a
+`parallel.json` execution manifest and combined `trials.jsonl`, `summary.json`,
+`run.json`, `config.json` and `report.md`. Follow individual progress with:
+
+```bash
+tail -f test_time/outputs/extensions_003/svdd_repair_aware/worker_*.log
+```
+
+Worker times overlap: summed episode seconds and mean seconds per attempt measure
+work/latency, not the elapsed duration of the parallel run. The combined summary
+also records elapsed time including setup/export and throughput separately.
 
 Use `trials.jsonl` and the extension summaries for success rates. The old analysis
 assumes one selected graph per trial and would omit hard-h failures with no returned

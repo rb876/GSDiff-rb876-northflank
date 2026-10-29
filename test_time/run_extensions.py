@@ -12,6 +12,7 @@ import hashlib
 import json
 from pathlib import Path
 import subprocess
+import sys
 import time
 
 from .types import Scenario, overall_validity, read_json, write_json
@@ -141,6 +142,8 @@ def _parser():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--config", type=Path, default=Path(__file__).parent / "configs/extensions_v1.json")
     parser.add_argument("--method", choices=METHODS)
+    parser.add_argument("--workers", type=int, default=1,
+                        help="Independent processes sharing the device; split the trial seeds (default: 1)")
     for name in ("trials", "seed", "inference_batch_size", "k", "rollouts", "terminal_k", "max_nfe"):
         parser.add_argument("--" + name, type=int)
     parser.add_argument("--device", default="cuda:0")
@@ -368,11 +371,28 @@ def run(args):
 def main(argv=None):
     parser = _parser()
     args = parser.parse_args(argv)
+    if args.workers < 1:
+        parser.error("--workers must be positive")
     if args.summarize_root:
         summarize_root(args.summarize_root)
         return
     if args.method is None:
         parser.error("--method is required unless --summarize_root is used")
+    if args.workers > 1:
+        from .parallel_extensions import run_parallel
+        from .extension_workers import summarize_workers
+        try:
+            output = run_parallel(args)
+        except BaseException:
+            if getattr(args, "parallel_output", None) is not None:
+                try:
+                    summarize_workers(args.parallel_output, args.method)
+                except Exception as error:
+                    print(f"Could not summarize partial workers: {error}", file=sys.stderr)
+            raise
+        summarize_workers(output, args.method)
+        print(f"Saved {output / 'report.md'}", flush=True)
+        return
     run(args)
 
 
