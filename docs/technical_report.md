@@ -271,7 +271,7 @@ The joint term replaces the three bathroom severities during selection, avoiding
 
 ## Evaluation and Compute
 
-**Protocol:** 100 selected designs per completed method, paired trial seeds `10000–10099`, the same frozen checkpoints, eleven scored checks and the declared 18 m canvas scenario. All final outcomes use the CPU bathroom audit. Full SVDD remains **pending**; full evaluation of the extensions was deferred due to **time constraints**.
+**Protocol:** the main comparison uses 100 selected designs per completed method, paired trial seeds `10000–10099`, the same frozen checkpoints, eleven scored checks and the declared 18 m canvas scenario. All final outcomes use the CPU bathroom audit. Hard-MC additionally completed 100 attempts under the same scenario and seeds; its results appear below. Full SVDD remains **pending**; full evaluation of repair-aware SVDD was deferred due to **time constraints**.
 
 **Table 1.** Overall validity requires valid structure and every applicable scored check to pass. Brackets give 95% Wilson intervals. Check success is passes/all applicable checks, including unknowns in the denominator; all eleven checks are applicable here. Severity averages measured per-check penalties, excluding unknowns and the structural penalty. Room-count $W_1$ measures distribution shift from baseline on usable, structurally valid layouts. The full-SVDD NFE budget is planned.
 
@@ -332,7 +332,7 @@ The detailed SVGs use the labelled-floorplan and constraint-card layout: each ch
 
 All **86/99/99/100** usable, structurally valid graphs (baseline/Best-of-2/late SVDD/Best-of-11) are unique. Mean pairwise semantic-layout distance stays within **0.804–0.810**. These diagnostics show no exact-duplicate collapse, while Best-of-11 has the largest room-count shift from baseline. Fixed-canvas diversity measures do not establish fidelity to real floorplans; no RPLAN reference dataset was available for FID/KID. The [saved metrics and provenance](assets/bathroom_001/result_audit.json) include the diversity results and source hashes.
 
-This evaluation supplies the assessment's frozen-model baseline, explicit constraint subset and assumptions, scalar reward, matched-NFE comparison, per-check outcomes, failure analysis and annotated vector outputs. The full-versus-late ablation remains pending; full extension evaluations were deferred due to time constraints. One scenario and one batch of 100 paired trials limit generalization. [Numerical audit](assets/bathroom_001/result_audit.json) · [Figure generator](../test_time/report_assets.py) · [Reproduction instructions](../test_time/README.md) · [Constraint definitions](../test_time/configs/constraints_bathroom_v1.json).
+This evaluation supplies the assessment's frozen-model baseline, explicit constraint subset and assumptions, scalar reward, matched-NFE comparison, per-check outcomes, failure analysis and annotated vector outputs. Hard-MC adds a completed extension evaluation. The full-versus-late ablation remains pending; full repair-aware evaluation was deferred due to time constraints. One scenario and one batch of 100 paired trials limit generalization. [Numerical audit](assets/bathroom_001/result_audit.json) · [Figure generator](../test_time/report_assets.py) · [Reproduction instructions](../test_time/README.md) · [Constraint definitions](../test_time/configs/constraints_bathroom_v1.json).
 
 
 ## Practical Limits
@@ -377,7 +377,7 @@ At the assumed height, C077 implies C078. C036/C037/C041 share one bathroom arra
 
 ## Extensions: Late Hard-Feasibility and Repair-Aware SVDD
 
-We propose two extensions to improve the information used for branch selection: **the chance of eventual success** and **the feasibility attainable through small repairs**. Both are implemented using the same frozen checkpoints, eleven scored constraints and declared scenario, without reward gradients. Decisions are concentrated in the **last 10% of denoising**, within the final 100 transitions, where proposals have less noisy geometry. **Full evaluation was deferred due to time constraints.**
+We propose two extensions to improve the information used for branch selection: **the chance of eventual success** and **the feasibility attainable through small repairs**. Both are implemented using the same frozen checkpoints, eleven scored constraints and declared scenario, without reward gradients. Decisions are concentrated in the **last 10% of denoising**, within the final 100 transitions, where proposals have less noisy geometry. **Hard-MC completed 100 attempts; full repair-aware evaluation was deferred due to time constraints.**
 
 ### Hard-Feasibility MC: Predicting Eventual Success (`hard_h_mc`)
 
@@ -412,6 +412,35 @@ Continuous severity never enters this stochastic selection. Decision anchors lie
 The final bank contains eight completions; selection is uniform among verified successes, otherwise the attempt fails. Finite proposal/rollout/terminal banks, fallbacks and a **40,000-NFE attempt cap** make this approximate conditioning. Success rates include failed attempts; retaining only successful episodes can further bias the distribution.
 
 **Naming and target:** `hard_h_mc` estimates binary continuation probabilities online. The paper's [SVDD-MC (§4.3)](https://arxiv.org/html/2408.08252v5#S4.SS3) instead learns a value estimator by regression. The notes' limit $p_\beta\to p_F$ as $\beta\to\infty$ requires $E=0$ exactly on the feasible set. Our unknown checks carry no numeric severity, so $E=0$ alone does **not** establish feasibility; the explicit pass predicate is essential.
+
+#### Hard-MC Results
+
+Hard-MC returns **83 valid designs from 100 attempts** (95% Wilson interval: **74.5–89.1%**). Every returned design passes all eleven checks. The remaining 17 attempts return no graph and count as unsuccessful.
+
+**Table 2.** Final outcomes, including attempts whose successful lookaheads did not lead to a valid terminal sample.
+
+| Outcome | Attempts |
+|---|---:|
+| Valid final design returned | 83 |
+| No final design; a valid lookahead was found | 13 |
+| No valid design found | 4 |
+
+Thus **96 attempts found a feasible completion somewhere in the search**, but the final success rate is **83%**. Lookaheads score intermediate branches; only the final bank supplies returned designs.
+
+**Table 3.** Measured costs include all 100 attempts. Sampling/checking time excludes setup and artifact export; cost per valid design includes unsuccessful attempts.
+
+| Cost | Per attempt | Per returned valid design |
+|---|---:|---:|
+| NFE | 6,808 | 8,202 |
+| Sampling/checking time, seconds | 50.98 | 61.42 |
+
+Hard-MC reaches **83%** success versus **56%** for late SVDD, using **3.4×** its NFE per attempt. Best-of-11 reaches 94% at 11,000 NFE; these extension comparisons have different budgets. The run took **86 minutes** overall, with CPU checking accounting for **67%** of sampling/checking time. [Saved metrics and provenance](assets/hard_mc_overnight_001/result_audit.json) · [All 100 attempts](assets/hard_mc_overnight_001/per_attempt.csv).
+
+**Runtime:** Hard-MC took **50.98 s/attempt**, versus **106.30 s** for late SVDD, despite higher NFE. It evaluated **56 graphs per attempt versus 1,002**, reducing repeated edge decoding, room extraction and constraint searches—a likely explanation for its shorter runtime. NFE counts only denoising and excludes that work.
+
+![Hard-MC: a returned valid floorplan at seed 10001 and the eight rejected terminal candidates' check results at seed 10023.](assets/hard_mc_overnight_001/hard_mc_examples.png)
+
+**Figure 5.** Left: the first returned success, with all eleven checks passing. Right: the first failed attempt where all eight terminal candidates fail only **C085/C090**. Rejected floorplans were not saved; the failure panel shows their recorded checks. [Annotated success](assets/hard_mc_overnight_001/hard_mc_success_seed10001_annotated.svg) · [Vector PDF](assets/hard_mc_overnight_001/hard_mc_examples.pdf) · [Source evidence](assets/hard_mc_overnight_001/examples_sources.json).
 
 ### Repair-Aware SVDD: Identifying Layouts That Small Edits Can Improve (`svdd_repair_aware`)
 

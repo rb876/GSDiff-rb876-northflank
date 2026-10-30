@@ -1,0 +1,175 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="1678" viewBox="0 0 1440 1678">
+<rect width="100%" height="100%" fill="white"/>
+<text x="32" y="47" fill="#167343" font-family="DejaVu Sans, sans-serif" font-size="23" font-weight="bold">GSDiff | overall: VALID | structure: valid</text>
+<text x="32" y="78" fill="#263238" font-family="DejaVu Sans, sans-serif" font-size="15" font-weight="normal">11 passed  |  0 failed  |  0 unresolved  |  Energy: 0</text>
+<text x="32" y="104" fill="#56616b" font-family="DejaVu Sans, sans-serif" font-size="13" font-weight="normal">paper_derived scale: 0.0351562 m/drawing pixel. Room areas below use this scale.</text>
+<text x="32" y="139" fill="#263238" font-family="DejaVu Sans, sans-serif" font-size="17" font-weight="bold">Room types and areas</text>
+<text x="632" y="129" fill="#263238" font-family="DejaVu Sans, sans-serif" font-size="17" font-weight="bold">Constraint results</text>
+<rect x="32" y="150" width="560" height="530" rx="6" fill="#ffffff" stroke="#e1e5e9"/>
+<polygon points="345.867,474.345 300.300,474.345 300.300,633.212 300.300,664.000 425.916,664.000 425.916,474.345 345.867,474.345" fill="#eab69f" stroke="#777777" stroke-width="2"/>
+<polygon points="345.867,474.345 345.867,397.990 384.044,397.990 384.044,329.025 384.044,305.626 344.635,305.626 344.635,237.892 344.635,165.232 252.271,164.000 252.271,305.626 201.778,305.626 201.778,474.345 300.300,474.345 345.867,474.345" fill="#f4f1de" stroke="#777777" stroke-width="2"/>
+<polygon points="183.305,633.212 300.300,633.212 300.300,474.345 201.778,474.345 183.305,474.345 183.305,633.212" fill="#eab69f" stroke="#777777" stroke-width="2"/>
+<polygon points="344.635,165.232 344.635,237.892 440.695,237.892 440.695,165.232 344.635,165.232" fill="#5f797b" stroke="#777777" stroke-width="2"/>
+<polygon points="384.044,329.025 440.695,329.025 440.695,237.892 344.635,237.892 344.635,305.626 384.044,305.626 384.044,329.025" fill="#e07a5f" stroke="#777777" stroke-width="2"/>
+<line x1="345.867" y1="474.345" x2="300.300" y2="474.345" stroke="#70777c" stroke-width="2"/>
+<line x1="345.867" y1="474.345" x2="345.867" y2="397.990" stroke="#70777c" stroke-width="2"/>
+<line x1="345.867" y1="474.345" x2="425.916" y2="474.345" stroke="#70777c" stroke-width="2"/>
+<line x1="183.305" y1="633.212" x2="183.305" y2="474.345" stroke="#70777c" stroke-width="2"/>
+<line x1="183.305" y1="633.212" x2="300.300" y2="633.212" stroke="#70777c" stroke-width="2"/>
+<line x1="344.635" y1="165.232" x2="440.695" y2="165.232" stroke="#70777c" stroke-width="2"/>
+<line x1="344.635" y1="165.232" x2="252.271" y2="164.000" stroke="#70777c" stroke-width="2"/>
+<line x1="344.635" y1="165.232" x2="344.635" y2="237.892" stroke="#70777c" stroke-width="2"/>
+<line x1="384.044" y1="329.025" x2="384.044" y2="305.626" stroke="#70777c" stroke-width="2"/>
+<line x1="384.044" y1="329.025" x2="384.044" y2="397.990" stroke="#70777c" stroke-width="2"/>
+<line x1="384.044" y1="329.025" x2="440.695" y2="329.025" stroke="#70777c" stroke-width="2"/>
+<line x1="384.044" y1="305.626" x2="344.635" y2="305.626" stroke="#70777c" stroke-width="2"/>
+<line x1="300.300" y1="474.345" x2="201.778" y2="474.345" stroke="#70777c" stroke-width="2"/>
+<line x1="300.300" y1="474.345" x2="300.300" y2="633.212" stroke="#70777c" stroke-width="2"/>
+<line x1="345.867" y1="397.990" x2="384.044" y2="397.990" stroke="#70777c" stroke-width="2"/>
+<line x1="440.695" y1="165.232" x2="440.695" y2="237.892" stroke="#70777c" stroke-width="2"/>
+<line x1="201.778" y1="474.345" x2="201.778" y2="305.626" stroke="#70777c" stroke-width="2"/>
+<line x1="201.778" y1="474.345" x2="183.305" y2="474.345" stroke="#70777c" stroke-width="2"/>
+<line x1="440.695" y1="237.892" x2="344.635" y2="237.892" stroke="#70777c" stroke-width="2"/>
+<line x1="440.695" y1="237.892" x2="440.695" y2="329.025" stroke="#70777c" stroke-width="2"/>
+<line x1="252.271" y1="164.000" x2="252.271" y2="305.626" stroke="#70777c" stroke-width="2"/>
+<line x1="300.300" y1="664.000" x2="425.916" y2="664.000" stroke="#70777c" stroke-width="2"/>
+<line x1="300.300" y1="664.000" x2="300.300" y2="633.212" stroke="#70777c" stroke-width="2"/>
+<line x1="201.778" y1="305.626" x2="252.271" y2="305.626" stroke="#70777c" stroke-width="2"/>
+<line x1="425.916" y1="664.000" x2="425.916" y2="474.345" stroke="#70777c" stroke-width="2"/>
+<line x1="344.635" y1="237.892" x2="344.635" y2="305.626" stroke="#70777c" stroke-width="2"/>
+<text x="363.108" y="565.172" text-anchor="middle" fill="#20262c" font-family="DejaVu Sans, sans-serif" font-size="13" stroke="white" stroke-width="3" paint-order="stroke fill" stroke-linejoin="round">Bedroom 1</text>
+<text x="363.108" y="582.172" text-anchor="middle" fill="#20262c" font-family="DejaVu Sans, sans-serif" font-size="13" stroke="white" stroke-width="3" paint-order="stroke fill" stroke-linejoin="round">19.41 m²</text>
+<text x="275.468" y="371.813" text-anchor="middle" fill="#20262c" font-family="DejaVu Sans, sans-serif" font-size="13" stroke="white" stroke-width="3" paint-order="stroke fill" stroke-linejoin="round">Living 1</text>
+<text x="275.468" y="388.813" text-anchor="middle" fill="#20262c" font-family="DejaVu Sans, sans-serif" font-size="13" stroke="white" stroke-width="3" paint-order="stroke fill" stroke-linejoin="round">33.30 m²</text>
+<text x="241.803" y="549.778" text-anchor="middle" fill="#20262c" font-family="DejaVu Sans, sans-serif" font-size="13" stroke="white" stroke-width="3" paint-order="stroke fill" stroke-linejoin="round">Bedroom 2</text>
+<text x="241.803" y="566.778" text-anchor="middle" fill="#20262c" font-family="DejaVu Sans, sans-serif" font-size="13" stroke="white" stroke-width="3" paint-order="stroke fill" stroke-linejoin="round">15.15 m²</text>
+<text x="392.665" y="189.062" text-anchor="middle" fill="#20262c" font-family="DejaVu Sans, sans-serif" font-size="13" stroke="white" stroke-width="3" paint-order="stroke fill" stroke-linejoin="round">Bathroom</text>
+<text x="392.665" y="206.062" text-anchor="middle" fill="#20262c" font-family="DejaVu Sans, sans-serif" font-size="13" stroke="white" stroke-width="3" paint-order="stroke fill" stroke-linejoin="round">1</text>
+<text x="392.665" y="223.062" text-anchor="middle" fill="#20262c" font-family="DejaVu Sans, sans-serif" font-size="13" stroke="white" stroke-width="3" paint-order="stroke fill" stroke-linejoin="round">5.69 m²</text>
+<text x="404.086" y="270.558" text-anchor="middle" fill="#20262c" font-family="DejaVu Sans, sans-serif" font-size="13" stroke="white" stroke-width="3" paint-order="stroke fill" stroke-linejoin="round">Kitchen 1</text>
+<text x="404.086" y="287.558" text-anchor="middle" fill="#20262c" font-family="DejaVu Sans, sans-serif" font-size="13" stroke="white" stroke-width="3" paint-order="stroke fill" stroke-linejoin="round">6.38 m²</text>
+<text x="32" y="713" fill="#263238" font-family="DejaVu Sans, sans-serif" font-size="17" font-weight="bold">Room key (R numbers identify small rooms)</text>
+<rect x="32" y="734" width="13" height="13" rx="0" fill="#eab69f" stroke="#999999"/>
+<text x="53" y="744" fill="#263238" font-family="DejaVu Sans, sans-serif" font-size="13" font-weight="normal">R1 Bedroom 1 · 19.41 m²</text>
+<rect x="318" y="734" width="13" height="13" rx="0" fill="#f4f1de" stroke="#999999"/>
+<text x="339" y="744" fill="#263238" font-family="DejaVu Sans, sans-serif" font-size="13" font-weight="normal">R2 Living 1 · 33.30 m²</text>
+<rect x="32" y="763" width="13" height="13" rx="0" fill="#eab69f" stroke="#999999"/>
+<text x="53" y="773" fill="#263238" font-family="DejaVu Sans, sans-serif" font-size="13" font-weight="normal">R3 Bedroom 2 · 15.15 m²</text>
+<rect x="318" y="763" width="13" height="13" rx="0" fill="#5f797b" stroke="#999999"/>
+<text x="339" y="773" fill="#263238" font-family="DejaVu Sans, sans-serif" font-size="13" font-weight="normal">R4 Bathroom 1 · 5.69 m²</text>
+<rect x="32" y="792" width="13" height="13" rx="0" fill="#e07a5f" stroke="#999999"/>
+<text x="53" y="802" fill="#263238" font-family="DejaVu Sans, sans-serif" font-size="13" font-weight="normal">R5 Kitchen 1 · 6.38 m²</text>
+<text x="32" y="868" fill="#167343" font-family="DejaVu Sans, sans-serif" font-size="17" font-weight="bold">Verified bathroom arrangement</text>
+<text x="32" y="889" fill="#263238" font-family="DejaVu Sans, sans-serif" font-size="13" font-weight="normal">Bathroom 1 · assumed fixtures · shared C036/C037/C041 layout</text>
+<rect x="32" y="900" width="560" height="320" rx="6" fill="#fbfcfd" stroke="#dce2e7"/>
+<polygon points="117.000,912.000 117.000,1207.000 507.000,1207.000 507.000,912.000 117.000,912.000" fill="#f3f6f6" stroke="#5f797b" stroke-width="2"/>
+<polygon data-bathroom-object="door_swing_polygon_m" points="117.000,1207.000 230.778,1207.000 230.641,1201.417 230.230,1195.848 229.546,1190.305 228.592,1184.803 227.368,1179.354 225.879,1173.972 224.127,1168.669 222.117,1163.459 219.854,1158.354 217.343,1153.366 214.590,1148.507 211.603,1143.788 208.387,1139.223 204.951,1134.820 201.304,1130.592 197.453,1126.547 193.408,1122.696 189.180,1119.049 184.777,1115.613 180.212,1112.397 175.493,1109.410 170.634,1106.657 165.646,1104.146 160.541,1101.883 155.331,1099.873 150.028,1098.121 144.646,1096.632 139.197,1095.408 133.695,1094.454 128.152,1093.770 122.583,1093.359 117.000,1093.222 117.000,1207.000" fill="none" stroke="#e67e22" stroke-width="2"><title>Door swing</title></polygon>
+<polygon data-bathroom-object="transfer_polygon_m" points="173.889,912.000 287.667,912.000 287.667,1096.889 173.889,1096.889 173.889,912.000" fill="none" stroke="#16834d" stroke-width="2"><title>WC transfer</title></polygon>
+<polygon data-bathroom-object="wc_polygon_m" points="117.000,912.000 173.889,912.000 173.889,1011.556 117.000,1011.556 117.000,912.000" fill="#e7eaee" stroke="#374151" stroke-width="2"><title>WC</title></polygon>
+<polygon data-bathroom-object="basin_polygon_m" points="435.889,912.000 507.000,912.000 507.000,997.333 435.889,997.333 435.889,912.000" fill="#eee6f5" stroke="#8b5aa6" stroke-width="2"><title>Basin</title></polygon>
+<circle data-bathroom-object="turning_circle" cx="282.556" cy="1018.667" r="106.667" fill="none" stroke="#2765b0" stroke-width="3"><title>Turning circle</title></circle>
+<rect x="32" y="1240" width="13" height="13" rx="0" fill="#ffffff" stroke="#374151"/>
+<text x="52" y="1250" fill="#374151" font-family="DejaVu Sans, sans-serif" font-size="13" font-weight="normal">WC</text>
+<rect x="218" y="1240" width="13" height="13" rx="0" fill="#ffffff" stroke="#8b5aa6"/>
+<text x="238" y="1250" fill="#8b5aa6" font-family="DejaVu Sans, sans-serif" font-size="13" font-weight="normal">Basin</text>
+<rect x="404" y="1240" width="13" height="13" rx="0" fill="#ffffff" stroke="#16834d"/>
+<text x="424" y="1250" fill="#16834d" font-family="DejaVu Sans, sans-serif" font-size="13" font-weight="normal">Transfer</text>
+<rect x="32" y="1265" width="13" height="13" rx="0" fill="#ffffff" stroke="#e67e22"/>
+<text x="52" y="1275" fill="#e67e22" font-family="DejaVu Sans, sans-serif" font-size="13" font-weight="normal">Door swing</text>
+<rect x="218" y="1265" width="13" height="13" rx="0" fill="#ffffff" stroke="#2765b0"/>
+<text x="238" y="1275" fill="#2765b0" font-family="DejaVu Sans, sans-serif" font-size="13" font-weight="normal">Turning circle</text>
+<rect x="632" y="140" width="776" height="96" rx="7" fill="#ffffff" stroke="#dce2e7"/>
+<rect x="632" y="147" width="4" height="82" rx="0" fill="#167343" stroke="none"/>
+<rect x="1256" y="153" width="134" height="28" rx="5" fill="#eef7f1" stroke="none"/>
+<text x="1268" y="172" fill="#167343" font-family="DejaVu Sans, sans-serif" font-size="15" font-weight="bold">PASS</text>
+<text x="650" y="171" fill="#263238" font-family="DejaVu Sans, sans-serif" font-size="17" font-weight="bold">C033 Bedroom turning space</text>
+<text x="650" y="195" fill="#56616b" font-family="DejaVu Sans, sans-serif" font-size="13" font-weight="normal">Requirement: At least one bedroom must fit a bed and a 1.5 m diameter turning circle, without overlap.</text>
+<text x="650" y="219" fill="#263238" font-family="DejaVu Sans, sans-serif" font-size="15" font-weight="normal">Why: Bedroom 1 fits a 1.4 × 1.9 m bed and a separate 1.5 m diameter turning circle.</text>
+<rect x="632" y="246" width="776" height="135" rx="7" fill="#ffffff" stroke="#dce2e7"/>
+<rect x="632" y="253" width="4" height="121" rx="0" fill="#167343" stroke="none"/>
+<rect x="1256" y="259" width="134" height="28" rx="5" fill="#eef7f1" stroke="none"/>
+<text x="1268" y="278" fill="#167343" font-family="DejaVu Sans, sans-serif" font-size="15" font-weight="bold">PASS</text>
+<text x="650" y="277" fill="#263238" font-family="DejaVu Sans, sans-serif" font-size="17" font-weight="bold">C035 Clearance around the bed</text>
+<text x="650" y="301" fill="#56616b" font-family="DejaVu Sans, sans-serif" font-size="13" font-weight="normal">Requirement: Bed clearances: 0.9 m on both long sides + 1.2 m at one short side OR 1.2 m on both long sides</text>
+<text x="650" y="319" fill="#56616b" font-family="DejaVu Sans, sans-serif" font-size="13" font-weight="normal">+ 0.9 m at one short side. Use the same bed placement as the turning-space check.</text>
+<text x="650" y="343" fill="#263238" font-family="DejaVu Sans, sans-serif" font-size="15" font-weight="normal">Why: Bedroom 1 fits a 1.4 × 1.9 m bed, its clearances and the turning circle in the same</text>
+<text x="650" y="364" fill="#263238" font-family="DejaVu Sans, sans-serif" font-size="15" font-weight="normal">arrangement.</text>
+<rect x="632" y="391" width="776" height="135" rx="7" fill="#ffffff" stroke="#dce2e7"/>
+<rect x="632" y="398" width="4" height="121" rx="0" fill="#167343" stroke="none"/>
+<rect x="1256" y="404" width="134" height="28" rx="5" fill="#eef7f1" stroke="none"/>
+<text x="1268" y="423" fill="#167343" font-family="DejaVu Sans, sans-serif" font-size="15" font-weight="bold">PASS</text>
+<text x="650" y="422" fill="#263238" font-family="DejaVu Sans, sans-serif" font-size="17" font-weight="bold">C036 Bathroom turning space</text>
+<text x="650" y="446" fill="#56616b" font-family="DejaVu Sans, sans-serif" font-size="13" font-weight="normal">Requirement: A furnished bathroom must fit the 1.5 m diameter turning circle, using the same fixture and door</text>
+<text x="650" y="464" fill="#56616b" font-family="DejaVu Sans, sans-serif" font-size="13" font-weight="normal">layout as C037/C041.</text>
+<text x="650" y="488" fill="#263238" font-family="DejaVu Sans, sans-serif" font-size="15" font-weight="normal">Why: Bathroom 1 contains a 1.5 m diameter circle clear of the WC, within the saved shared</text>
+<text x="650" y="509" fill="#263238" font-family="DejaVu Sans, sans-serif" font-size="15" font-weight="normal">arrangement. C041 checks permitted basin/door overlaps.</text>
+<rect x="632" y="536" width="776" height="135" rx="7" fill="#ffffff" stroke="#dce2e7"/>
+<rect x="632" y="543" width="4" height="121" rx="0" fill="#167343" stroke="none"/>
+<rect x="1256" y="549" width="134" height="28" rx="5" fill="#eef7f1" stroke="none"/>
+<text x="1268" y="568" fill="#167343" font-family="DejaVu Sans, sans-serif" font-size="15" font-weight="bold">PASS</text>
+<text x="650" y="567" fill="#263238" font-family="DejaVu Sans, sans-serif" font-size="17" font-weight="bold">C037 WC lateral transfer space</text>
+<text x="650" y="591" fill="#56616b" font-family="DejaVu Sans, sans-serif" font-size="13" font-weight="normal">Requirement: Provide a 0.8 × 1.3 m lateral transfer rectangle beside the WC, clear of fixtures and outside the</text>
+<text x="650" y="609" fill="#56616b" font-family="DejaVu Sans, sans-serif" font-size="13" font-weight="normal">door swing.</text>
+<text x="650" y="633" fill="#263238" font-family="DejaVu Sans, sans-serif" font-size="15" font-weight="normal">Why: Bathroom 1: the saved rectangle lies beside the WC, inside the room, clear of solid fixtures</text>
+<text x="650" y="654" fill="#263238" font-family="DejaVu Sans, sans-serif" font-size="15" font-weight="normal">and outside the door swing.</text>
+<rect x="632" y="681" width="776" height="135" rx="7" fill="#ffffff" stroke="#dce2e7"/>
+<rect x="632" y="688" width="4" height="121" rx="0" fill="#167343" stroke="none"/>
+<rect x="1256" y="694" width="134" height="28" rx="5" fill="#eef7f1" stroke="none"/>
+<text x="1268" y="713" fill="#167343" font-family="DejaVu Sans, sans-serif" font-size="15" font-weight="bold">PASS</text>
+<text x="650" y="712" fill="#263238" font-family="DejaVu Sans, sans-serif" font-size="17" font-weight="bold">C041 Bathroom turning-space overlaps</text>
+<text x="650" y="736" fill="#56616b" font-family="DejaVu Sans, sans-serif" font-size="13" font-weight="normal">Requirement: The same turning circle must respect door swing ≤ 0.25 m OR under-basin overlap ≤ 0.15 m;</text>
+<text x="650" y="754" fill="#56616b" font-family="DejaVu Sans, sans-serif" font-size="13" font-weight="normal">only one overlap is permitted.</text>
+<text x="650" y="778" fill="#263238" font-family="DejaVu Sans, sans-serif" font-size="15" font-weight="normal">Why: Bathroom 1: door overlap 0 m; under-basin overlap 0 m. The saved circle meets both limits</text>
+<text x="650" y="799" fill="#263238" font-family="DejaVu Sans, sans-serif" font-size="15" font-weight="normal">and uses at most one overlap.</text>
+<rect x="632" y="826" width="776" height="117" rx="7" fill="#ffffff" stroke="#dce2e7"/>
+<rect x="632" y="833" width="4" height="103" rx="0" fill="#167343" stroke="none"/>
+<rect x="1256" y="839" width="134" height="28" rx="5" fill="#eef7f1" stroke="none"/>
+<text x="1268" y="858" fill="#167343" font-family="DejaVu Sans, sans-serif" font-size="15" font-weight="bold">PASS</text>
+<text x="650" y="857" fill="#263238" font-family="DejaVu Sans, sans-serif" font-size="17" font-weight="bold">C076 Minimum main-room size</text>
+<text x="650" y="881" fill="#56616b" font-family="DejaVu Sans, sans-serif" font-size="13" font-weight="normal">Requirement: One living room or bedroom: (area ≥ 9 m² AND height ≥ 2.2 m) OR volume ≥ 20 m³.</text>
+<text x="650" y="905" fill="#263238" font-family="DejaVu Sans, sans-serif" font-size="15" font-weight="normal">Why: Main-room candidate: 19.41 m², height 2.5 m, volume 48.54 m³. The area-and-height route</text>
+<text x="650" y="926" fill="#263238" font-family="DejaVu Sans, sans-serif" font-size="15" font-weight="normal">passes.</text>
+<rect x="632" y="953" width="776" height="96" rx="7" fill="#ffffff" stroke="#dce2e7"/>
+<rect x="632" y="960" width="4" height="82" rx="0" fill="#167343" stroke="none"/>
+<rect x="1256" y="966" width="134" height="28" rx="5" fill="#eef7f1" stroke="none"/>
+<text x="1268" y="985" fill="#167343" font-family="DejaVu Sans, sans-serif" font-size="15" font-weight="bold">PASS</text>
+<text x="650" y="984" fill="#263238" font-family="DejaVu Sans, sans-serif" font-size="17" font-weight="bold">C077 Habitable floor area</text>
+<text x="650" y="1008" fill="#56616b" font-family="DejaVu Sans, sans-serif" font-size="13" font-weight="normal">Requirement: Estimated habitable area ≥ 28 m² for 2 occupants.</text>
+<text x="650" y="1032" fill="#263238" font-family="DejaVu Sans, sans-serif" font-size="15" font-weight="normal">Why: Estimated habitable area: 79.93 m²; meets the 28 m² requirement.</text>
+<rect x="632" y="1059" width="776" height="96" rx="7" fill="#ffffff" stroke="#dce2e7"/>
+<rect x="632" y="1066" width="4" height="82" rx="0" fill="#167343" stroke="none"/>
+<rect x="1256" y="1072" width="134" height="28" rx="5" fill="#eef7f1" stroke="none"/>
+<text x="1268" y="1091" fill="#167343" font-family="DejaVu Sans, sans-serif" font-size="15" font-weight="bold">PASS</text>
+<text x="650" y="1090" fill="#263238" font-family="DejaVu Sans, sans-serif" font-size="17" font-weight="bold">C078 Habitable volume</text>
+<text x="650" y="1114" fill="#56616b" font-family="DejaVu Sans, sans-serif" font-size="13" font-weight="normal">Requirement: Estimated habitable volume ≥ 66 m³ for 2 occupants.</text>
+<text x="650" y="1138" fill="#263238" font-family="DejaVu Sans, sans-serif" font-size="15" font-weight="normal">Why: Estimated habitable volume: 199.83 m³; meets the 66 m³ requirement.</text>
+<rect x="632" y="1165" width="776" height="117" rx="7" fill="#ffffff" stroke="#dce2e7"/>
+<rect x="632" y="1172" width="4" height="103" rx="0" fill="#167343" stroke="none"/>
+<rect x="1256" y="1178" width="134" height="28" rx="5" fill="#eef7f1" stroke="none"/>
+<text x="1268" y="1197" fill="#167343" font-family="DejaVu Sans, sans-serif" font-size="15" font-weight="bold">PASS</text>
+<text x="650" y="1196" fill="#263238" font-family="DejaVu Sans, sans-serif" font-size="17" font-weight="bold">C085 Kitchen extraction</text>
+<text x="650" y="1220" fill="#56616b" font-family="DejaVu Sans, sans-serif" font-size="13" font-weight="normal">Requirement: Each kitchen: declared normal extraction ≥ 105 m³/h for 3 main rooms.</text>
+<text x="650" y="1244" fill="#263238" font-family="DejaVu Sans, sans-serif" font-size="15" font-weight="normal">Why: 3 main rooms; 1 kitchen(s). Declared normal flow per kitchen: 105 m³/h; meets the 105</text>
+<text x="650" y="1265" fill="#263238" font-family="DejaVu Sans, sans-serif" font-size="15" font-weight="normal">m³/h minimum. Airflow is a fixed scenario input, not a model prediction.</text>
+<rect x="632" y="1292" width="776" height="117" rx="7" fill="#ffffff" stroke="#dce2e7"/>
+<rect x="632" y="1299" width="4" height="103" rx="0" fill="#167343" stroke="none"/>
+<rect x="1256" y="1305" width="134" height="28" rx="5" fill="#eef7f1" stroke="none"/>
+<text x="1268" y="1324" fill="#167343" font-family="DejaVu Sans, sans-serif" font-size="15" font-weight="bold">PASS</text>
+<text x="650" y="1323" fill="#263238" font-family="DejaVu Sans, sans-serif" font-size="17" font-weight="bold">C086 Bathroom extraction</text>
+<text x="650" y="1347" fill="#56616b" font-family="DejaVu Sans, sans-serif" font-size="13" font-weight="normal">Requirement: Each bathroom: declared normal extraction ≥ 30 m³/h for 3 main rooms.</text>
+<text x="650" y="1371" fill="#263238" font-family="DejaVu Sans, sans-serif" font-size="15" font-weight="normal">Why: 3 main rooms; 1 bathroom(s). Declared normal flow per bathroom: 30 m³/h; meets the 30</text>
+<text x="650" y="1392" fill="#263238" font-family="DejaVu Sans, sans-serif" font-size="15" font-weight="normal">m³/h minimum. Airflow is a fixed scenario input, not a model prediction.</text>
+<rect x="632" y="1419" width="776" height="117" rx="7" fill="#ffffff" stroke="#dce2e7"/>
+<rect x="632" y="1426" width="4" height="103" rx="0" fill="#167343" stroke="none"/>
+<rect x="1256" y="1432" width="134" height="28" rx="5" fill="#eef7f1" stroke="none"/>
+<text x="1268" y="1451" fill="#167343" font-family="DejaVu Sans, sans-serif" font-size="15" font-weight="bold">PASS</text>
+<text x="650" y="1450" fill="#263238" font-family="DejaVu Sans, sans-serif" font-size="17" font-weight="bold">C090 Reduced-mode extraction</text>
+<text x="650" y="1474" fill="#56616b" font-family="DejaVu Sans, sans-serif" font-size="13" font-weight="normal">Requirement: Occupant-adjustable reduced mode: total extraction ≥ 75 m³/h AND each kitchen ≥ 45 m³/h.</text>
+<text x="650" y="1498" fill="#263238" font-family="DejaVu Sans, sans-serif" font-size="15" font-weight="normal">Why: 3 main rooms. Declared reduced total: 75 m³/h (meets 75); per-kitchen flow: 45 m³/h</text>
+<text x="650" y="1519" fill="#263238" font-family="DejaVu Sans, sans-serif" font-size="15" font-weight="normal">(meets 45). Both requirements must pass; these flows are scenario inputs.</text>
+<line x1="32" y1="1558" x2="1408" y2="1558" stroke="#dce2e7"/>
+<text x="32" y="1585" fill="#56616b" font-family="DejaVu Sans, sans-serif" font-size="13" font-weight="normal">Room types are the model&#x27;s saved semantic labels. Metric dimensions use the declared scale; other furniture and door swings are unobserved.</text>
+<text x="32" y="1604" fill="#56616b" font-family="DejaVu Sans, sans-serif" font-size="13" font-weight="normal">Bathroom objects are hypothetical scenario placements, not GSDiff predictions. The inset shows one shared proposal for C036/C037/C041; it does not establish a route through the dwelling.</text>
+<text x="32" y="1623" fill="#56616b" font-family="DejaVu Sans, sans-serif" font-size="13" font-weight="normal">Supporting definitions: C034, C079, C080. These supply parameters; they are not scored checks.</text>
+<text x="32" y="1642" fill="#56616b" font-family="DejaVu Sans, sans-serif" font-size="13" font-weight="normal">These geometry checks assess the stated assumptions, not verified building compliance. Full measurements remain in the evaluation JSON.</text>
+</svg>

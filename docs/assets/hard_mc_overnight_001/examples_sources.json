@@ -1,0 +1,80 @@
+{
+  "method": "hard_h_mc",
+  "selection": {
+    "success": "First returned valid design in ascending trial order.",
+    "failure": "First failed attempt in trial order whose eight terminal candidates all have valid structure and fail only C085/C090, with no unknown checks."
+  },
+  "success": {
+    "trial": 1,
+    "seed": 10001,
+    "graph": "hard_mc_success_seed10001_graph.json",
+    "evaluation": "hard_mc_success_seed10001_evaluation.json",
+    "detailed_figures": {
+      "png": "hard_mc_success_seed10001_annotated.png",
+      "svg": "hard_mc_success_seed10001_annotated.svg"
+    }
+  },
+  "failure": {
+    "trial": 23,
+    "seed": 10023,
+    "trial_status": "no_feasible_terminal_sample",
+    "returned_graph": false,
+    "terminal_events": "hard_mc_failure_seed10023_events.json",
+    "candidate_count": 8,
+    "failing_ids": [
+      "C085",
+      "C090"
+    ],
+    "rejected_geometry_available": false,
+    "limitations": "Saved checks identify failures but do not retain the rejected layouts, room counts, or numerical airflow deficits."
+  },
+  "coordinate_scale_m_per_drawing_pixel": 0.03515625,
+  "sources": [
+    {
+      "path": "test_time/outputs/hard_mc_overnight_001/config.json",
+      "sha256": "4b60d3efb533cc55a16efead2dd6ab55ac12a83a5cd7197ca36f7e86ccfa818b"
+    },
+    {
+      "path": "test_time/outputs/hard_mc_overnight_001/trials.jsonl",
+      "sha256": "76d65cbf5bd725eb303c2fa838ba7a4cb61a602f9be80359ca99c4b63a1ee58b"
+    },
+    {
+      "path": "test_time/outputs/hard_mc_overnight_001/events.jsonl",
+      "sha256": "0d2c22719a375236112ae00d49e58bf514461b27e1aed333409feafd8dfcb911"
+    },
+    {
+      "path": "test_time/outputs/hard_mc_overnight_001/samples/trial-0001-seed-10001.json",
+      "sha256": "e0d2eb9766388b99d228172db94512cd81690f47893d4932f0bfaa23994afda0"
+    },
+    {
+      "path": "test_time/outputs/hard_mc_overnight_001/samples/trial-0001-seed-10001-evaluation.json",
+      "sha256": "8cbdac93190507c4063c9798386ee67e3fa28eb1c30f271491b261f39c1298be"
+    }
+  ],
+  "renderers": [
+    {
+      "path": "test_time/hard_mc_assets.py",
+      "sha256": "130bbf0ad01c016e7e3de32ee222ee501d15d381422d9d661fddd8f383529415"
+    },
+    {
+      "path": "test_time/report_assets.py",
+      "sha256": "4cf6ad47f9ec57cb5ba3880765d69f110bb08630167627cd746791de6a17b8d2"
+    },
+    {
+      "path": "test_time/visualize.py",
+      "sha256": "fec02f2a2dbae85941693e3bad5fa7cfe7b39bc3784df2a569f074fbaa54c7cb"
+    }
+  ],
+  "figures": [
+    "hard_mc_success_seed10001.png",
+    "hard_mc_success_seed10001.pdf",
+    "hard_mc_success_seed10001.svg",
+    "hard_mc_failure_seed10023.png",
+    "hard_mc_failure_seed10023.pdf",
+    "hard_mc_failure_seed10023.svg",
+    "hard_mc_examples.png",
+    "hard_mc_examples.pdf",
+    "hard_mc_examples.svg"
+  ],
+  "regenerate": "python3 -m test_time.hard_mc_assets"
+}

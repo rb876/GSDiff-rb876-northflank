@@ -1,0 +1,305 @@
+{
+  "schema": "hard_mc_result_audit_v1",
+  "scope": "Read-only arithmetic and saved-evidence audit; no model sampling, checker execution or new graph validity judgement.",
+  "source_root": "test_time/outputs/hard_mc_overnight_001",
+  "sources_sha256": {
+    "test_time/outputs/hard_mc_overnight_001/config.json": "4b60d3efb533cc55a16efead2dd6ab55ac12a83a5cd7197ca36f7e86ccfa818b",
+    "test_time/outputs/hard_mc_overnight_001/run.json": "dc783ff4d64baff12f8f9622379dc2e568ea54953b16d0741726e2cf19e3dd73",
+    "test_time/outputs/hard_mc_overnight_001/summary.json": "c606799b62b7927925c16b7c4551ad606263e3bc073b8c33c3f3f055c8d84c21",
+    "test_time/outputs/hard_mc_overnight_001/trials.jsonl": "76d65cbf5bd725eb303c2fa838ba7a4cb61a602f9be80359ca99c4b63a1ee58b",
+    "test_time/outputs/hard_mc_overnight_001/events.jsonl": "0d2c22719a375236112ae00d49e58bf514461b27e1aed333409feafd8dfcb911",
+    "test_time/configs/scenario_bathroom_v1.json": "009569032d7d804adb447bba5e51fb0ccd402e0cf237219f42aa8aa1d3ea7dfb",
+    "test_time/configs/constraints_bathroom_v1.json": "db568bc95117aa157eed0f06e78f89af45ae1642ece9fb75c194a8db1207f73e",
+    "test_time/constraints.py": "66d5ce507ab530447b58a54a98bcdd3cf757ed7ac6ddd7060fe941f2f3221d42",
+    "test_time/policy.py": "64ab5b6ab98b89d4ec6cde801495ddc884338b29b9086721d6bda61f4e12ce9c",
+    "test_time/audit_geometry.py": "1411b7f0bf78fded16736cf458b4d06c2f3873e8e97f8b9123bac34d0ea65e27",
+    "test_time/bathroom_geometry.py": "7c2b02e5317249394f7fc0987e804bd46e9dad0ccea258e05386b2ec6a271576",
+    "test_time/hard_feasibility.py": "c8635086a8f867a0e504f127ab08da6d941301202c10cb236c185cbb9781cf5d",
+    "test_time/run_extensions.py": "efaee04632355210ec04a84e6836ccbcac3925bb5818521f29a888427dcda129",
+    "test_time/outputs/bathroom_001/controls_rebuilt/batch_1_seed_10000/baseline/config.json": "ceb2091cbddb7b75d2323c69132be244831801e0c51f02d1d4d8d3f91646563c",
+    "test_time/outputs/bathroom_001/controls_rebuilt/batch_1_seed_10000/baseline/summary.json": "4b0d776710a39dd21cec0102759de8c446d292a8ae4782aacb957f3f355bbdc8",
+    "test_time/outputs/bathroom_001/controls_rebuilt/batch_1_seed_10000/best_of_n_last10/config.json": "0533795351a62983e6055167d85574b2a986284b06e505981aee1c6a750b8eba",
+    "test_time/outputs/bathroom_001/controls_rebuilt/batch_1_seed_10000/best_of_n_last10/summary.json": "ea5c191cd8f4a5bd2200188b1b1f8f097bc84fb36bb36fee05146c88355e9c35",
+    "test_time/outputs/bathroom_001/controls_rebuilt/batch_1_seed_10000/best_of_n/config.json": "85e92230941378a4c7fa6b047ceee84cdfa61b6f4f09adcfd3929fec6347cf9c",
+    "test_time/outputs/bathroom_001/controls_rebuilt/batch_1_seed_10000/best_of_n/summary.json": "ccfc900a4b0d7b26da693aea9f963997f2c7ec01aab8f952bc390015dd75a9f1",
+    "test_time/outputs/bathroom_001/guided/svdd_pm_last10/config.json": "1b0ae0bc0cb592fdfdb0d3df864f5737c6825c187e53903762c76f815426674a",
+    "test_time/outputs/bathroom_001/guided/svdd_pm_last10/summary.json": "0c753c396bff37ceabf7c70a412236691c0e98618d693c9c931fdf02a3fd6d84"
+  },
+  "collection_hashes": {
+    "recipe": "SHA-256 of UTF-8 lines sorted by repository-relative path: <file_sha256><two spaces><path><LF>.",
+    "trace_files": {
+      "files": 100,
+      "manifest_sha256": "deeade023d5f67e840ad24691684ebdd621d1a10087fcea7d59be3129f0f1c2f"
+    },
+    "returned_evaluation_files": {
+      "files": 83,
+      "manifest_sha256": "da5f660d70db630d1f7bd56967a5d14fd7ea82b18eee395679cf9e8fa26cefe0"
+    }
+  },
+  "per_attempt_csv": {
+    "path": "docs/assets/hard_mc_overnight_001/per_attempt.csv",
+    "sha256": "d6182d50a5d3759dfd9eeaa06c1fd46f531e2dd1162ddbce3169a65b23ab7b2b",
+    "rows": 100,
+    "booleans": "0/1; empty first_feasible_nfe and evaluation fields mean absent, not zero"
+  },
+  "method": {
+    "name": "hard_h_mc",
+    "parameters": {
+      "k": 4,
+      "rollouts": 4,
+      "anchor_remaining": [
+        100,
+        50,
+        15
+      ],
+      "terminal_k": 8,
+      "zero_policy": "fresh_base",
+      "max_nfe": 40000
+    },
+    "inference_batch_size": 32,
+    "trial_batch_size": 1,
+    "diffusion_steps": 1000,
+    "exact_conditional": false,
+    "final_checker": "cpu_bathroom_audit_v1",
+    "policy_sha256": "d10d13c232aeca312d068d7998d1f5c13f72e5f0abf16b4dd3f728ba176085fd",
+    "sampler_policy_hash": "b67599789a08acc53b5cf7386e318c09dff11f26423cf04a1f2bacf59b28855f",
+    "policy_hash_note": "Runner and sampler hash different payload schemas; different hashes are expected.",
+    "repo_commit_recorded": "fa2f0363d7f2439db68689fe63d15604a60d3b41",
+    "checkpoint_sha256": {
+      "node": "99a6567f2c19bd849a026d1931cc56fa5742229a4ec50769bcff8b1e3314e96b",
+      "edge": "6e9fc4fc8aef2f39c55371cfab6066658b2eed39ada9bb808be6705039da75d1"
+    }
+  },
+  "verification": {
+    "unique_consecutive_seeds": [
+      10000,
+      10099
+    ],
+    "trial_ids": [
+      0,
+      99
+    ],
+    "run_complete": true,
+    "run_summary_equals_summary_json": true,
+    "all_recomputed_summary_fields_match": true,
+    "returned_evaluations_match_all_11_ledger_checks": true,
+    "all_100_traces_checked": true,
+    "parameters_unchanged_recorded": true,
+    "current_relevant_source_hashes_match": true
+  },
+  "results": {
+    "method": "hard_h_mc",
+    "attempts": 100,
+    "returned_graphs": 83,
+    "successful_attempts": 83,
+    "success_rate": 0.83,
+    "any_feasible_found": 96,
+    "no_graph_attempts": 17,
+    "structurally_valid_attempts": 83,
+    "outcomes": {
+      "no_feasible_terminal_sample": 17,
+      "success": 83
+    },
+    "total_wall_seconds": 5097.588600774499,
+    "total_nfe": 680790,
+    "seconds_per_attempt": 50.975886007745,
+    "nfe_per_attempt": 6807.9,
+    "seconds_per_success": 61.416730129813246,
+    "nfe_per_success": 8202.289156626506,
+    "total_edge_samples": 5600,
+    "total_node_calls": 127290,
+    "total_edge_calls": 400,
+    "fallback_count": 33,
+    "all_zero_count": 33,
+    "checker_seconds": 3417.4262236070936,
+    "scored_constraint_ids": [
+      "C033",
+      "C035",
+      "C036",
+      "C037",
+      "C041",
+      "C076",
+      "C077",
+      "C078",
+      "C085",
+      "C086",
+      "C090"
+    ],
+    "passes_per_scored_constraint": 83
+  },
+  "outcome_partition": {
+    "returned_success": 83,
+    "no_terminal_success_after_feasible_lookahead": 13,
+    "never_found_feasible": 4
+  },
+  "wilson_95_interval": {
+    "successes": 83,
+    "attempts": 100,
+    "z": 1.959963984540054,
+    "lower": 0.7445199523239887,
+    "upper": 0.8910643388594006,
+    "assumption": "Descriptive binomial interval across the 100 seeded attempts; not an exact conditional-sampling or generalization guarantee."
+  },
+  "compute": {
+    "nfe_definition": "sample-wise node denoiser evaluations = sum(stats.node_samples); excludes edge model calls and CPU checking",
+    "totals": {
+      "node_samples": 680790,
+      "node_calls": 127290,
+      "edge_samples": 5600,
+      "edge_calls": 400,
+      "candidate_evaluations": 5600,
+      "graph_completions": 5600,
+      "completed_graphs": 5600,
+      "feasible_graphs_found": 2295,
+      "fallback_count": 33,
+      "all_zero_count": 33,
+      "checker_seconds": 3417.4262236070936,
+      "wall_seconds": 5097.588600774499,
+      "wall_seconds_including_event_export": 5136.386020720034,
+      "event_export_seconds": 38.797419945534784
+    },
+    "first_feasible_nfe_distribution": {
+      "5200": 89,
+      "none": 4,
+      "7100": 6,
+      "7530": 1
+    },
+    "first_feasible_nfe_note": "Counts batched work already charged when a feasible lookahead/terminal event is observed; not NFE to a returned graph.",
+    "nfe_range_per_attempt": [
+      6700,
+      7685
+    ],
+    "budget_exhausted_attempts": 0
+  },
+  "timing": {
+    "sampling_checking_seconds": 5097.588600774499,
+    "checker_seconds": 3417.4262236070936,
+    "checker_fraction": 0.6704005543106929,
+    "setup_seconds": 1.1977241020067595,
+    "end_to_end_seconds": 5151.870269765001,
+    "end_to_end_minutes": 85.86450449608334,
+    "event_export_seconds": 38.797419945534784,
+    "remaining_overhead_seconds": 14.286524942959659,
+    "seconds_per_attempt": 50.975886007745,
+    "seconds_per_returned_success": 61.416730129813246,
+    "scope": "Per-attempt and per-success time includes sampling/lookaheads and CPU checking, excludes setup and artifact export; per-success totals include unsuccessful attempts. End-to-end includes overhead. Checker time is a subset, not additive."
+  },
+  "event_audit": {
+    "events": 5600,
+    "events_per_attempt": 56,
+    "lookahead_per_attempt": 48,
+    "terminal_per_attempt": 8,
+    "event_outcomes": {
+      "invalid": 2337,
+      "unknown": 968,
+      "valid": 2295
+    },
+    "latent_stage_statuses": {
+      "selected": 267,
+      "all_zero": 33
+    },
+    "all_zero_stages": 33,
+    "fresh_base_fallback_stages": 33,
+    "attempts_using_fallback": 21,
+    "fallback_count_distribution": {
+      "0": 79,
+      "3": 4,
+      "1": 13,
+      "2": 4
+    }
+  },
+  "compatibility": {
+    "comparison_scope": "scenario, constraint definitions, model adapter/checkpoint metadata, saved final checker; method and batching parameters intentionally excluded",
+    "scenario_canonical_sha256": "076bfa6f3d4de3cf31814ef9757ea8e86fcada31cf5cf9921cd146baaefbeb8e",
+    "constraints_canonical_sha256": "95594239f552c3ebab3db61687b8badbd1d28412f6c950b27cd02028f333df97",
+    "canonical_hash_recipe": "JSON sorted keys, compact separators, UTF-8",
+    "current_scenario_equal": true,
+    "current_constraints_equal_after_missing_disabled_reason_null": true,
+    "comparators": [
+      {
+        "run": "test_time/outputs/bathroom_001/controls_rebuilt/batch_1_seed_10000/baseline",
+        "successes": 34,
+        "attempts": 100,
+        "nfe_per_attempt": 1000.0,
+        "scenario_constraints_adapter_equal": true,
+        "final_checker_equal": true,
+        "summary_scored_ids_equal": true,
+        "config_selection_ids_equal": false,
+        "top_level_checker_source_hash_matches": {
+          "test_time/constraints.py": false,
+          "test_time/policy.py": false,
+          "test_time/audit_geometry.py": false,
+          "test_time/bathroom_geometry.py": false
+        }
+      },
+      {
+        "run": "test_time/outputs/bathroom_001/controls_rebuilt/batch_1_seed_10000/best_of_n_last10",
+        "successes": 47,
+        "attempts": 100,
+        "nfe_per_attempt": 2000.0,
+        "scenario_constraints_adapter_equal": true,
+        "final_checker_equal": true,
+        "summary_scored_ids_equal": true,
+        "config_selection_ids_equal": false,
+        "top_level_checker_source_hash_matches": {
+          "test_time/constraints.py": false,
+          "test_time/policy.py": false,
+          "test_time/audit_geometry.py": false,
+          "test_time/bathroom_geometry.py": false
+        },
+        "prefix_reselection_checker_hashes_all_match": true
+      },
+      {
+        "run": "test_time/outputs/bathroom_001/controls_rebuilt/batch_1_seed_10000/best_of_n",
+        "successes": 94,
+        "attempts": 100,
+        "nfe_per_attempt": 11000.0,
+        "scenario_constraints_adapter_equal": true,
+        "final_checker_equal": true,
+        "summary_scored_ids_equal": true,
+        "config_selection_ids_equal": false,
+        "top_level_checker_source_hash_matches": {
+          "test_time/constraints.py": false,
+          "test_time/policy.py": false,
+          "test_time/audit_geometry.py": false,
+          "test_time/bathroom_geometry.py": false
+        }
+      },
+      {
+        "run": "test_time/outputs/bathroom_001/guided/svdd_pm_last10",
+        "successes": 56,
+        "attempts": 100,
+        "nfe_per_attempt": 2000.0,
+        "scenario_constraints_adapter_equal": true,
+        "final_checker_equal": true,
+        "summary_scored_ids_equal": true,
+        "config_selection_ids_equal": true,
+        "top_level_checker_source_hash_matches": {
+          "test_time/constraints.py": true,
+          "test_time/policy.py": true,
+          "test_time/audit_geometry.py": true,
+          "test_time/bathroom_geometry.py": true
+        }
+      }
+    ],
+    "svdd_last10_comparison": {
+      "hard_mc_successes": 83,
+      "svdd_successes": 56,
+      "attempts_each": 100,
+      "success_difference_percentage_points": 27,
+      "nfe_per_attempt_ratio": 3.40395
+    },
+    "gaps": [
+      "Rebuilt control config.constraint_selection retains six historical scored IDs; actual constraints and saved summaries contain all eleven.",
+      "Rebuilt controls retain historical top-level source hashes; matching scenario/checkpoint/checker names alone do not establish identical checker implementation. Best-of-N last10 prefix-reselection records matching checker hashes; SVDD last10 top-level checker hashes match.",
+      "Rebuilt controls have no directly comparable generation wall time; SVDD timing is amortized batched throughput and hard MC uses one episode at a time.",
+      "Model checkpoint hashes and unchanged-parameter flag are recorded provenance; checkpoint binaries were not rehashed in this audit."
+    ]
+  },
+  "assumptions": [
+    "Success means a returned structurally valid graph passing all eleven scored checks under the saved scenario; three supporting definitions do not count as scored checks.",
+    "Finite geometric placement searches, hypothetical bathroom fixtures/door, declared ventilation capacities, paper-derived scale and uniform ceiling height remain scenario assumptions; this is not verified building compliance.",
+    "Feasible lookahead samples are not returned; terminal acceptance requires a feasible sample from the fresh terminal bank. No-graph attempts remain in all denominators.",
+    "No input artifacts were modified; compact CSV preserves every attempt."
+  ]
+}
