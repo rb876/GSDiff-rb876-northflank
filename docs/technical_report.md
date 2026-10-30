@@ -405,6 +405,8 @@ $$
 \qquad \Pr(I=k\mid\text{bank})=\frac{\widehat h_k}{\sum_j\widehat h_j}.
 $$
 
+Late SVDD checks ten predicted clean floorplans at each of 100 guided steps. Hard-MC rollouts instead denoise to completion **without intermediate constraint checks**; only completed floorplans are evaluated. Their success fractions select the **noisy proposal at the checkpoint** that continues denoising. The completed lookaheads supply the scores.
+
 Continuous severity never enters this stochastic selection. Decision anchors lie at **100, 50 and 15 transitions remaining**, within the final 10%; their positions are recorded in each run configuration. Independent initial noises and ordinary prefixes form the first bank, approximating $p_b^F$. Each completion includes GSDiff's actual edge decoder: random interpolation followed by edge-logit argmax and graph extraction.
 
 **Main trade-off:** completed rollouts and CPU audits are expensive, and four rollouts per proposal give a coarse success estimate. If every rollout fails, the binary scores cannot distinguish promising near misses from poor layouts. Neural continuations are batched on GPU; an all-zero bank triggers a recorded fresh ordinary block. Zero observed successes do not prove impossibility.
